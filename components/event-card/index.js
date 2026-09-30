@@ -1,4 +1,4 @@
-const { resolveFileUrl } = require('../../utils/format')
+const { resolveFileUrl, shortTime } = require('../../utils/format')
 
 Component({
   options: {
@@ -23,6 +23,7 @@ Component({
           displayTags: (entry.tags || []).slice(0, 4),
           displayPersons: (entry.persons || []).slice(0, 3),
           bodyText: entry.summary || entry.content || '',
+          displayTime: shortTime(entry.time),
           scorePercent: entry.score != null ? Math.round(entry.score * 100) : null
         })
       }
@@ -39,6 +40,7 @@ Component({
     displayTags: [],
     displayPersons: [],
     bodyText: '',
+    displayTime: '',
     scorePercent: null
   },
 

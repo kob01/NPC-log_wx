@@ -1,94 +1,118 @@
 .sp-mask {
-  position: fixed;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.55);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--mask);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .sp-panel {
-  width: 640rpx;
-  max-height: 88vh;
-  background: #fff;
-  border-radius: 24rpx;
-  padding: 24rpx;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
+    width: 640rpx;
+    max-height: 88vh;
+    background: var(--card);
+    border-radius: 24rpx;
+    padding: 24rpx;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
 }
 
 .sp-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16rpx;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16rpx;
+    flex-shrink: 0;
 }
 
 .sp-title {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: #2c3e50;
+    font-size: 32rpx;
+    font-weight: 700;
+    color: var(--text-1);
 }
 
 .sp-close {
-  font-size: 34rpx;
-  color: #a0aec0;
-  padding: 0 12rpx;
+    font-size: 34rpx;
+    color: var(--text-3);
+    padding: 0 12rpx;
 }
 
 .sp-platforms {
-  display: flex;
-  gap: 16rpx;
-  margin-bottom: 20rpx;
+    display: flex;
+    margin-bottom: 20rpx;
+    flex-shrink: 0;
 }
 
 .sp-chip {
-  flex: 1;
-  text-align: center;
-  font-size: 26rpx;
-  color: #666;
-  background: #f2f3f5;
-  border-radius: 32rpx;
-  padding: 10rpx 0;
+    flex: 1;
+    text-align: center;
+    font-size: 26rpx;
+    color: var(--text-2);
+    background: var(--fill-2);
+    border-radius: 32rpx;
+    padding: 10rpx 0;
+}
+
+/* 用 margin 而非 flex gap 撑间隔：低版本 WebView 不认 gap 时不会粘连 */
+.sp-chip-left {
+    margin-left: 16rpx;
 }
 
 .sp-chip-on {
-  color: #fff;
-  background: #1677ff;
+    color: var(--text-inv);
+    background: var(--primary);
 }
 
-/* 海报画布：3:4 竖版 */
+/* 海报画布：3:4 竖版（纸张底色由 canvas 绘制，恒为浅色，不随主题变化） */
 .sp-canvas {
-  width: 592rpx;
-  height: 789rpx;
-  border-radius: 16rpx;
-  background: #f5f6f8;
+    width: 592rpx;
+    height: 789rpx;
+    border-radius: 16rpx;
+    background: #f5f6f8;
+    /* 面板超高时整体滚动，不能让 flex 把画布压扁（海报会变形） */
+    flex-shrink: 0;
 }
 
 .sp-tip {
-  font-size: 24rpx;
-  color: #e6a23c;
-  text-align: center;
-  margin-top: 12rpx;
+    font-size: 24rpx;
+    color: var(--warning);
+    text-align: center;
+    margin-top: 12rpx;
+    flex-shrink: 0;
 }
 
 .sp-actions {
-  display: flex;
-  gap: 20rpx;
-  margin-top: 24rpx;
+    display: flex;
+    margin-top: 24rpx;
+    flex-shrink: 0;
+}
+
+.sp-actions-sub {
+    margin-top: 16rpx;
+}
+
+.sp-actions-sub .sp-btn {
+    background: var(--fill-2);
+    color: var(--text-2);
 }
 
 .sp-btn {
-  flex: 1;
+    flex: 1;
+    /* 覆盖 button 默认 margin: 0 auto，否则按钮会在行内居中而不填满 */
+    margin: 0;
+}
+
+.sp-btn-left {
+    margin-left: 20rpx;
 }
 
 .sp-btn-primary {
-  background: #1677ff;
-  color: #fff;
+    background: var(--primary);
+    color: var(--text-inv);
 }

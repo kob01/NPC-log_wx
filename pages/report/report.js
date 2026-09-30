@@ -2,6 +2,7 @@ const api = require('../../utils/api')
 const auth = require('../../utils/auth')
 
 Page({
+  behaviors: [require("../../utils/themeBehavior")],
   data: {
     report: null,
     years: [],

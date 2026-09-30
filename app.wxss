@@ -1,13 +1,126 @@
 /* ==================== 全局样式 ==================== */
 page {
-  background: #f5f6f8;
-  color: #1f1f1f;
-  font-size: 28rpx;
-  line-height: 1.6;
-  --primary: #1677ff;
+  /* ---------- 语义色 token（浅色）：组件与页面统一引用，深色模式在下方重定义 ---------- */
+  /* 背景与表面 */
+  --bg: #f5f6f8;
+  --card: #fff;
+  --card-sub: #f7f8fa;
+  --fill: #f0f0f0;
+  --fill-2: #f2f3f5;
+  --info-bg: #f0f7ff;
+  --mask: rgba(0, 0, 0, 0.5);
+  --shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+
+  /* 文字 */
+  --text-1: #1f1f1f;
+  --text-body: #333;
   --text-2: #666;
   --text-3: #999;
+  --text-4: #bbb;
+  --text-inv: #fff;
+
+  /* 主题与强调 */
+  --primary: #1677ff;
+  --primary-2: #4096ff;
+  --primary-weak: #e6f4ff;
+  --accent: #722ed1;
+  --accent-weak: #f9f0ff;
+
+  /* 边框与分隔 */
   --border: #eee;
+  --border-2: #e3e6eb;
+  --divider: #f0f0f0;
+
+  /* 状态色 */
+  --danger: #f5222d;
+  --danger-weak: #fff1f0;
+  --success: #52c41a;
+  --warning: #fa8c16;
+
+  /* 标签配色（浅底 + 深字） */
+  --tag-blue-bg: #e6f4ff;
+  --tag-blue-fg: #1677ff;
+  --tag-purple-bg: #f9f0ff;
+  --tag-purple-fg: #722ed1;
+  --tag-geek-bg: #f0f5ff;
+  --tag-geek-fg: #2f54eb;
+  --tag-cyan-bg: #e6fffb;
+  --tag-cyan-fg: #13c2c2;
+  --tag-gold-bg: #fffbe6;
+  --tag-gold-fg: #d48806;
+  --tag-green-bg: #f6ffed;
+  --tag-green-fg: #52c41a;
+  --tag-orange-bg: #fff7e6;
+  --tag-orange-fg: #fa8c16;
+  --tag-red-bg: #fff1f0;
+  --tag-red-fg: #f5222d;
+  --tag-gray-bg: #f0f0f0;
+  --tag-gray-fg: #555;
+
+  background: var(--bg);
+  color: var(--text-1);
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+/* ---------- 深色模式 token：挂在页面根节点 .theme-dark 类上，由 JS 监听系统切换实时增删，免重进即时换色 ---------- */
+.theme-dark {
+    --bg: #17181a;
+    --card: #232527;
+    --card-sub: #2a2c2f;
+    --fill: #2f3134;
+    --fill-2: #34363a;
+    --info-bg: #1c2a3a;
+    --mask: rgba(0, 0, 0, 0.65);
+    --shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.4);
+
+    --text-1: #eaeaea;
+    --text-body: #d0d0d0;
+    --text-2: #a6a6a6;
+    --text-3: #8a8a8a;
+    --text-4: #6a6a6a;
+    --text-inv: #fff;
+
+    --primary: #3d8bfd;
+    --primary-2: #5b9dff;
+    --primary-weak: #17304d;
+    --accent: #9f5fe0;
+    --accent-weak: #2a1c3d;
+
+    --border: #34363a;
+    --border-2: #3a3d42;
+    --divider: #303236;
+
+    --danger: #ff6b6b;
+    --danger-weak: #3a1e20;
+    --success: #73d13d;
+    --warning: #ffa940;
+
+    --tag-blue-bg: #17304d;
+    --tag-blue-fg: #69b1ff;
+    --tag-purple-bg: #2a1c3d;
+    --tag-purple-fg: #b37feb;
+    --tag-geek-bg: #1b2340;
+    --tag-geek-fg: #85a5ff;
+    --tag-cyan-bg: #123134;
+    --tag-cyan-fg: #36cfc9;
+    --tag-gold-bg: #3a2f14;
+    --tag-gold-fg: #e8c451;
+    --tag-green-bg: #1d2b17;
+    --tag-green-fg: #95de64;
+    --tag-orange-bg: #3a2716;
+    --tag-orange-fg: #ffc069;
+    --tag-red-bg: #3a1e20;
+    --tag-red-fg: #ff7875;
+    --tag-gray-bg: #34363a;
+    --tag-gray-fg: #b0b0b0;
+}
+
+/* 页面根节点：铺满视口并引用主题 token；根节点带 .theme-dark 时其下所有 token 自动切换 */
+.page-root {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text-1);
 }
 
 view,
@@ -18,15 +131,15 @@ image {
 
 /* 卡片 */
 .card {
-  background: #fff;
+  background: var(--card);
   border-radius: 20rpx;
   padding: 24rpx;
   margin: 20rpx 24rpx;
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow);
 }
 
 .card-flat {
-  background: #fff;
+  background: var(--card);
   border-radius: 20rpx;
   padding: 24rpx;
 }
@@ -70,48 +183,48 @@ image {
   border-radius: 8rpx;
   font-size: 22rpx;
   line-height: 1.7;
-  background: #f0f0f0;
-  color: #555;
+  background: var(--tag-gray-bg);
+  color: var(--tag-gray-fg);
 }
 
 .tag-blue {
-  background: #e6f4ff;
-  color: #1677ff;
+  background: var(--tag-blue-bg);
+  color: var(--tag-blue-fg);
 }
 
 .tag-purple {
-  background: #f9f0ff;
-  color: #722ed1;
+  background: var(--tag-purple-bg);
+  color: var(--tag-purple-fg);
 }
 
 .tag-geekblue {
-  background: #f0f5ff;
-  color: #2f54eb;
+  background: var(--tag-geek-bg);
+  color: var(--tag-geek-fg);
 }
 
 .tag-cyan {
-  background: #e6fffb;
-  color: #13c2c2;
+  background: var(--tag-cyan-bg);
+  color: var(--tag-cyan-fg);
 }
 
 .tag-gold {
-  background: #fffbe6;
-  color: #d48806;
+  background: var(--tag-gold-bg);
+  color: var(--tag-gold-fg);
 }
 
 .tag-green {
-  background: #f6ffed;
-  color: #52c41a;
+  background: var(--tag-green-bg);
+  color: var(--tag-green-fg);
 }
 
 .tag-orange {
-  background: #fff7e6;
-  color: #fa8c16;
+  background: var(--tag-orange-bg);
+  color: var(--tag-orange-fg);
 }
 
 .tag-red {
-  background: #fff1f0;
-  color: #f5222d;
+  background: var(--tag-red-bg);
+  color: var(--tag-red-fg);
 }
 
 /* 次要文本 */
@@ -151,7 +264,7 @@ image {
 /* 主按钮 */
 .btn-primary {
   background: var(--primary);
-  color: #fff;
+  color: var(--text-inv);
   border-radius: 12rpx;
   font-size: 30rpx;
   padding: 20rpx 0;
@@ -161,11 +274,11 @@ image {
 
 .btn-primary[disabled] {
   opacity: 0.6;
-  color: #fff;
+  color: var(--text-inv);
 }
 
 .btn-ghost {
-  background: #fff;
+  background: var(--card);
   color: var(--primary);
   border: 1rpx solid var(--primary);
   border-radius: 12rpx;
@@ -176,8 +289,8 @@ image {
 
 /* 提示条（AI 未配置等降级场景） */
 .hint-bar {
-  background: #f4f4f5;
-  color: #888;
+  background: var(--fill);
+  color: var(--text-2);
   font-size: 24rpx;
   padding: 16rpx 20rpx;
   border-radius: 12rpx;
@@ -195,13 +308,13 @@ image {
   margin-right: 16rpx;
   border-radius: 30rpx;
   font-size: 26rpx;
-  background: #fff;
-  color: #666;
+  background: var(--card);
+  color: var(--text-2);
 }
 
 .chip.active {
   background: var(--primary);
-  color: #fff;
+  color: var(--text-inv);
 }
 
 /* 分割 */

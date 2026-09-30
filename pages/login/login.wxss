@@ -1,7 +1,7 @@
 .login {
   min-height: 100vh;
   padding: 120rpx 60rpx 0;
-  background: linear-gradient(180deg, #eaf2ff 0%, #f5f6f8 40%);
+  background: linear-gradient(180deg, var(--primary-weak) 0%, var(--bg) 40%);
 }
 
 .brand {
@@ -15,8 +15,8 @@
   line-height: 120rpx;
   margin: 0 auto;
   border-radius: 32rpx;
-  background: #1677ff;
-  color: #fff;
+  background: var(--primary);
+  color: var(--text-inv);
   font-size: 64rpx;
 }
 
@@ -29,14 +29,14 @@
 .brand-desc {
   margin-top: 8rpx;
   font-size: 26rpx;
-  color: #888;
+  color: var(--text-3);
 }
 
 .form {
-  background: #fff;
+  background: var(--card);
   border-radius: 24rpx;
   padding: 40rpx 36rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow);
 }
 
 .field {
@@ -45,14 +45,14 @@
 
 .field-label {
   font-size: 26rpx;
-  color: #666;
+  color: var(--text-2);
 }
 
 .field-input {
   margin-top: 12rpx;
   height: 88rpx;
   padding: 0 24rpx;
-  background: #f5f6f8;
+  background: var(--bg);
   border-radius: 14rpx;
   font-size: 30rpx;
 }
@@ -65,5 +65,5 @@
   margin-top: 28rpx;
   text-align: center;
   font-size: 22rpx;
-  color: #bbb;
+  color: var(--text-4);
 }

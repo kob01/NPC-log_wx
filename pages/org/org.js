@@ -9,6 +9,7 @@ function roleText(role) {
 }
 
 Page({
+  behaviors: [require("../../utils/themeBehavior")],
   data: {
     tab: 'mine',
     loading: true,

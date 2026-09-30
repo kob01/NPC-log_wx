@@ -23,6 +23,17 @@ function dayKey(time) {
   return time ? String(time).slice(0, 10) : '未知日期'
 }
 
+/**
+ * 卡片展示时间去掉年份：YYYY-MM-DD HH:mm → MM-DD HH:mm
+ * 非标准格式（如缺年份或无日期）原样返回
+ * @param {string} time
+ */
+function shortTime(time) {
+  if (!time) return ''
+  const s = String(time)
+  return /^\d{4}-/.test(s) ? s.slice(5) : s
+}
+
 /** 空值占位 */
 const EMPTY = '-'
 function orDash(v) {
@@ -76,6 +87,7 @@ function nowMonth() {
 module.exports = {
   resolveFileUrl,
   dayKey,
+  shortTime,
   EMPTY,
   orDash,
   csvToArray,

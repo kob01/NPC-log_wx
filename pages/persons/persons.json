@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "人物图谱",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
   "usingComponents": {
     "event-card": "/components/event-card/index",
     "empty-state": "/components/empty-state/index",

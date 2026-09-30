@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "年度回顾",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
   "usingComponents": {
     "empty-state": "/components/empty-state/index",
     "loading": "/components/loading/index"

@@ -7,8 +7,8 @@
   display: flex;
   align-items: center;
   padding: 50rpx 40rpx;
-  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
-  color: #fff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
+  color: var(--text-inv);
 }
 
 .avatar {
@@ -44,7 +44,7 @@
 }
 
 .group {
-  background: #fff;
+  background: var(--card);
   border-radius: 20rpx;
   margin: 24rpx;
   padding: 0 28rpx;
@@ -64,18 +64,18 @@
 
 .cell-title {
   font-size: 30rpx;
-  color: #1f1f1f;
+  color: var(--text-1);
 }
 
 .cell-desc {
   margin-top: 6rpx;
   font-size: 22rpx;
-  color: #999;
+  color: var(--text-3);
 }
 
 .arrow {
   font-size: 40rpx;
-  color: #ccc;
+  color: var(--text-4);
 }
 
 .logout-wrap {
@@ -83,6 +83,6 @@
 }
 
 .logout-btn {
-  color: #f5222d;
-  border-color: #f5222d;
+  color: var(--danger);
+  border-color: var(--danger);
 }

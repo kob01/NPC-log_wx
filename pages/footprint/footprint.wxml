@@ -1,4 +1,4 @@
-<view class="footprint">
+<view class="footprint page-root {{themeClass}}">
   <!-- 过滤条 -->
   <view class="filter">
     <scroll-view class="chips" scroll-x>
@@ -33,6 +33,7 @@
 
   <!-- 地图 -->
   <map
+    id="footprintMap"
     wx:if="{{markers.length}}"
     class="map"
     latitude="{{center.latitude}}"
@@ -80,4 +81,4 @@
   </view>
 </view>
 
-<share-poster visible="{{showPoster}}" type="footprint" entry="{{}}" presetCopy="{{presetCopy}}" bind:close="onHidePoster" />
+<share-poster visible="{{showPoster}}" type="footprint" entry="{{}}" presetCopy="{{presetCopy}}" presetImage="{{presetImage}}" bind:close="onHidePoster" />

@@ -1,5 +1,5 @@
 {
-  "appid": "wxa9613c6103f90906",
+  "appid": "wx16b7f9571f326b5d",
   "projectname": "NPC-log_wx",
   "description": "NPC 日志微信小程序",
   "packOptions": {
@@ -49,5 +49,6 @@
   "libVersion": "3.0.0",
   "condition": {},
   "simulatorPluginLibVersion": {},
-  "editorSetting": {}
+  "editorSetting": {},
+  "isGameTourist": false
 }

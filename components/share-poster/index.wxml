@@ -9,7 +9,7 @@
       <view
         wx:for="{{platforms}}"
         wx:key="key"
-        class="sp-chip {{platform === item.key ? 'sp-chip-on' : ''}}"
+        class="sp-chip {{index > 0 ? 'sp-chip-left' : ''}} {{platform === item.key ? 'sp-chip-on' : ''}}"
         data-key="{{item.key}}"
         bindtap="onPickPlatform"
       >{{item.label}}</view>
@@ -20,8 +20,16 @@
     <view wx:if="{{tip}}" class="sp-tip">{{tip}}</view>
 
     <view class="sp-actions">
-      <button class="sp-btn" size="mini" bindtap="onRegenerate">换一版</button>
-      <button class="sp-btn sp-btn-primary" size="mini" bindtap="onSave">保存图片</button>
+      <button class="sp-btn sp-btn-primary" size="mini" bindtap="onShareWx">发给微信好友</button>
+      <button class="sp-btn sp-btn-left" size="mini" bindtap="onSave">存到相册</button>
+    </view>
+    <view class="sp-actions sp-actions-sub">
+      <button class="sp-btn" size="mini" bindtap="onShareToApp" data-platform="xiaohongshu">去小红书发布</button>
+      <button class="sp-btn sp-btn-left" size="mini" bindtap="onShareToApp" data-platform="douyin">去抖音发布</button>
+    </view>
+    <view class="sp-actions sp-actions-sub">
+      <button class="sp-btn" size="mini" bindtap="onRegenerate">换一版文案</button>
+      <button class="sp-btn sp-btn-left" size="mini" bindtap="onCopyText">复制文案</button>
     </view>
   </view>
 </view>

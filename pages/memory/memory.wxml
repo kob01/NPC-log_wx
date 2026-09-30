@@ -1,4 +1,4 @@
-<view class="memory">
+<view class="memory page-root {{themeClass}}">
   <!-- 1. AI 问答 -->
   <view class="card">
     <view class="section-title">⚡ 问一下你的日记</view>
@@ -19,7 +19,7 @@
       <view class="refs" wx:if="{{askResult.references.length}}">
         <view class="refs-title">参考来源</view>
         <view
-          class="ref-item"
+          class="ref-item {{last ? 'ref-item-last' : ''}}"
           wx:for="{{askResult.references}}"
           wx:key="id"
           data-id="{{item.id}}"

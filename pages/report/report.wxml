@@ -1,4 +1,4 @@
-<view class="report">
+<view class="report page-root {{themeClass}}">
   <view class="year-bar">
     <picker mode="selector" range="{{years}}" value="{{yearIndex}}" bindchange="onYearChange">
       <view class="year-picker">{{year || '选择年份'}} ▾</view>
@@ -35,7 +35,7 @@
 
       <!-- AI 年度总结 -->
       <view class="card">
-        <view class="section-title"> 年度总结</view>
+        <view class="section-title">✨ 年度总结</view>
         <block wx:if="{{report.summary}}">
           <view class="summary-text">{{report.summary}}</view>
           <view class="tag-cloud">

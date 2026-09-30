@@ -1,6 +1,6 @@
 .detail {
   min-height: 100vh;
-  padding-bottom: 40rpx;
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
 }
 
 .gallery {
@@ -22,7 +22,9 @@
 
 .head-time {
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-3);
+  /* 无分类标签时时间仍靠右，与卡片右上角位置保持一致 */
+  margin-left: auto;
 }
 
 .head-title {
@@ -34,13 +36,33 @@
 .meta {
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #888;
+  color: var(--text-3);
 }
 
 .ai-summary {
   font-size: 28rpx;
-  color: #444;
+  color: var(--text-body);
   line-height: 1.7;
+}
+
+/* 录音回放 */
+.audio-row {
+  display: flex;
+  align-items: center;
+}
+
+.audio-btn {
+  padding: 10rpx 32rpx;
+  border-radius: 40rpx;
+  background: var(--primary);
+  color: var(--text-inv);
+  font-size: 28rpx;
+}
+
+.audio-time {
+  margin-left: 20rpx;
+  font-size: 26rpx;
+  color: var(--text-3);
 }
 
 .ai-tags {
@@ -49,7 +71,7 @@
 
 .body-text {
   font-size: 30rpx;
-  color: #333;
+  color: var(--text-body);
   line-height: 1.8;
   white-space: pre-wrap;
   word-break: break-all;
@@ -57,19 +79,19 @@
 
 .loc-name {
   font-size: 30rpx;
-  color: #1f1f1f;
+  color: var(--text-1);
 }
 
 .loc-addr {
   margin-top: 6rpx;
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-3);
 }
 
 .loc-go {
   margin-top: 12rpx;
   font-size: 26rpx;
-  color: #1677ff;
+  color: var(--primary);
 }
 
 .link-item {
@@ -77,18 +99,23 @@
   align-items: center;
   justify-content: space-between;
   padding: 16rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid var(--divider);
 }
 
 .link-title {
   flex: 1;
   font-size: 28rpx;
-  color: #1677ff;
+  color: var(--primary);
+}
+
+/* 最后一行不再拖一条无意义的分隔线 */
+.link-item-last {
+  border-bottom: none;
 }
 
 .link-copy {
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-3);
   margin-left: 20rpx;
 }
 
@@ -106,10 +133,15 @@
   margin: 0 12rpx;
 }
 
+/* 单独一行的分享按钮不需要 flex 行内的侧边距，否则与上下卡片左右缘不对齐 */
+.share-row .footer-btn {
+  margin: 0;
+}
+
 .btn-danger {
-  background: #fff;
-  color: #f5222d;
-  border: 1rpx solid #f5222d;
+  background: var(--card);
+  color: var(--danger);
+  border: 1rpx solid var(--danger);
   border-radius: 12rpx;
   font-size: 28rpx;
   padding: 14rpx 0;

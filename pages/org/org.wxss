@@ -5,7 +5,7 @@
 
 .tabs {
   display: flex;
-  background: #fff;
+  background: var(--card);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -16,12 +16,12 @@
   text-align: center;
   padding: 26rpx 0;
   font-size: 28rpx;
-  color: #666;
+  color: var(--text-2);
   position: relative;
 }
 
 .tab.active {
-  color: #1677ff;
+  color: var(--primary);
   font-weight: 600;
 }
 
@@ -33,7 +33,7 @@
   transform: translateX(-50%);
   width: 60rpx;
   height: 6rpx;
-  background: #1677ff;
+  background: var(--primary);
   border-radius: 3rpx;
 }
 
@@ -45,14 +45,16 @@
   padding: 0 8rpx;
   margin-left: 8rpx;
   border-radius: 16rpx;
-  background: #f5222d;
-  color: #fff;
+  background: var(--danger);
+  color: var(--text-inv);
   font-size: 20rpx;
   text-align: center;
+  /* 默认 baseline 对齐会让红点骑在文字基线上 */
+  vertical-align: middle;
 }
 
 .o-card {
-  background: #fff;
+  background: var(--card);
   border-radius: 18rpx;
   margin: 20rpx 24rpx;
   padding: 24rpx;
@@ -72,28 +74,28 @@
 
 .o-org {
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-3);
   max-width: 40%;
 }
 
 .o-desc {
   margin-top: 10rpx;
   font-size: 26rpx;
-  color: #666;
+  color: var(--text-2);
 }
 
 .o-meta {
   margin-top: 12rpx;
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-3);
 }
 
 .status.ok {
-  color: #52c41a;
+  color: var(--success);
 }
 
 .status.wait {
-  color: #fa8c16;
+  color: var(--warning);
 }
 
 .dot {
@@ -101,7 +103,7 @@
 }
 
 .red {
-  color: #f5222d;
+  color: var(--danger);
 }
 
 .o-actions {
@@ -121,14 +123,14 @@
 }
 
 .mini-btn.primary {
-  background: #1677ff;
-  color: #fff;
+  background: var(--primary);
+  color: var(--text-inv);
 }
 
 .mini-btn.danger {
-  background: #fff;
-  color: #f5222d;
-  border: 1rpx solid #ffa39e;
+  background: var(--card);
+  color: var(--danger);
+  border: 1rpx solid var(--danger);
 }
 
 .mini-btn::after {
@@ -137,14 +139,18 @@
 
 .wait-tag {
   font-size: 24rpx;
-  color: #fa8c16;
+  color: var(--warning);
   align-self: center;
 }
 
 .mask {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  /* 不用 inset 简写：部分旧内核不支持，会让遮罩变成 0 尺寸、点外部无法关闭 */
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--mask);
   z-index: 100;
 }
 
@@ -154,11 +160,15 @@
   right: 0;
   bottom: 0;
   height: 70vh;
-  background: #fff;
+  background: var(--card);
   border-radius: 28rpx 28rpx 0 0;
   z-index: 101;
   display: flex;
   flex-direction: column;
+  /* 内容超高时裁在面板内，不让成员/审批行溢出圆角面板 */
+  overflow: hidden;
+  /* 底部安全区，避免最后一行成员/审批项落在 Home 条下 */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .popup-head {
@@ -175,12 +185,12 @@
 
 .popup-close {
   font-size: 36rpx;
-  color: #999;
+  color: var(--text-3);
 }
 
 .popup-tabs {
   display: flex;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid var(--divider);
 }
 
 .ptab {
@@ -188,17 +198,19 @@
   text-align: center;
   padding: 20rpx 0;
   font-size: 28rpx;
-  color: #666;
+  color: var(--text-2);
 }
 
 .ptab.active {
-  color: #1677ff;
+  color: var(--primary);
   font-weight: 600;
-  border-bottom: 4rpx solid #1677ff;
+  border-bottom: 4rpx solid var(--primary);
 }
 
 .popup-body {
   flex: 1;
+  /* scroll-view 在 flex 列里需要明确可收缩，否则高度塌陷不滚动或溢出面板 */
+  min-height: 0;
   padding: 0 28rpx;
 }
 
@@ -207,21 +219,28 @@
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid #f5f5f5;
+  border-bottom: 1rpx solid var(--divider);
 }
 
 .p-name {
   font-size: 28rpx;
+  /* 长用户名+真名不撑开整行，把右侧按钮顶出屏幕 */
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .p-role {
   margin-left: 12rpx;
   font-size: 22rpx;
-  color: #999;
+  color: var(--text-3);
 }
 
 .p-btns {
   display: flex;
+  flex-shrink: 0;
 }
 
 .p-btn {
@@ -232,12 +251,12 @@
 }
 
 .p-btn.ok {
-  background: #1677ff;
-  color: #fff;
+  background: var(--primary);
+  color: var(--text-inv);
 }
 
 .p-btn.no {
-  background: #fff;
-  color: #f5222d;
-  border: 1rpx solid #ffa39e;
+  background: var(--card);
+  color: var(--danger);
+  border: 1rpx solid var(--danger);
 }

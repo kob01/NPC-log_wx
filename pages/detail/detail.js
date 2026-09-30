@@ -3,6 +3,7 @@ const auth = require('../../utils/auth')
 const { resolveFileUrl } = require('../../utils/format')
 
 Page({
+  behaviors: [require("../../utils/themeBehavior")],
   data: {
     id: '',
     detail: null,
@@ -10,8 +11,14 @@ Page({
     visibilityText: '仅自己可见',
     canEdit: false,
     showPoster: false,
-    loading: true
+    loading: true,
+    // 录音回放
+    audioSrc: '',
+    audioPlaying: false,
+    audioCurrent: 0
   },
+
+  _audio: null,
 
   onLoad(options) {
     if (!auth.checkLogin()) return
@@ -25,6 +32,10 @@ Page({
       this._needRefresh = false
       this.loadDetail(this.data.id)
     }
+  },
+
+  onUnload() {
+    this.destroyAudio()
   },
 
   async loadDetail(id) {
@@ -52,15 +63,60 @@ Page({
           ? `组织可见·${detail.visibleOrgNames}`
           : '组织可见'
       }
+      // 录音相对路径必须经 resolveFileUrl 拼上 BASE_URL 才能播
+      const audioSrc = detail.audioUrl ? resolveFileUrl(detail.audioUrl) : ''
+      if (this._audio && this._audio.src !== audioSrc) this.destroyAudio()
       this.setData({
         detail,
         imageUrls,
         visibilityText,
         canEdit: !!detail.is_mine || auth.isAdmin(),
+        audioSrc,
+        audioPlaying: false,
+        audioCurrent: 0,
         loading: false
       })
     } catch (err) {
       this.setData({ detail: null, loading: false })
+    }
+  },
+
+  // ==================== 录音回放 ====================
+  destroyAudio() {
+    if (this._audio) {
+      this._audio.destroy()
+      this._audio = null
+    }
+  },
+
+  initAudio(src) {
+    const audio = wx.createInnerAudioContext()
+    audio.src = src
+    audio.onPlay(() => this.setData({ audioPlaying: true }))
+    audio.onPause(() => this.setData({ audioPlaying: false }))
+    audio.onStop(() => this.setData({ audioPlaying: false, audioCurrent: 0 }))
+    audio.onEnded(() => this.setData({ audioPlaying: false, audioCurrent: 0 }))
+    audio.onError(() => {
+      this.setData({ audioPlaying: false })
+      wx.showToast({ title: '录音播放失败', icon: 'none' })
+    })
+    // 秒数变化才刷屏，避免每次 timeupdate 都 setData
+    audio.onTimeUpdate(() => {
+      const s = Math.floor(audio.currentTime || 0)
+      if (s !== this.data.audioCurrent) this.setData({ audioCurrent: s })
+    })
+    this._audio = audio
+    return audio
+  },
+
+  toggleAudio() {
+    const { audioSrc } = this.data
+    if (!audioSrc) return
+    const audio = this._audio || this.initAudio(audioSrc)
+    if (this.data.audioPlaying) {
+      audio.pause()
+    } else {
+      audio.play()
     }
   },
 
@@ -132,6 +188,10 @@ Page({
         if (!res.confirm) return
         const { code, message } = await api.event.remove(this.data.id)
         if (Number(code) === 200) {
+          // 删掉后列表必须重拉，否则已删日志仍留在时间轴上
+          const app = getApp()
+          app.globalData = app.globalData || {}
+          app.globalData.timelineDirty = true
           wx.showToast({ title: '已删除', icon: 'success' })
           setTimeout(() => wx.navigateBack(), 600)
         } else {

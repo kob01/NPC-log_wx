@@ -1,60 +1,60 @@
 {
-  "pages": [
-    "pages/timeline/timeline",
-    "pages/memory/memory",
-    "pages/footprint/footprint",
-    "pages/profile/profile",
-    "pages/login/login",
-    "pages/detail/detail",
-    "pages/edit/edit",
-    "pages/report/report",
-    "pages/persons/persons",
-    "pages/org/org"
-  ],
-  "plugins": {
-    "WechatSI": {
-      "version": "0.3.5",
-      "provider": "wx069ba97219f66d99"
-    }
-  },
-  "window": {
-    "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#1677ff",
-    "navigationBarTitleText": "NPC日志",
-    "navigationBarTextStyle": "white",
-    "backgroundColor": "#f5f6f8"
-  },
-  "tabBar": {
-    "color": "#8a8a8a",
-    "selectedColor": "#1677ff",
-    "backgroundColor": "#ffffff",
-    "borderStyle": "black",
-    "list": [
-      {
-        "pagePath": "pages/timeline/timeline",
-        "text": "日志"
-      },
-      {
-        "pagePath": "pages/memory/memory",
-        "text": "AI回忆"
-      },
-      {
-        "pagePath": "pages/footprint/footprint",
-        "text": "足迹"
-      },
-      {
-        "pagePath": "pages/profile/profile",
-        "text": "我的"
-      }
-    ]
-  },
-  "permission": {
-    "scope.userLocation": {
-      "desc": "用于在地图上选择日志地点与展示足迹"
-    }
-  },
-  "requiredPrivateInfos": ["chooseLocation", "getLocation"],
-  "useExtendedLib": {},
-  "style": "v2",
-  "sitemapLocation": "sitemap.json"
+    "darkmode": true,
+    "pages": [
+        "pages/timeline/timeline",
+        "pages/memory/memory",
+        "pages/footprint/footprint",
+        "pages/profile/profile",
+        "pages/login/login",
+        "pages/detail/detail",
+        "pages/edit/edit",
+        "pages/report/report",
+        "pages/persons/persons",
+        "pages/org/org"
+    ],
+    "window": {
+        "backgroundTextStyle": "light",
+        "navigationBarBackgroundColor": "@navBgColor",
+        "navigationBarTitleText": "NPC日志",
+        "navigationBarTextStyle": "@navTxtStyle",
+        "backgroundColor": "@bgColor"
+    },
+    "tabBar": {
+        "color": "@tabFontColor",
+        "selectedColor": "@tabSelColor",
+        "backgroundColor": "@tabBgColor",
+        "borderStyle": "black",
+        "list": [
+            {
+                "pagePath": "pages/timeline/timeline",
+                "text": "日志"
+            },
+            {
+                "pagePath": "pages/memory/memory",
+                "text": "AI回忆"
+            },
+            {
+                "pagePath": "pages/footprint/footprint",
+                "text": "足迹"
+            },
+            {
+                "pagePath": "pages/profile/profile",
+                "text": "我的"
+            }
+        ]
+    },
+    "permission": {
+        "scope.userLocation": {
+            "desc": "用于在地图上选择日志地点与展示足迹"
+        }
+    },
+    "requiredPrivateInfos": [
+        "chooseLocation",
+        "getLocation"
+    ],
+    "lazyCodeLoading": "requiredComponents",
+    "useExtendedLib": {},
+    "style": "v2",
+    "themeLocation": "theme.json",
+    "sitemapLocation": "sitemap.json"
 }

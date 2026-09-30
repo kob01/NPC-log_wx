@@ -1,6 +1,7 @@
 const auth = require('../../utils/auth')
 
 Page({
+  behaviors: [require("../../utils/themeBehavior")],
   data: {
     user: {},
     isAdmin: false,

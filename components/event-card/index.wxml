@@ -1,36 +1,38 @@
 <view class="ec-card" bindtap="onTap">
+  <!-- 顶栏：事件标题贴左，时间贴右 -->
   <view class="ec-head">
-    <view class="tag tag-blue" wx:if="{{entry.type}}">{{entry.type}}</view>
-    <text class="ec-time">{{entry.time || ''}}</text>
+    <view class="ec-title ellipsis">{{entry.event || '（无标题）'}}</view>
+    <text class="ec-time">{{displayTime}}</text>
   </view>
 
-  <view class="ec-title ellipsis">{{entry.event || '（无标题）'}}</view>
-
-  <view class="ec-body ellipsis-2" wx:if="{{bodyText}}">{{bodyText}}</view>
-
-  <scroll-view class="ec-thumbs" scroll-x wx:if="{{displayThumbs.length}}">
+  <!-- 正文 + 单图预览：文字铺满左侧，图片靠右；无图时文字占满整行 -->
+  <view class="ec-media">
+    <view class="ec-body ellipsis-2" wx:if="{{bodyText}}">{{bodyText}}</view>
     <image
-      wx:for="{{displayThumbs}}"
-      wx:key="*this"
       class="ec-thumb"
-      src="{{item}}"
+      wx:if="{{displayThumbs.length}}"
+      src="{{displayThumbs[0]}}"
       mode="aspectFill"
       lazy-load
-      data-index="{{index}}"
+      data-index="{{0}}"
       catchtap="onPreview"
     />
-  </scroll-view>
+  </view>
 
   <view class="ec-tags" wx:if="{{displayTags.length || displayPersons.length}}">
     <view class="tag tag-geekblue" wx:for="{{displayTags}}" wx:key="*this">{{item}}</view>
     <view class="tag tag-purple" wx:for="{{displayPersons}}" wx:key="*this">{{item}}</view>
   </view>
 
-  <view class="ec-foot">
+  <!-- 底栏：事件类型固定左下，地址固定右下靠右；各自有则展示、无则隐藏，左右位置恒定 -->
+  <view class="ec-foot" wx:if="{{entry.position || entry.address || entry.type || (showScore && scorePercent != null)}}">
+    <view class="ec-foot-left">
+      <view class="tag tag-blue ec-type" wx:if="{{entry.type}}">{{entry.type}}</view>
+      <text class="ec-score" wx:if="{{showScore && scorePercent != null}}">相关度 {{scorePercent}}%</text>
+    </view>
     <view class="ec-loc ellipsis" wx:if="{{entry.position || entry.address}}">
       <text class="ec-loc-icon">◎</text>
       <text>{{entry.position || entry.address}}</text>
     </view>
-    <text class="ec-score" wx:if="{{showScore && scorePercent != null}}">相关度 {{scorePercent}}%</text>
   </view>
 </view>

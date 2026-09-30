@@ -1,4 +1,4 @@
-<view class="edit">
+<view class="edit page-root {{themeClass}}">
   <!-- 时间 -->
   <view class="form-item">
     <view class="label">时间<text class="req">*</text></view>
@@ -99,7 +99,7 @@
     <view wx:else>
       <view class="org-tip">不选则默认所有已加入组织可见</view>
       <view
-        class="org-row"
+        class="org-row {{last ? 'org-row-last' : ''}}"
         wx:for="{{orgOptions}}"
         wx:key="id"
         data-id="{{item.id}}"
@@ -132,7 +132,7 @@
     </button>
   </view>
 
-  <!-- 录音悬浮卡片：点卡片回顶部，▶ 播放录音，∧/∨ 折叠 -->
+  <!-- 录音悬浮卡片（刚录的与日志已存的都走这里）：点卡片回顶部，▶ 播放，∧/∨ 折叠，✕ 不保留录音 -->
   <view class="voice-panel {{voiceCollapsed ? 'collapsed' : ''}}" wx:if="{{voice}}" bindtap="voiceTapToTop">
     <view class="voice-head">
       <text class="voice-play" catchtap="togglePlay">{{playing ? '⏸' : '▶'}}</text>
@@ -141,6 +141,6 @@
       <text class="voice-fold" catchtap="toggleVoiceCollapsed">{{voiceCollapsed ? '∨' : '∧'}}</text>
       <text class="voice-close" catchtap="closeVoicePanel">✕</text>
     </view>
-    <view class="voice-text" wx:if="{{!voiceCollapsed}}">{{voice.text}}</view>
+    <view class="voice-text" wx:if="{{!voiceCollapsed && voice.text}}">{{voice.text}}</view>
   </view>
 </view>

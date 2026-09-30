@@ -1,4 +1,4 @@
-<view class="profile">
+<view class="profile page-root {{themeClass}}">
   <view class="user-card">
     <view class="avatar">{{avatarText}}</view>
     <view class="user-info">

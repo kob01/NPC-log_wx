@@ -9,7 +9,7 @@
   height: 72rpx;
   margin: 0 24rpx 20rpx;
   padding: 0 24rpx;
-  background: #fff;
+  background: var(--card);
   border-radius: 40rpx;
 }
 
@@ -35,14 +35,14 @@
   padding: 24rpx 12rpx;
   margin: 0 8rpx;
   text-align: center;
-  background: #fff;
+  background: var(--card);
   border-radius: 18rpx;
   border: 2rpx solid transparent;
 }
 
 .person-card.active {
-  border-color: #722ed1;
-  background: #f9f0ff;
+  border-color: var(--accent);
+  background: var(--accent-weak);
 }
 
 .p-avatar {
@@ -51,8 +51,8 @@
   line-height: 72rpx;
   margin: 0 auto;
   border-radius: 50%;
-  background: #722ed1;
-  color: #fff;
+  background: var(--accent);
+  color: var(--text-inv);
   font-size: 34rpx;
 }
 
@@ -65,7 +65,7 @@
 .p-count {
   margin-top: 4rpx;
   font-size: 22rpx;
-  color: #999;
+  color: var(--text-3);
 }
 
 .tl {
@@ -75,19 +75,20 @@
 .tl-head {
   display: flex;
   align-items: baseline;
-  padding: 0 30rpx 12rpx;
+  /* 与下方 event-card 的 24rpx 左右缘对齐 */
+  padding: 0 24rpx 12rpx;
 }
 
 .tl-name {
   font-size: 34rpx;
   font-weight: 700;
-  color: #722ed1;
+  color: var(--accent);
 }
 
 .tl-total {
   margin-left: 16rpx;
   font-size: 24rpx;
-  color: #999;
+  color: var(--text-3);
 }
 
 .chips {
@@ -101,13 +102,13 @@
   margin-right: 16rpx;
   border-radius: 30rpx;
   font-size: 26rpx;
-  background: #fff;
-  color: #666;
+  background: var(--card);
+  color: var(--text-2);
 }
 
 .chip.active {
-  background: #722ed1;
-  color: #fff;
+  background: var(--accent);
+  color: var(--text-inv);
 }
 
 .tl event-card {

@@ -1,8 +1,7 @@
-<view class="login">
+<view class="login page-root {{themeClass}}">
   <view class="brand">
     <view class="logo">◎</view>
     <view class="brand-name">NPC日志</view>
-    <view class="brand-desc">你的 AI ++ 超级记忆</view>
   </view>
 
   <view class="form">

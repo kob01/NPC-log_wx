@@ -1,8 +1,10 @@
 {
-  "navigationBarTitleText": "地图足迹",
-  "usingComponents": {
-    "empty-state": "/components/empty-state/index",
-    "loading": "/components/loading/index",
-    "share-poster": "/components/share-poster/index"
-  }
+    "navigationBarTitleText": "地图足迹",
+    "enablePullDownRefresh": true,
+    "backgroundTextStyle": "dark",
+    "usingComponents": {
+        "empty-state": "/components/empty-state/index",
+        "loading": "/components/loading/index",
+        "share-poster": "/components/share-poster/index"
+    }
 }

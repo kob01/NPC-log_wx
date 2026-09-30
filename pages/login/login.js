@@ -2,6 +2,7 @@ const api = require('../../utils/api')
 const auth = require('../../utils/auth')
 
 Page({
+  behaviors: [require("../../utils/themeBehavior")],
   data: {
     username: '',
     password: '',
@@ -9,7 +10,13 @@ Page({
   },
 
   onInput(e) {
-    this.setData({ [e.currentTarget.dataset.key]: e.detail.value })
+    // 不用计算属性名 { [key]: value }（会被增强编译转成
+    // require('@swc/runtime/_define_property.js')，该 runtime 缺失时
+    // 整个页面逻辑层注册失败，表现为开发者工具里按钮点了没反应），
+    // 改用先建对象再 setData 的等价写法
+    const patch = {}
+    patch[e.currentTarget.dataset.key] = e.detail.value
+    this.setData(patch)
   },
 
   async onLogin() {

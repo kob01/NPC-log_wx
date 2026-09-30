@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "日志",
+  "navigationBarTitleText": "NPC日志",
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark",
   "usingComponents": {

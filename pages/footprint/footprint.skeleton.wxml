@@ -1,0 +1,52 @@
+<!--
+此文件为开发者工具生成，生成时间: 2026/10/1 00:50:04
+使用方法：
+在 D:\code\NPC\NPC-log_wx\pages\footprint\footprint.wxml 引入模板
+
+```
+<import src="footprint.skeleton.wxml"/>
+<template is="skeleton" wx:if="{{loading}}" />
+```
+
+在 D:\code\NPC\NPC-log_wx\pages\footprint\footprint.wxss 中引入样式
+```
+@import "./footprint.skeleton.wxss";
+```
+
+更多详细信息可以参考文档：https://developers.weixin.qq.com/miniprogram/dev/devtools/skeleton.html
+-->
+<template name="skeleton">
+  <view class="sk-container">
+    <view class="footprint" data-ib-structured-id="page0-0">
+      <view class="filter" data-ib-structured-id="page0-1">
+        <scroll-view scroll-x="true" class="chips" data-ib-structured-id="page0-2">
+          <view class="chip active sk-transparent sk-text-18-7500-318 sk-text" data-ib-structured-id="page0-3" data-year="true">全部</view>
+          <view class="chip __ib-selected-node __ib-selected-node-notdrag sk-transparent sk-text-18-7500-943 sk-text" data-ib-structured-id="page0-4" data-year="2025">
+            2025(1)
+          </view>
+        </scroll-view>
+        <view class="tag-search" data-ib-structured-id="page0-5">
+          <view class="tag-input sk-image" data-ib-structured-id="page0-6" placeholder="按标签筛选" value="true"></view>
+          <text class="tag-go sk-transparent sk-text-18-7500-267 sk-text" data-ib-structured-id="page0-7">筛选</text>
+        </view>
+      </view>
+      <view class="count" data-ib-structured-id="page0-8">
+        <text data-ib-structured-id="page0-9" class="sk-transparent sk-text-18-7500-99 sk-text">共 1 个足迹点</text>
+        <button class="share-btn sk-transparent sk-button sk-pseudo sk-pseudo-circle" data-ib-structured-id="page0-10" size="mini">✨ 分享足迹</button>
+      </view>
+      <view show-location="true" class="map sk-transparent sk-text-18-7500-665 sk-text sk-image" data-ib-structured-id="page0-11" id="footprintMap" include-points="[{&quot;latitude&quot;:31.221461,&quot;longitude&quot;:121.544346}]" latitude="31.221461"
+        longitude="121.544346" markers="[{&quot;id&quot;:24,&quot;latitude&quot;:31.221461,&quot;longitude&quot;:121.544346,&quot;width&quot;:28,&quot;height&quot;:28,&quot;callout&quot;:{&quot;content&quot;:&quot;Welcome JYJ&quot;,&quot;color&quot;:&quot;#333333&quot;,&quot;fontSize&quot;:12,&quot;borderRadius&quot;:8,&quot;bgColor&quot;:&quot;#ffffff&quot;,&quot;padding&quot;:8,&quot;display&quot;:&quot;BYCLICK&quot;,&quot;textAlign&quot;:&quot;center&quot;}}]"
+        scale="14" style="position: relative; left: -32px; top: 5px">©2026 Tencent - GS(2026)1190号地图</view>
+      <view class="list" data-ib-structured-id="page0-23">
+        <view class="list-title sk-transparent sk-text-18-7500-386 sk-text" data-ib-structured-id="page0-24">足迹列表</view>
+        <view class="list-item" data-ib-structured-id="page0-25" data-index="0">
+          <view class="li-body" data-ib-structured-id="page0-27">
+            <view class="li-name ellipsis sk-transparent sk-text-18-7500-356 sk-text" data-ib-structured-id="page0-28">Welcome JYJ</view>
+            <view class="li-meta sk-transparent sk-text-18-7500-964 sk-text" data-ib-structured-id="page0-29">2025-05-21 · 浦东新区</view>
+          </view>
+          <text class="li-nav sk-transparent sk-text-18-7500-860 sk-text" data-ib-structured-id="page0-30">◎</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</template>

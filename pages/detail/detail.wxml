@@ -1,3 +1,4 @@
+<view class="page-root {{themeClass}}">
 <view class="detail" wx:if="{{detail}}">
   <!-- 图片轮播 -->
   <swiper
@@ -24,11 +25,21 @@
     <view class="meta">可见范围：{{visibilityText}}</view>
   </view>
 
+  <!-- 录音回放 -->
+  <view class="card" wx:if="{{audioSrc}}">
+    <view class="section-title">🎙 录音</view>
+    <view class="audio-row">
+      <view class="audio-btn" bindtap="toggleAudio">{{audioPlaying ? '⏸ 暂停' : '▶ 播放'}}</view>
+      <text class="audio-time" wx:if="{{audioPlaying}}">已播 {{audioCurrent}}″</text>
+      <text class="audio-time" wx:elif="{{detail.audioDuration}}">{{detail.audioDuration}}″</text>
+    </view>
+  </view>
+
   <!-- AI 摘要 -->
   <view class="card" wx:if="{{detail.summary || detail.tags.length || detail.persons.length}}">
     <view class="section-title">✨ AI 摘要</view>
     <view class="ai-summary" wx:if="{{detail.summary}}">{{detail.summary}}</view>
-    <view class="ai-tags">
+    <view class="ai-tags" wx:if="{{detail.tags.length || detail.persons.length}}">
       <view class="tag tag-geekblue" wx:for="{{detail.tags}}" wx:key="*this">{{item}}</view>
       <view class="tag tag-purple" wx:for="{{detail.persons}}" wx:key="*this">{{item}}</view>
     </view>
@@ -66,7 +77,7 @@
   <!-- 作品链接 -->
   <view class="card" wx:if="{{detail.links.length}}">
     <view class="section-title">🔗 作品链接</view>
-    <view class="link-item" wx:for="{{detail.links}}" wx:key="id" data-url="{{item.url}}" bindtap="onCopyLink">
+    <view class="link-item {{last ? 'link-item-last' : ''}}" wx:for="{{detail.links}}" wx:key="id" data-url="{{item.url}}" bindtap="onCopyLink">
       <view class="link-title ellipsis">{{item.title || item.url}}</view>
       <text class="link-copy">复制</text>
     </view>
@@ -88,3 +99,4 @@
 <empty-state wx:else text="日志不存在或无权查看" />
 
 <share-poster visible="{{showPoster}}" entry="{{detail}}" bind:close="onHidePoster" />
+</view>

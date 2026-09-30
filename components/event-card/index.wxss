@@ -1,72 +1,97 @@
 .ec-card {
-  background: #fff;
+  background: var(--card);
   border-radius: 20rpx;
   padding: 24rpx;
   margin: 0 24rpx 20rpx;
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow);
 }
 
+/* 顶栏：标题贴左，时间贴右 */
 .ec-head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8rpx;
-}
-
-.ec-time {
-  font-size: 22rpx;
-  color: #999;
+  align-items: self-start;
+  margin-top: 0;
 }
 
 .ec-title {
-  font-size: 30rpx;
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
   font-weight: 600;
-  color: #1f1f1f;
+  color: var(--text-1);
+}
+
+.ec-time {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+/* 正文 + 单图预览：文字铺满左侧，图片靠右 */
+.ec-media {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 8rpx;
 }
 
 .ec-body {
-  margin-top: 8rpx;
+  flex: 1;
+  min-width: 0;
   font-size: 26rpx;
-  color: #666;
+  color: var(--text-2);
 }
 
-.ec-thumbs {
-  margin-top: 16rpx;
-  white-space: nowrap;
-}
-
+/* 单图预览：固定尺寸靠右，无正文时仍贴右 */
 .ec-thumb {
-  display: inline-block;
-  width: 112rpx;
-  height: 112rpx;
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  width: 120rpx;
+  height: 120rpx;
   border-radius: 12rpx;
-  margin-right: 12rpx;
-  background: #f0f0f0;
+  background: var(--fill);
 }
 
 .ec-tags {
   margin-top: 14rpx;
 }
 
+/* 底栏：事件类型固定左下，地址固定右下靠右 */
 .ec-foot {
   margin-top: 12rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
 }
 
+/* 左下槽：事件类型 + 相关度（不参与伸缩，始终贴左） */
+.ec-foot-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* 右下槽：地址靠右展示，过长则省略号截断（margin-left:auto 保证无类型时仍贴右） */
 .ec-loc {
   font-size: 22rpx;
-  color: #999;
-  max-width: 70%;
+  color: var(--text-3);
+  margin-left: auto;
+  min-width: 0;
 }
 
 .ec-loc-icon {
   margin-right: 4rpx;
-  color: #bbb;
+  color: var(--text-4);
+}
+
+/* 事件类型：左下角首个元素，无外边距 */
+.ec-type {
+  flex-shrink: 0;
+  margin: 0;
 }
 
 .ec-score {
+  flex-shrink: 0;
+  margin-left: 12rpx;
   font-size: 22rpx;
-  color: #1677ff;
+  color: var(--primary);
 }

@@ -1,5 +1,5 @@
-<view class="timeline">
-  <!-- 搜索：收起为图标，点击展开为输入框 -->
+<view class="timeline page-root {{themeClass}}">
+  <!-- 顶部：展开为搜索框；收起时右侧并排「搜索图标 + 新增」 -->
   <view class="search-bar">
     <view class="search-box" wx:if="{{searchExpanded}}">
       <text class="search-icon">🔍</text>
@@ -15,25 +15,30 @@
       />
       <text class="search-clear" wx:if="{{keyword}}" bindtap="onClear">✕</text>
     </view>
-    <view class="search-collapsed" wx:else bindtap="expandSearch">
-      <text class="search-icon">🔍</text>
-      <text class="search-hint">搜索日志</text>
+    <view class="top-bar" wx:else>
+      <view class="search-collapsed" bindtap="expandSearch"><text class="search-icon">🔍</text></view>
+      <view class="add-btn" bindtap="goEdit">＋</view>
     </view>
   </view>
 
   <block wx:if="{{groups.length}}">
-    <view class="group" wx:for="{{groups}}" wx:key="day" wx:for-item="group">
-      <view class="day-head">
-        <text class="day-pill">{{group.day}}</text>
+    <view class="tl-body">
+      <view class="tl-line"></view>
+      <view class="group" wx:for="{{groups}}" wx:key="month" wx:for-item="group">
+        <view class="tl-month">{{group.label}}</view>
+        <view
+          class="tl-row {{item.first ? 'tl-row-first' : ''}}"
+          wx:for="{{group.items}}"
+          wx:key="id"
+        >
+          <view class="tl-dot"></view>
+          <event-card
+            entry="{{item}}"
+            show-score="{{searchMode}}"
+            bind:select="goDetail"
+          />
+        </view>
       </view>
-      <event-card
-        wx:for="{{group.items}}"
-        wx:key="id"
-        wx:for-item="item"
-        entry="{{item}}"
-        show-score="{{searchMode}}"
-        bind:select="goDetail"
-      />
     </view>
   </block>
 
@@ -47,11 +52,14 @@
     — 没有更多了 —
   </view>
 
-  <!-- 悬浮按钮：＋ 写日志 / 🎙 长按录音 -->
-  <block wx:if="{{!searchMode}}">
-    <view class="fab fab-mic" bindtouchstart="onMicStart" bindtouchend="onMicEnd" bindtouchcancel="onMicEnd">🎙</view>
-    <view class="fab" bindtap="goEdit">＋</view>
-  </block>
+  <!-- 底部录音悬浮按钮：按住录音，松开发送 -->
+  <view
+    class="fab"
+    wx:if="{{!searchMode}}"
+    bindtouchstart="onMicStart"
+    bindtouchend="onMicEnd"
+    bindtouchcancel="onMicEnd"
+  >🎙</view>
 
   <!-- 录音波纹浮层 -->
   <view class="record-mask" wx:if="{{recording}}" catchtouchmove="noop">
@@ -62,7 +70,7 @@
       <view class="mic-core">🎙</view>
     </view>
     <view class="record-time">{{recordSeconds}}″</view>
-    <view class="record-text">{{liveText || '请说出这段日志…'}}</view>
+    <view class="record-text">请说出这段日志…</view>
     <view class="record-hint">松开发送 · 最长 60 秒</view>
   </view>
 </view>
