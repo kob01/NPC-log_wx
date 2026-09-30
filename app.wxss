@@ -65,55 +65,55 @@ page {
 
 /* ---------- 深色模式 token：挂在页面根节点 .theme-dark 类上，由 JS 监听系统切换实时增删，免重进即时换色 ---------- */
 .theme-dark {
-    --bg: #17181a;
-    --card: #232527;
-    --card-sub: #2a2c2f;
-    --fill: #2f3134;
-    --fill-2: #34363a;
-    --info-bg: #1c2a3a;
-    --mask: rgba(0, 0, 0, 0.65);
-    --shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.4);
+  --bg: #17181a;
+  --card: #232527;
+  --card-sub: #2a2c2f;
+  --fill: #2f3134;
+  --fill-2: #34363a;
+  --info-bg: #1c2a3a;
+  --mask: rgba(0, 0, 0, 0.65);
+  --shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.4);
 
-    --text-1: #eaeaea;
-    --text-body: #d0d0d0;
-    --text-2: #a6a6a6;
-    --text-3: #8a8a8a;
-    --text-4: #6a6a6a;
-    --text-inv: #fff;
+  --text-1: #eaeaea;
+  --text-body: #d0d0d0;
+  --text-2: #a6a6a6;
+  --text-3: #8a8a8a;
+  --text-4: #6a6a6a;
+  --text-inv: #fff;
 
-    --primary: #3d8bfd;
-    --primary-2: #5b9dff;
-    --primary-weak: #17304d;
-    --accent: #9f5fe0;
-    --accent-weak: #2a1c3d;
+  --primary: #3d8bfd;
+  --primary-2: #5b9dff;
+  --primary-weak: #17304d;
+  --accent: #9f5fe0;
+  --accent-weak: #2a1c3d;
 
-    --border: #34363a;
-    --border-2: #3a3d42;
-    --divider: #303236;
+  --border: #34363a;
+  --border-2: #3a3d42;
+  --divider: #303236;
 
-    --danger: #ff6b6b;
-    --danger-weak: #3a1e20;
-    --success: #73d13d;
-    --warning: #ffa940;
+  --danger: #ff6b6b;
+  --danger-weak: #3a1e20;
+  --success: #73d13d;
+  --warning: #ffa940;
 
-    --tag-blue-bg: #17304d;
-    --tag-blue-fg: #69b1ff;
-    --tag-purple-bg: #2a1c3d;
-    --tag-purple-fg: #b37feb;
-    --tag-geek-bg: #1b2340;
-    --tag-geek-fg: #85a5ff;
-    --tag-cyan-bg: #123134;
-    --tag-cyan-fg: #36cfc9;
-    --tag-gold-bg: #3a2f14;
-    --tag-gold-fg: #e8c451;
-    --tag-green-bg: #1d2b17;
-    --tag-green-fg: #95de64;
-    --tag-orange-bg: #3a2716;
-    --tag-orange-fg: #ffc069;
-    --tag-red-bg: #3a1e20;
-    --tag-red-fg: #ff7875;
-    --tag-gray-bg: #34363a;
-    --tag-gray-fg: #b0b0b0;
+  --tag-blue-bg: #17304d;
+  --tag-blue-fg: #69b1ff;
+  --tag-purple-bg: #2a1c3d;
+  --tag-purple-fg: #b37feb;
+  --tag-geek-bg: #1b2340;
+  --tag-geek-fg: #85a5ff;
+  --tag-cyan-bg: #123134;
+  --tag-cyan-fg: #36cfc9;
+  --tag-gold-bg: #3a2f14;
+  --tag-gold-fg: #e8c451;
+  --tag-green-bg: #1d2b17;
+  --tag-green-fg: #95de64;
+  --tag-orange-bg: #3a2716;
+  --tag-orange-fg: #ffc069;
+  --tag-red-bg: #3a1e20;
+  --tag-red-fg: #ff7875;
+  --tag-gray-bg: #34363a;
+  --tag-gray-fg: #b0b0b0;
 }
 
 /* 页面根节点：铺满视口并引用主题 token；根节点带 .theme-dark 时其下所有 token 自动切换 */

@@ -238,11 +238,15 @@ Page({
       const day = dayKey(entry.time);
       const month = day.slice(0, 7);
       const label =
-        month === "未知日期" ? month : `${month.slice(0, 4)}年${Number(month.slice(5, 7))}月`;
+        month === "未知日期"
+          ? month
+          : `${month.slice(0, 4)}年${Number(month.slice(5, 7))}月`;
       const last = groups[groups.length - 1];
       // 用 Object.assign 而非对象展开 { ...entry }：展开会被增强编译转成
       // require('@swc/runtime/...') helper，工具端 runtime 缺失时整页注册失败
-      const row = Object.assign({}, entry, { first: !(last && last.month === month) });
+      const row = Object.assign({}, entry, {
+        first: !(last && last.month === month),
+      });
       if (last && last.month === month) {
         last.items.push(row);
       } else {
@@ -322,7 +326,8 @@ Page({
     if (!pending) return;
     app.globalData._pendingTimelineInsert = null;
     if (!pending.id || !pending.event) return;
-    if (this.data.entries.some((e) => String(e.id) === String(pending.id))) return;
+    if (this.data.entries.some((e) => String(e.id) === String(pending.id)))
+      return;
     const merged = [pending, ...this.data.entries];
     this.setData({ entries: merged, groups: this.buildGroups(merged) });
   },
