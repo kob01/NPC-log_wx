@@ -1,0 +1,111 @@
+<view class="memory">
+  <!-- 1. AI 问答 -->
+  <view class="card">
+    <view class="section-title">⚡ 问一下你的日记</view>
+    <textarea
+      class="ask-input"
+      placeholder="例如：去年我和家人去哪旅游了？"
+      maxlength="500"
+      value="{{question}}"
+      bindinput="onQuestionInput"
+    />
+    <button class="btn-primary ask-btn" loading="{{asking}}" bindtap="onAsk">提问</button>
+
+    <loading wx:if="{{asking}}" text="AI 正在回忆…" />
+    <view class="hint-bar" wx:if="{{askNotConfigured}}">AI 未配置，暂无法问答。可在服务端配置模型密钥后开启。</view>
+    <view class="ask-error" wx:if="{{askError}}">{{askError}}</view>
+    <view class="ask-answer" wx:if="{{askResult}}">
+      <view class="answer-text">{{askResult.answer}}</view>
+      <view class="refs" wx:if="{{askResult.references.length}}">
+        <view class="refs-title">参考来源</view>
+        <view
+          class="ref-item"
+          wx:for="{{askResult.references}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="goDetail"
+        >
+          <text class="ref-time">{{item.time}}</text>
+          <text class="ref-event">《{{item.event}}》</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 2. 热门标签 -->
+  <view class="card" wx:if="{{tags.length}}">
+    <view class="section-title">🏷 热门标签</view>
+    <view class="tag-cloud">
+      <view
+        class="tag tag-geekblue"
+        wx:for="{{tags}}"
+        wx:key="tag"
+        data-tag="{{item.tag}}"
+        bindtap="onTagClick"
+      >
+        {{item.tag}} · {{item.count}}
+      </view>
+    </view>
+  </view>
+
+  <!-- 3. 月度摘要 -->
+  <view class="card">
+    <view class="row-between">
+      <view class="section-title" style="margin-bottom:0">📅 本月摘要</view>
+      <text class="link-btn" bindtap="onSummary">{{summaryLoading ? '生成中' : (summary ? '重新生成' : '生成摘要')}}</text>
+    </view>
+    <view class="hint-bar" wx:if="{{summaryNotConfigured}}" style="margin-top:16rpx">AI 未配置，暂无法生成摘要。</view>
+    <view wx:if="{{summary && summary.summary}}">
+      <view class="summary-text">{{summary.summary}}</view>
+      <view class="tag-cloud" wx:if="{{summary.keywords.length}}">
+        <view
+          class="tag tag-cyan"
+          wx:for="{{summary.keywords}}"
+          wx:key="*this"
+          data-tag="{{item}}"
+          bindtap="onTagClick"
+        >
+          {{item}}
+        </view>
+      </view>
+      <view class="summary-meta">{{summary.period}}{{summary.cached ? ' · 已缓存' : ''}}</view>
+      <view class="share-line">
+        <text class="link-btn" bindtap="onSharePoster">✨ 生成分享卡</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 4. 记忆搜索 -->
+  <view class="card">
+    <view class="section-title">🔍 记忆搜索</view>
+    <view class="search-box">
+      <input
+        class="search-input"
+        placeholder="输入关键词检索相关日志"
+        confirm-type="search"
+        value="{{keyword}}"
+        bindinput="onKeywordInput"
+        bindconfirm="onSearch"
+      />
+      <text class="search-go" bindtap="onSearch">搜索</text>
+    </view>
+
+    <loading wx:if="{{searching}}" />
+    <block wx:elif="{{searchList.length}}">
+      <view class="search-count">共 {{searchTotal}} 条相关</view>
+      <event-card
+        wx:for="{{searchList}}"
+        wx:key="id"
+        entry="{{item}}"
+        show-score="{{true}}"
+        bind:select="goDetailById"
+      />
+      <view class="load-more" wx:if="{{searchList.length < searchTotal && searchList.length < 20}}" bindtap="onLoadMore">
+        加载更多
+      </view>
+    </block>
+    <empty-state wx:elif="{{searched}}" text="没有找到相关记忆" />
+  </view>
+</view>
+
+<share-poster visible="{{showPoster}}" type="summary" entry="{{posterEntry}}" presetCopy="{{posterCopy}}" bind:close="onHidePoster" />

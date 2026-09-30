@@ -1,0 +1,190 @@
+.footprint {
+  min-height: 100vh;
+  padding-bottom: 40rpx;
+}
+
+.filter {
+  background: #fff;
+  padding: 16rpx 0;
+}
+
+.chips {
+  white-space: nowrap;
+  padding: 0 24rpx 12rpx;
+}
+
+.chip {
+  display: inline-block;
+  padding: 8rpx 26rpx;
+  margin-right: 16rpx;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  background: #f5f6f8;
+  color: #666;
+}
+
+.chip.active {
+  background: #1677ff;
+  color: #fff;
+}
+
+.tag-search {
+  display: flex;
+  align-items: center;
+  margin: 0 24rpx;
+  height: 64rpx;
+  padding: 0 8rpx 0 24rpx;
+  background: #f5f6f8;
+  border-radius: 32rpx;
+}
+
+.tag-input {
+  flex: 1;
+  font-size: 26rpx;
+}
+
+.tag-go {
+  padding: 8rpx 26rpx;
+  background: #1677ff;
+  color: #fff;
+  border-radius: 28rpx;
+  font-size: 24rpx;
+}
+
+.count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 30rpx 0;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.share-btn {
+  background: #1677ff;
+  color: #fff;
+  font-size: 24rpx;
+  border-radius: 32rpx;
+  padding: 0 24rpx;
+  margin: 0;
+  line-height: 1.9;
+}
+
+.map {
+  width: 100%;
+  height: 560rpx;
+  margin-top: 16rpx;
+}
+
+.empty-hint {
+  margin: 30rpx 24rpx;
+}
+
+.sel-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  margin: 16rpx 24rpx;
+  padding: 20rpx;
+  border-radius: 18rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+}
+
+.sel-thumb {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 12rpx;
+  margin-right: 18rpx;
+  flex-shrink: 0;
+}
+
+.sel-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sel-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.sel-time {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+.sel-addr {
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 4rpx;
+}
+
+.sel-actions {
+  display: flex;
+  flex-direction: column;
+  margin-left: 12rpx;
+}
+
+.sel-btn {
+  padding: 10rpx 24rpx;
+  margin: 6rpx 0;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  text-align: center;
+  border: 1rpx solid #1677ff;
+  color: #1677ff;
+}
+
+.sel-btn.primary {
+  background: #1677ff;
+  color: #fff;
+}
+
+.list {
+  background: #fff;
+  margin: 16rpx 24rpx;
+  border-radius: 18rpx;
+  padding: 10rpx 24rpx;
+}
+
+.list-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  padding: 16rpx 0;
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.li-thumb {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 10rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.li-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.li-name {
+  font-size: 28rpx;
+}
+
+.li-meta {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+
+.li-nav {
+  font-size: 34rpx;
+  color: #1677ff;
+}

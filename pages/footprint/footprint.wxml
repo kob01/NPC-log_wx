@@ -1,0 +1,83 @@
+<view class="footprint">
+  <!-- 过滤条 -->
+  <view class="filter">
+    <scroll-view class="chips" scroll-x>
+      <view class="chip {{year === '' ? 'active' : ''}}" data-year="" bindtap="onYearChip">全部</view>
+      <view
+        class="chip {{year === item.year ? 'active' : ''}}"
+        wx:for="{{years}}"
+        wx:key="year"
+        data-year="{{item.year}}"
+        bindtap="onYearChip"
+      >
+        {{item.year}}({{item.count}})
+      </view>
+    </scroll-view>
+    <view class="tag-search">
+      <input
+        class="tag-input"
+        placeholder="按标签筛选"
+        value="{{tag}}"
+        confirm-type="search"
+        bindinput="onTagInput"
+        bindconfirm="onTagSearch"
+      />
+      <text class="tag-go" bindtap="onTagSearch">筛选</text>
+    </view>
+  </view>
+
+  <view class="count" wx:if="{{total}}">
+    <text>共 {{total}} 个足迹点</text>
+    <button class="share-btn" size="mini" bindtap="onSharePoster">✨ 分享足迹</button>
+  </view>
+
+  <!-- 地图 -->
+  <map
+    wx:if="{{markers.length}}"
+    class="map"
+    latitude="{{center.latitude}}"
+    longitude="{{center.longitude}}"
+    scale="{{scale}}"
+    markers="{{markers}}"
+    include-points="{{includePoints}}"
+    bindmarkertap="onMarkerTap"
+    show-location
+  />
+
+  <loading wx:if="{{loading}}" />
+  <view class="hint-bar empty-hint" wx:if="{{!loading && !markers.length}}">暂无带坐标的足迹</view>
+
+  <!-- 底部选中卡片 -->
+  <view class="sel-card" wx:if="{{selected}}">
+    <image
+      class="sel-thumb"
+      wx:if="{{selected.thumb}}"
+      src="{{selected.thumb}}"
+      mode="aspectFill"
+    />
+    <view class="sel-body">
+      <view class="sel-title ellipsis">{{selected.event}}</view>
+      <view class="sel-time">{{selected.time}}</view>
+      <view class="sel-addr ellipsis">{{selected.address || selected.position}}</view>
+    </view>
+    <view class="sel-actions">
+      <view class="sel-btn" data-id="{{selected.id}}" bindtap="goDetail">详情</view>
+      <view class="sel-btn primary" bindtap="openNav">导航</view>
+    </view>
+  </view>
+
+  <!-- 地点列表 -->
+  <view class="list" wx:if="{{points.length}}">
+    <view class="list-title">足迹列表</view>
+    <view class="list-item" wx:for="{{points}}" wx:key="id" data-index="{{index}}" bindtap="onListTap">
+      <image class="li-thumb" wx:if="{{item.thumb}}" src="{{item.thumb}}" mode="aspectFill" />
+      <view class="li-body">
+        <view class="li-name ellipsis">{{item.event}}</view>
+        <view class="li-meta">{{item.time}} · {{item.address || item.position}}</view>
+      </view>
+      <text class="li-nav">◎</text>
+    </view>
+  </view>
+</view>
+
+<share-poster visible="{{showPoster}}" type="footprint" entry="{{}}" presetCopy="{{presetCopy}}" bind:close="onHidePoster" />

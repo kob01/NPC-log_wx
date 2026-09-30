@@ -1,0 +1,36 @@
+<view class="ec-card" bindtap="onTap">
+  <view class="ec-head">
+    <view class="tag tag-blue" wx:if="{{entry.type}}">{{entry.type}}</view>
+    <text class="ec-time">{{entry.time || ''}}</text>
+  </view>
+
+  <view class="ec-title ellipsis">{{entry.event || '（无标题）'}}</view>
+
+  <view class="ec-body ellipsis-2" wx:if="{{bodyText}}">{{bodyText}}</view>
+
+  <scroll-view class="ec-thumbs" scroll-x wx:if="{{displayThumbs.length}}">
+    <image
+      wx:for="{{displayThumbs}}"
+      wx:key="*this"
+      class="ec-thumb"
+      src="{{item}}"
+      mode="aspectFill"
+      lazy-load
+      data-index="{{index}}"
+      catchtap="onPreview"
+    />
+  </scroll-view>
+
+  <view class="ec-tags" wx:if="{{displayTags.length || displayPersons.length}}">
+    <view class="tag tag-geekblue" wx:for="{{displayTags}}" wx:key="*this">{{item}}</view>
+    <view class="tag tag-purple" wx:for="{{displayPersons}}" wx:key="*this">{{item}}</view>
+  </view>
+
+  <view class="ec-foot">
+    <view class="ec-loc ellipsis" wx:if="{{entry.position || entry.address}}">
+      <text class="ec-loc-icon">◎</text>
+      <text>{{entry.position || entry.address}}</text>
+    </view>
+    <text class="ec-score" wx:if="{{showScore && scorePercent != null}}">相关度 {{scorePercent}}%</text>
+  </view>
+</view>

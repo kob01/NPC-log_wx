@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "我的组织",
+  "usingComponents": {
+    "empty-state": "/components/empty-state/index",
+    "loading": "/components/loading/index"
+  }
+}

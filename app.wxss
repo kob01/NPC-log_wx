@@ -1,0 +1,212 @@
+/* ==================== 全局样式 ==================== */
+page {
+  background: #f5f6f8;
+  color: #1f1f1f;
+  font-size: 28rpx;
+  line-height: 1.6;
+  --primary: #1677ff;
+  --text-2: #666;
+  --text-3: #999;
+  --border: #eee;
+}
+
+view,
+text,
+image {
+  box-sizing: border-box;
+}
+
+/* 卡片 */
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin: 20rpx 24rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+}
+
+.card-flat {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 24rpx;
+}
+
+/* 区块标题 */
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+  display: flex;
+  align-items: center;
+}
+
+/* 文本省略 */
+.ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ellipsis-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.ellipsis-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* 标签 */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2rpx 14rpx;
+  margin: 0 8rpx 8rpx 0;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.7;
+  background: #f0f0f0;
+  color: #555;
+}
+
+.tag-blue {
+  background: #e6f4ff;
+  color: #1677ff;
+}
+
+.tag-purple {
+  background: #f9f0ff;
+  color: #722ed1;
+}
+
+.tag-geekblue {
+  background: #f0f5ff;
+  color: #2f54eb;
+}
+
+.tag-cyan {
+  background: #e6fffb;
+  color: #13c2c2;
+}
+
+.tag-gold {
+  background: #fffbe6;
+  color: #d48806;
+}
+
+.tag-green {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.tag-orange {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.tag-red {
+  background: #fff1f0;
+  color: #f5222d;
+}
+
+/* 次要文本 */
+.text-2 {
+  color: var(--text-2);
+}
+
+.text-3 {
+  color: var(--text-3);
+}
+
+.text-sm {
+  font-size: 24rpx;
+}
+
+.text-bold {
+  font-weight: 600;
+}
+
+/* flex 工具 */
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-1 {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 主按钮 */
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  padding: 20rpx 0;
+  text-align: center;
+  border: none;
+}
+
+.btn-primary[disabled] {
+  opacity: 0.6;
+  color: #fff;
+}
+
+.btn-ghost {
+  background: #fff;
+  color: var(--primary);
+  border: 1rpx solid var(--primary);
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  padding: 14rpx 0;
+  text-align: center;
+}
+
+/* 提示条（AI 未配置等降级场景） */
+.hint-bar {
+  background: #f4f4f5;
+  color: #888;
+  font-size: 24rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 12rpx;
+  line-height: 1.5;
+}
+
+/* 顶部分类筛选 chips */
+.chips {
+  white-space: nowrap;
+}
+
+.chip {
+  display: inline-block;
+  padding: 8rpx 24rpx;
+  margin-right: 16rpx;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  background: #fff;
+  color: #666;
+}
+
+.chip.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* 分割 */
+.divider {
+  height: 1rpx;
+  background: var(--border);
+  margin: 16rpx 0;
+}

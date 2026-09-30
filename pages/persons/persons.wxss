@@ -1,0 +1,116 @@
+.persons {
+  min-height: 100vh;
+  padding: 20rpx 0 40rpx;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  height: 72rpx;
+  margin: 0 24rpx 20rpx;
+  padding: 0 24rpx;
+  background: #fff;
+  border-radius: 40rpx;
+}
+
+.search-icon {
+  font-size: 26rpx;
+  margin-right: 12rpx;
+  opacity: 0.5;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 28rpx;
+}
+
+.person-scroll {
+  white-space: nowrap;
+  padding: 0 16rpx;
+}
+
+.person-card {
+  display: inline-block;
+  width: 160rpx;
+  padding: 24rpx 12rpx;
+  margin: 0 8rpx;
+  text-align: center;
+  background: #fff;
+  border-radius: 18rpx;
+  border: 2rpx solid transparent;
+}
+
+.person-card.active {
+  border-color: #722ed1;
+  background: #f9f0ff;
+}
+
+.p-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #722ed1;
+  color: #fff;
+  font-size: 34rpx;
+}
+
+.p-name {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.p-count {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+
+.tl {
+  margin-top: 24rpx;
+}
+
+.tl-head {
+  display: flex;
+  align-items: baseline;
+  padding: 0 30rpx 12rpx;
+}
+
+.tl-name {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #722ed1;
+}
+
+.tl-total {
+  margin-left: 16rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.chips {
+  white-space: nowrap;
+  padding: 0 24rpx 16rpx;
+}
+
+.chip {
+  display: inline-block;
+  padding: 8rpx 26rpx;
+  margin-right: 16rpx;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  background: #fff;
+  color: #666;
+}
+
+.chip.active {
+  background: #722ed1;
+  color: #fff;
+}
+
+.tl event-card {
+  display: block;
+  margin-bottom: 20rpx;
+}

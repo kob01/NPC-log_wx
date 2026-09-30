@@ -1,0 +1,104 @@
+<view class="report">
+  <view class="year-bar">
+    <picker mode="selector" range="{{years}}" value="{{yearIndex}}" bindchange="onYearChange">
+      <view class="year-picker">{{year || '选择年份'}} ▾</view>
+    </picker>
+    <text class="reload" bindtap="reload">刷新</text>
+  </view>
+
+  <loading wx:if="{{loading}}" />
+  <view class="hint-bar error" wx:if="{{error}}">{{error}}</view>
+
+  <block wx:if="{{report && !loading}}">
+    <empty-state wx:if="{{report.eventCount === 0}}" text="这一年还没有日志" />
+
+    <block wx:else>
+      <!-- 核心数字 -->
+      <view class="stats">
+        <view class="stat-item">
+          <view class="stat-num">{{report.eventCount}}</view>
+          <view class="stat-label">条日志</view>
+        </view>
+        <view class="stat-item">
+          <view class="stat-num">{{report.monthCount}}<text class="stat-sub">/12</text></view>
+          <view class="stat-label">活跃月</view>
+        </view>
+        <view class="stat-item">
+          <view class="stat-num">{{report.locatedCount}}</view>
+          <view class="stat-label">有定位</view>
+        </view>
+        <view class="stat-item">
+          <view class="stat-num">{{report.topPersons.length}}</view>
+          <view class="stat-label">相关人物</view>
+        </view>
+      </view>
+
+      <!-- AI 年度总结 -->
+      <view class="card">
+        <view class="section-title"> 年度总结</view>
+        <block wx:if="{{report.summary}}">
+          <view class="summary-text">{{report.summary}}</view>
+          <view class="tag-cloud">
+            <view class="tag tag-gold" wx:for="{{report.keywords}}" wx:key="*this">{{item}}</view>
+          </view>
+          <view class="meta" wx:if="{{report.cached}}">已缓存</view>
+        </block>
+        <view class="hint-bar" wx:elif="{{!report.aiConfigured}}">AI 未配置，仅展示统计数据。</view>
+        <view class="hint-bar" wx:else>AI 总结生成失败或暂无内容。</view>
+      </view>
+
+      <!-- 分类分布 -->
+      <view class="card" wx:if="{{report.typeDist.length}}">
+        <view class="section-title">📊 分类分布</view>
+        <view class="bar-row" wx:for="{{report.typeDist}}" wx:key="type">
+          <text class="bar-name ellipsis">{{item.type}}</text>
+          <view class="bar-track">
+            <view class="bar-fill" style="width:{{item.percent}}%"></view>
+          </view>
+          <text class="bar-count">{{item.count}}</text>
+        </view>
+      </view>
+
+      <!-- 高频人物 -->
+      <view class="card" wx:if="{{report.topPersons.length}}">
+        <view class="section-title">👥 高频人物</view>
+        <view class="tag-cloud">
+          <view
+            class="tag tag-purple"
+            wx:for="{{report.topPersons}}"
+            wx:key="person"
+            data-name="{{item.person}}"
+            bindtap="goPersons"
+          >
+            {{item.person}} · {{item.count}}
+          </view>
+        </view>
+      </view>
+
+      <!-- 热门标签 -->
+      <view class="card" wx:if="{{report.topTags.length}}">
+        <view class="section-title">🏷 热门标签</view>
+        <view class="tag-cloud">
+          <view class="tag tag-geekblue" wx:for="{{report.topTags}}" wx:key="tag">
+            {{item.tag}} · {{item.count}}
+          </view>
+        </view>
+      </view>
+
+      <!-- 月度时间线 -->
+      <view class="card">
+        <view class="section-title">🗓 月度轨迹</view>
+        <view class="month-item" wx:for="{{report.months}}" wx:key="month">
+          <view class="month-dot {{item.summary ? 'on' : ''}}"></view>
+          <view class="month-body">
+            <view class="month-head">
+              <text class="month-name">{{item.month}}</text>
+              <text class="month-count">{{item.count}} 条</text>
+            </view>
+            <view class="month-summary ellipsis-2" wx:if="{{item.summary}}">{{item.summary}}</view>
+          </view>
+        </view>
+      </view>
+    </block>
+  </block>
+</view>

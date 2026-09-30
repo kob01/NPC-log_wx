@@ -1,0 +1,43 @@
+<view class="profile">
+  <view class="user-card">
+    <view class="avatar">{{avatarText}}</view>
+    <view class="user-info">
+      <view class="user-name">{{user.real_name || user.username || '未登录'}}</view>
+      <view class="user-sub">
+        <text>{{user.username}}</text>
+        <view class="tag tag-blue role-tag" wx:if="{{isAdmin}}">管理员</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="group">
+    <view class="cell">
+      <view class="cell-left">
+        <text class="cell-title">只看自己日志</text>
+        <text class="cell-desc">开启后列表/足迹/统计仅统计本人数据</text>
+      </view>
+      <switch checked="{{onlyMine}}" color="#1677ff" bindchange="onToggleOnlyMine" />
+    </view>
+  </view>
+
+  <view class="group">
+    <view class="cell" bindtap="goReport">
+      <view class="cell-left"><text class="cell-title">年度回顾</text></view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="divider"></view>
+    <view class="cell" bindtap="goPersons">
+      <view class="cell-left"><text class="cell-title">人物图谱</text></view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="divider"></view>
+    <view class="cell" bindtap="goOrg">
+      <view class="cell-left"><text class="cell-title">我的组织</text></view>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="logout-wrap">
+    <button class="btn-ghost logout-btn" bindtap="onLogout">退出登录</button>
+  </view>
+</view>

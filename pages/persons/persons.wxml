@@ -1,0 +1,60 @@
+<view class="persons">
+  <!-- 搜索人物 -->
+  <view class="search-box">
+    <text class="search-icon">🔍</text>
+    <input
+      class="search-input"
+      placeholder="搜索人物"
+      value="{{keyword}}"
+      bindinput="onKeywordInput"
+    />
+  </view>
+
+  <!-- 人物横滑列表 -->
+  <loading wx:if="{{listLoading}}" />
+  <scroll-view class="person-scroll" scroll-x wx:elif="{{filtered.length}}">
+    <view
+      class="person-card {{selected === item.person ? 'active' : ''}}"
+      wx:for="{{filtered}}"
+      wx:key="person"
+      data-name="{{item.person}}"
+      bindtap="selectPerson"
+    >
+      <view class="p-avatar">{{item.initial}}</view>
+      <view class="p-name ellipsis">{{item.person}}</view>
+      <view class="p-count">{{item.count}} 条</view>
+    </view>
+  </scroll-view>
+  <empty-state wx:else text="暂无人物数据（需 AI 抽取人物）" />
+
+  <!-- 所选人物时间线 -->
+  <view class="tl" wx:if="{{selected}}">
+    <view class="tl-head">
+      <text class="tl-name">{{selected}}</text>
+      <text class="tl-total" wx:if="{{timeline}}">共 {{timeline.total}} 条</text>
+    </view>
+
+    <scroll-view class="chips" scroll-x wx:if="{{yearChips.length}}">
+      <view
+        class="chip {{year === item.value ? 'active' : ''}}"
+        wx:for="{{yearChips}}"
+        wx:key="value"
+        data-year="{{item.value}}"
+        bindtap="onYearChip"
+      >
+        {{item.label}}
+      </view>
+    </scroll-view>
+
+    <loading wx:if="{{timelineLoading}}" />
+    <block wx:elif="{{timeline && timeline.list.length}}">
+      <event-card
+        wx:for="{{timeline.list}}"
+        wx:key="id"
+        entry="{{item}}"
+        bind:select="goDetail"
+      />
+    </block>
+    <empty-state wx:elif="{{!timelineLoading}}" text="该人物暂无相关日志" />
+  </view>
+</view>

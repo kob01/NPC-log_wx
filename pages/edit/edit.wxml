@@ -1,0 +1,146 @@
+<view class="edit">
+  <!-- 时间 -->
+  <view class="form-item">
+    <view class="label">时间<text class="req">*</text></view>
+    <view class="time-row">
+      <picker mode="date" value="{{date}}" bindchange="onDateChange">
+        <view class="picker-box">{{date || '选择日期'}}</view>
+      </picker>
+      <picker mode="time" value="{{timeStr}}" bindchange="onTimeChange">
+        <view class="picker-box">{{timeStr || '选择时间'}}</view>
+      </picker>
+    </view>
+  </view>
+
+  <!-- 事件 -->
+  <view class="form-item">
+    <view class="label">事件<text class="req">*</text></view>
+    <textarea class="area" placeholder="发生了什么？" maxlength="200" value="{{event}}" data-key="event" bindinput="onInput" />
+  </view>
+
+  <!-- 分类 -->
+  <view class="form-item">
+    <view class="label">分类</view>
+    <picker mode="selector" range="{{typeOptions}}" value="{{typeIndex}}" bindchange="onTypeChange">
+      <view class="picker-line">{{typeIndex >= 0 ? typeOptions[typeIndex] : '请选择分类'}} <text class="arrow">›</text></view>
+    </picker>
+  </view>
+
+  <!-- 进度/记录 -->
+  <view class="form-item">
+    <view class="label">进度 / 记录</view>
+    <textarea class="area" placeholder="详细记录…" maxlength="2000" value="{{content}}" data-key="content" bindinput="onInput" />
+  </view>
+
+  <!-- 评价 -->
+  <view class="form-item">
+    <view class="label">评价</view>
+    <picker mode="selector" range="{{ratingOptions}}" value="{{ratingIndex}}" bindchange="onRatingChange">
+      <view class="picker-line">{{ratingIndex >= 0 ? ratingOptions[ratingIndex] : '请选择评价'}} <text class="arrow">›</text></view>
+    </picker>
+  </view>
+
+  <!-- 感受 -->
+  <view class="form-item">
+    <view class="label">感受</view>
+    <textarea class="area" placeholder="你的感受…" maxlength="1000" value="{{feeling}}" data-key="feeling" bindinput="onInput" />
+  </view>
+
+  <!-- 经验教训 -->
+  <view class="form-item">
+    <view class="label">经验教训</view>
+    <textarea class="area" placeholder="学到了什么？" maxlength="1000" value="{{experience}}" data-key="experience" bindinput="onInput" />
+  </view>
+
+  <!-- 地点 -->
+  <view class="form-item">
+    <view class="label">地点</view>
+    <view class="loc-box" bindtap="chooseLocation">
+      <block wx:if="{{location.position}}">
+        <view class="loc-name">📍 {{location.position}}</view>
+        <view class="loc-addr" wx:if="{{location.address}}">{{location.address}}</view>
+        <text class="loc-clear" catchtap="clearLocation">✕ 清除</text>
+      </block>
+      <view class="loc-empty" wx:else>点击选择地点（地图选点）<text class="arrow">›</text></view>
+    </view>
+  </view>
+
+  <!-- 见证者 -->
+  <view class="form-item">
+    <view class="label">见证者</view>
+    <input class="input" placeholder="有谁在场？" maxlength="100" value="{{witness}}" data-key="witness" bindinput="onInput" />
+  </view>
+
+  <!-- 图片 -->
+  <view class="form-item">
+    <view class="label">图片（{{images.length}}/9）</view>
+    <view class="img-grid">
+      <view class="img-cell" wx:for="{{images}}" wx:key="url">
+        <image class="img" src="{{item.displayUrl}}" mode="aspectFill" data-index="{{index}}" bindtap="previewImage" />
+        <view class="img-del" data-index="{{index}}" catchtap="removeImage">✕</view>
+      </view>
+      <view class="img-add" wx:if="{{images.length < 9}}" bindtap="chooseImage">＋</view>
+    </view>
+    <view class="uploading" wx:if="{{uploading}}">图片上传中…</view>
+  </view>
+
+  <!-- 可见范围 -->
+  <view class="form-item">
+    <view class="label">可见范围</view>
+    <picker mode="selector" range="{{visibilityOptions}}" value="{{visibilityIndex}}" bindchange="onVisibilityChange">
+      <view class="picker-line">{{visibilityOptions[visibilityIndex]}} <text class="arrow">›</text></view>
+    </picker>
+  </view>
+
+  <!-- 可见组织（组织可见时） -->
+  <view class="form-item" wx:if="{{visibilityIndex === 1}}">
+    <view class="label">可见组织</view>
+    <view class="hint-bar" wx:if="{{!orgOptions.length}}">你还没有加入任何组织</view>
+    <view wx:else>
+      <view class="org-tip">不选则默认所有已加入组织可见</view>
+      <view
+        class="org-row"
+        wx:for="{{orgOptions}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="toggleOrg"
+      >
+        <text class="org-name">{{item.org_name}}</text>
+        <text class="org-check {{item.checked ? 'on' : ''}}">{{item.checked ? '✓' : ''}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 作品链接 -->
+  <view class="form-item">
+    <view class="label">作品链接</view>
+    <view class="link-row" wx:for="{{links}}" wx:key="index">
+      <picker class="link-platform" mode="selector" range="{{platformLabels}}" value="{{item.platformIndex}}" data-index="{{index}}" bindchange="onLinkPlatform">
+        <view class="picker-box small">{{platformLabels[item.platformIndex]}}</view>
+      </picker>
+      <input class="link-url" placeholder="链接地址" value="{{item.url}}" data-index="{{index}}" bindinput="onLinkUrl" />
+      <text class="link-del" data-index="{{index}}" catchtap="removeLink">✕</text>
+    </view>
+    <view class="link-add" bindtap="addLink">＋ 添加链接</view>
+  </view>
+
+  <view class="footer-space"></view>
+
+  <view class="submit-bar">
+    <button class="btn-primary submit-btn" loading="{{submitting}}" bindtap="onSubmit">
+      {{id ? '保存修改' : '发布日志'}}
+    </button>
+  </view>
+
+  <!-- 录音悬浮卡片：点卡片回顶部，▶ 播放录音，∧/∨ 折叠 -->
+  <view class="voice-panel {{voiceCollapsed ? 'collapsed' : ''}}" wx:if="{{voice}}" bindtap="voiceTapToTop">
+    <view class="voice-head">
+      <text class="voice-play" catchtap="togglePlay">{{playing ? '⏸' : '▶'}}</text>
+      <text class="voice-dur">{{voice.duration}}″</text>
+      <text class="voice-status">{{voiceStatus}}</text>
+      <text class="voice-fold" catchtap="toggleVoiceCollapsed">{{voiceCollapsed ? '∨' : '∧'}}</text>
+      <text class="voice-close" catchtap="closeVoicePanel">✕</text>
+    </view>
+    <view class="voice-text" wx:if="{{!voiceCollapsed}}">{{voice.text}}</view>
+  </view>
+</view>

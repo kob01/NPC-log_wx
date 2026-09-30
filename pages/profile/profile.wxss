@@ -1,0 +1,88 @@
+.profile {
+  min-height: 100vh;
+  padding-bottom: 40rpx;
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  padding: 50rpx 40rpx;
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  color: #fff;
+}
+
+.avatar {
+  width: 110rpx;
+  height: 110rpx;
+  line-height: 110rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 48rpx;
+  font-weight: 600;
+}
+
+.user-info {
+  margin-left: 28rpx;
+}
+
+.user-name {
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.user-sub {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  opacity: 0.9;
+}
+
+.role-tag {
+  margin-left: 16rpx;
+}
+
+.group {
+  background: #fff;
+  border-radius: 20rpx;
+  margin: 24rpx;
+  padding: 0 28rpx;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx 0;
+}
+
+.cell-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.cell-title {
+  font-size: 30rpx;
+  color: #1f1f1f;
+}
+
+.cell-desc {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+
+.arrow {
+  font-size: 40rpx;
+  color: #ccc;
+}
+
+.logout-wrap {
+  padding: 40rpx 24rpx;
+}
+
+.logout-btn {
+  color: #f5222d;
+  border-color: #f5222d;
+}

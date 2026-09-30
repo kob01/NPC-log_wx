@@ -1,0 +1,90 @@
+<view class="detail" wx:if="{{detail}}">
+  <!-- 图片轮播 -->
+  <swiper
+    class="gallery"
+    wx:if="{{imageUrls.length}}"
+    indicator-dots="{{imageUrls.length > 1}}"
+    circular
+  >
+    <swiper-item wx:for="{{imageUrls}}" wx:key="*this" data-index="{{index}}" bindtap="onPreviewImage">
+      <image class="gallery-img" src="{{item}}" mode="aspectFill" />
+    </swiper-item>
+  </swiper>
+
+  <!-- 头部信息 -->
+  <view class="card">
+    <view class="head-row">
+      <view class="tag tag-blue" wx:if="{{detail.type}}">{{detail.type}}</view>
+      <text class="head-time">{{detail.time}}</text>
+    </view>
+    <view class="head-title">{{detail.event || '（无标题）'}}</view>
+
+    <view class="meta" wx:if="{{detail.witness}}">见证者：{{detail.witness}}</view>
+    <view class="meta" wx:if="{{detail.author}}">作者：{{detail.author}}</view>
+    <view class="meta">可见范围：{{visibilityText}}</view>
+  </view>
+
+  <!-- AI 摘要 -->
+  <view class="card" wx:if="{{detail.summary || detail.tags.length || detail.persons.length}}">
+    <view class="section-title">✨ AI 摘要</view>
+    <view class="ai-summary" wx:if="{{detail.summary}}">{{detail.summary}}</view>
+    <view class="ai-tags">
+      <view class="tag tag-geekblue" wx:for="{{detail.tags}}" wx:key="*this">{{item}}</view>
+      <view class="tag tag-purple" wx:for="{{detail.persons}}" wx:key="*this">{{item}}</view>
+    </view>
+  </view>
+
+  <!-- 正文 -->
+  <view class="card" wx:if="{{detail.content}}">
+    <view class="section-title">进度 / 记录</view>
+    <view class="body-text">{{detail.content}}</view>
+  </view>
+
+  <view class="card" wx:if="{{detail.feeling}}">
+    <view class="section-title">感受</view>
+    <view class="body-text">{{detail.feeling}}</view>
+  </view>
+
+  <view class="card" wx:if="{{detail.experience}}">
+    <view class="section-title">经验教训</view>
+    <view class="body-text">{{detail.experience}}</view>
+  </view>
+
+  <view class="card" wx:if="{{detail.rating}}">
+    <view class="section-title">评价</view>
+    <view class="body-text">{{detail.rating}}</view>
+  </view>
+
+  <!-- 地点 -->
+  <view class="card loc-card" wx:if="{{detail.position || detail.address}}" bindtap="onOpenLocation">
+    <view class="section-title">📍 地点</view>
+    <view class="loc-name">{{detail.position || detail.address}}</view>
+    <view class="loc-addr" wx:if="{{detail.lng && detail.address}}">{{detail.address}}</view>
+    <view class="loc-go" wx:if="{{detail.lng && detail.lat}}">点击查看地图 / 导航 ›</view>
+  </view>
+
+  <!-- 作品链接 -->
+  <view class="card" wx:if="{{detail.links.length}}">
+    <view class="section-title">🔗 作品链接</view>
+    <view class="link-item" wx:for="{{detail.links}}" wx:key="id" data-url="{{item.url}}" bindtap="onCopyLink">
+      <view class="link-title ellipsis">{{item.title || item.url}}</view>
+      <text class="link-copy">复制</text>
+    </view>
+  </view>
+
+  <!-- 生成分享卡（浏览即可用） -->
+  <view class="share-row">
+    <button class="btn-primary footer-btn" bindtap="onShowPoster">✨ 生成分享卡</button>
+  </view>
+
+  <!-- 底部操作 -->
+  <view class="footer" wx:if="{{canEdit}}">
+    <button class="btn-ghost footer-btn" bindtap="goEdit">编辑</button>
+    <button class="btn-danger footer-btn" bindtap="onDelete">删除</button>
+  </view>
+</view>
+
+<loading wx:elif="{{loading}}" />
+<empty-state wx:else text="日志不存在或无权查看" />
+
+<share-poster visible="{{showPoster}}" entry="{{detail}}" bind:close="onHidePoster" />

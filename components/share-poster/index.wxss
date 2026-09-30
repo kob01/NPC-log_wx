@@ -1,0 +1,94 @@
+.sp-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sp-panel {
+  width: 640rpx;
+  max-height: 88vh;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.sp-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.sp-close {
+  font-size: 34rpx;
+  color: #a0aec0;
+  padding: 0 12rpx;
+}
+
+.sp-platforms {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.sp-chip {
+  flex: 1;
+  text-align: center;
+  font-size: 26rpx;
+  color: #666;
+  background: #f2f3f5;
+  border-radius: 32rpx;
+  padding: 10rpx 0;
+}
+
+.sp-chip-on {
+  color: #fff;
+  background: #1677ff;
+}
+
+/* 海报画布：3:4 竖版 */
+.sp-canvas {
+  width: 592rpx;
+  height: 789rpx;
+  border-radius: 16rpx;
+  background: #f5f6f8;
+}
+
+.sp-tip {
+  font-size: 24rpx;
+  color: #e6a23c;
+  text-align: center;
+  margin-top: 12rpx;
+}
+
+.sp-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 24rpx;
+}
+
+.sp-btn {
+  flex: 1;
+}
+
+.sp-btn-primary {
+  background: #1677ff;
+  color: #fff;
+}

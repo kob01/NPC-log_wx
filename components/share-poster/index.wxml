@@ -1,0 +1,27 @@
+<view class="sp-mask" wx:if="{{visible}}">
+  <view class="sp-panel">
+    <view class="sp-head">
+      <text class="sp-title">生成分享卡</text>
+      <text class="sp-close" bindtap="onClose">✕</text>
+    </view>
+
+    <view class="sp-platforms">
+      <view
+        wx:for="{{platforms}}"
+        wx:key="key"
+        class="sp-chip {{platform === item.key ? 'sp-chip-on' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="onPickPlatform"
+      >{{item.label}}</view>
+    </view>
+
+    <canvas type="2d" id="poster" class="sp-canvas"></canvas>
+
+    <view wx:if="{{tip}}" class="sp-tip">{{tip}}</view>
+
+    <view class="sp-actions">
+      <button class="sp-btn" size="mini" bindtap="onRegenerate">换一版</button>
+      <button class="sp-btn sp-btn-primary" size="mini" bindtap="onSave">保存图片</button>
+    </view>
+  </view>
+</view>

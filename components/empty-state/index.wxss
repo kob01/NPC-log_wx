@@ -1,0 +1,15 @@
+.empty {
+  padding: 100rpx 0;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 72rpx;
+  opacity: 0.5;
+}
+
+.empty-text {
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  color: #999;
+}

@@ -1,0 +1,37 @@
+<view class="login">
+  <view class="brand">
+    <view class="logo">◎</view>
+    <view class="brand-name">NPC日志</view>
+    <view class="brand-desc">你的 AI ++ 超级记忆</view>
+  </view>
+
+  <view class="form">
+    <view class="field">
+      <text class="field-label">账号</text>
+      <input
+        class="field-input"
+        placeholder="请输入用户名"
+        value="{{username}}"
+        data-key="username"
+        bindinput="onInput"
+      />
+    </view>
+    <view class="field">
+      <text class="field-label">密码</text>
+      <input
+        class="field-input"
+        password
+        placeholder="请输入密码"
+        value="{{password}}"
+        data-key="password"
+        bindinput="onInput"
+      />
+    </view>
+
+    <button class="btn-primary login-btn" loading="{{loading}}" bindtap="onLogin">
+      登 录
+    </button>
+
+    <view class="tip">登录即表示同意相关服务条款</view>
+  </view>
+</view>

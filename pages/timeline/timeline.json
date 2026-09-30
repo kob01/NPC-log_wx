@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "日志",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "event-card": "/components/event-card/index",
+    "empty-state": "/components/empty-state/index",
+    "loading": "/components/loading/index"
+  }
+}

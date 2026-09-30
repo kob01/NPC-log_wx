@@ -1,0 +1,102 @@
+<view class="org">
+  <!-- 顶部标签 -->
+  <view class="tabs">
+    <view class="tab {{tab === 'mine' ? 'active' : ''}}" data-tab="mine" bindtap="switchTab">我的组织</view>
+    <view class="tab {{tab === 'square' ? 'active' : ''}}" data-tab="square" bindtap="switchTab">组织广场</view>
+    <view class="tab {{tab === 'pending' ? 'active' : ''}}" wx:if="{{canManage || pendingCount}}" data-tab="pending" bindtap="switchTab">
+      待审批<text class="badge" wx:if="{{pendingCount}}">{{pendingCount}}</text>
+    </view>
+  </view>
+
+  <loading wx:if="{{loading}}" />
+
+  <!-- 我的组织 -->
+  <block wx:elif="{{tab === 'mine'}}">
+    <view class="o-card" wx:for="{{myOrgs}}" wx:key="id">
+      <view class="o-head">
+        <text class="o-name ellipsis">{{item.org_name}}</text>
+        <view class="tag tag-blue">{{item.roleText}}</view>
+      </view>
+      <view class="o-desc ellipsis-2" wx:if="{{item.description}}">{{item.description}}</view>
+      <view class="o-meta">
+        <text class="status {{item.my_status === 1 ? 'ok' : 'wait'}}">{{item.my_status === 1 ? '已通过' : '待审批'}}</text>
+        <text class="dot">·</text>
+        <text>{{item.member_count || 0}} 成员</text>
+        <text class="red" wx:if="{{item.pending_count > 0}}">· {{item.pending_count}} 待审批</text>
+      </view>
+      <view class="o-actions">
+        <button class="mini-btn primary" wx:if="{{item.my_status === 1 && item.is_manager === 1}}" data-id="{{item.id}}" bindtap="openManage">管理</button>
+        <button class="mini-btn danger" wx:if="{{item.my_status === 1}}" data-id="{{item.id}}" bindtap="onLeave">退出</button>
+      </view>
+    </view>
+    <empty-state wx:if="{{!myOrgs.length}}" text="你还没有加入任何组织" />
+  </block>
+
+  <!-- 组织广场 -->
+  <block wx:elif="{{tab === 'square'}}">
+    <view class="o-card" wx:for="{{square}}" wx:key="id">
+      <view class="o-head">
+        <text class="o-name ellipsis">{{item.org_name}}</text>
+      </view>
+      <view class="o-desc ellipsis-2" wx:if="{{item.description}}">{{item.description}}</view>
+      <view class="o-meta"><text>{{item.member_count || 0}} 成员</text></view>
+      <view class="o-actions">
+        <button class="mini-btn danger" wx:if="{{item.relation === 'joined'}}" data-id="{{item.id}}" bindtap="onLeave">退出</button>
+        <text class="wait-tag" wx:elif="{{item.relation === 'pending'}}">待审批</text>
+        <button class="mini-btn primary" wx:else data-id="{{item.id}}" bindtap="onApply">申请加入</button>
+      </view>
+    </view>
+    <empty-state wx:if="{{!square.length}}" text="暂无可加入的组织" />
+  </block>
+
+  <!-- 全局待审批 -->
+  <block wx:elif="{{tab === 'pending'}}">
+    <view class="o-card" wx:for="{{pendingAll}}" wx:key="key">
+      <view class="o-head">
+        <text class="o-name">{{item.username}}</text>
+        <text class="o-org ellipsis">申请加入：{{item.org_name}}</text>
+      </view>
+      <view class="o-meta"><text>{{item.apply_time}}</text></view>
+      <view class="o-actions">
+        <button class="mini-btn primary" data-org="{{item.orgId}}" data-user="{{item.userId}}" data-approved="1" bindtap="onAuditGlobal">通过</button>
+        <button class="mini-btn danger" data-org="{{item.orgId}}" data-user="{{item.userId}}" data-approved="0" bindtap="onAuditGlobal">拒绝</button>
+      </view>
+    </view>
+    <empty-state wx:if="{{!pendingAll.length}}" text="没有待审批的申请" />
+  </block>
+
+  <!-- 管理弹层 -->
+  <view class="mask" wx:if="{{manageOpen}}" bindtap="closeManage"></view>
+  <view class="popup" wx:if="{{manageOpen}}">
+    <view class="popup-head">
+      <text class="popup-title ellipsis">管理 · {{curOrg.org_name}}</text>
+      <text class="popup-close" bindtap="closeManage">✕</text>
+    </view>
+    <view class="popup-tabs">
+      <view class="ptab {{manageTab === 'requests' ? 'active' : ''}}" data-mt="requests" bindtap="switchManageTab">待审批({{requests.length}})</view>
+      <view class="ptab {{manageTab === 'members' ? 'active' : ''}}" data-mt="members" bindtap="switchManageTab">成员</view>
+    </view>
+    <scroll-view class="popup-body" scroll-y>
+      <block wx:if="{{manageTab === 'requests'}}">
+        <view class="p-row" wx:for="{{requests}}" wx:key="userId">
+          <text class="p-name">{{item.username}} {{item.real_name || ''}}</text>
+          <view class="p-btns">
+            <text class="p-btn ok" data-user="{{item.userId}}" data-approved="1" bindtap="onAudit">通过</text>
+            <text class="p-btn no" data-user="{{item.userId}}" data-approved="0" bindtap="onAudit">拒绝</text>
+          </view>
+        </view>
+        <empty-state wx:if="{{!requests.length}}" text="无待审批" />
+      </block>
+      <block wx:else>
+        <view class="p-row" wx:for="{{members}}" wx:key="id">
+          <text class="p-name">{{item.username}} {{item.real_name || ''}}<text class="p-role">{{item.roleText}}</text></text>
+          <view class="p-btns">
+            <text class="p-btn ok" wx:if="{{item.role !== 2 && item.role !== 1}}" data-user="{{item.id}}" data-role="1" bindtap="onSetManager">提升</text>
+            <text class="p-btn no" wx:if="{{item.role === 1}}" data-user="{{item.id}}" data-role="0" bindtap="onSetManager">降级</text>
+          </view>
+        </view>
+        <empty-state wx:if="{{!members.length}}" text="无成员" />
+      </block>
+    </scroll-view>
+  </view>
+</view>

@@ -1,0 +1,158 @@
+.report {
+  min-height: 100vh;
+  padding: 20rpx 0 40rpx;
+}
+
+.year-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30rpx 10rpx;
+}
+
+.year-picker {
+  padding: 12rpx 36rpx;
+  background: #fff;
+  border-radius: 30rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.reload {
+  font-size: 26rpx;
+  color: #1677ff;
+}
+
+.report .card {
+  margin: 0 24rpx 20rpx;
+}
+
+.hint-bar.error {
+  margin: 0 24rpx 20rpx;
+  background: #fff1f0;
+  color: #cf1322;
+}
+
+.stats {
+  display: flex;
+  background: #fff;
+  border-radius: 20rpx;
+  margin: 0 24rpx 20rpx;
+  padding: 30rpx 0;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-num {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #1677ff;
+}
+
+.stat-sub {
+  font-size: 24rpx;
+  color: #bbb;
+}
+
+.stat-label {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+
+.summary-text {
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: #444;
+  white-space: pre-wrap;
+}
+
+.tag-cloud {
+  margin-top: 12rpx;
+}
+
+.meta {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #bbb;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.bar-name {
+  width: 140rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.bar-track {
+  flex: 1;
+  height: 16rpx;
+  background: #f0f0f0;
+  border-radius: 10rpx;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4096ff, #1677ff);
+  border-radius: 10rpx;
+}
+
+.bar-count {
+  width: 60rpx;
+  text-align: right;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.month-item {
+  display: flex;
+  padding: 14rpx 0;
+}
+
+.month-dot {
+  width: 16rpx;
+  height: 16rpx;
+  margin: 12rpx 20rpx 0 4rpx;
+  border-radius: 50%;
+  background: #ddd;
+  flex-shrink: 0;
+}
+
+.month-dot.on {
+  background: #1677ff;
+}
+
+.month-body {
+  flex: 1;
+}
+
+.month-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.month-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.month-count {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.month-summary {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: #888;
+}
