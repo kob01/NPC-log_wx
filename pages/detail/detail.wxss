@@ -16,21 +16,38 @@
 
 .head-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  /* 顶对齐：标题占多行时时间仍贴首行，不随高度居中飘 */
+  align-items: flex-start;
 }
 
-.head-time {
-  font-size: 24rpx;
-  color: var(--text-3);
-  /* 无分类标签时时间仍靠右，与卡片右上角位置保持一致 */
-  margin-left: auto;
+/* 标题 + 分类标签同处一个流式容器，两者才能同行相接 */
+.head-main {
+  display: inline-flex;
+  flex: 1;
+  gap: 16rpx;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .head-title {
-  margin-top: 12rpx;
-  font-size: 38rpx;
+  display: inline;
+  font-size: 32rpx;
   font-weight: 700;
+  line-height: 1;
+}
+
+/* 行内标签：覆盖全局 .tag 的 margin（原本为网格换行留右下边距），改为与标题左侧间距 */
+.head-tag {
+  /* margin: 0 0 0 12rpx; */
+  vertical-align: middle;
+}
+
+.head-time {
+  /* 不用 space-between + margin-left:auto：靠弹性主轴自然顶到右侧，无标签时位置不变 */
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
 }
 
 .meta {
@@ -121,21 +138,27 @@
 
 .footer {
   display: flex;
-  padding: 30rpx 24rpx;
+  gap: 16rpx;
+  align-items: stretch;
+  padding: 0 24rpx 0;
 }
 
-.share-row {
-  padding: 30rpx 24rpx 0;
-}
-
+/* 三个按钮同排：等宽 + 统一高度，避开全局 padding 带来的高低不齐 */
 .footer-btn {
   flex: 1;
-  margin: 0 12rpx;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 26rpx;
+  white-space: nowrap;
 }
 
-/* 单独一行的分享按钮不需要 flex 行内的侧边距，否则与上下卡片左右缘不对齐 */
-.share-row .footer-btn {
-  margin: 0;
+/* 按钮间距不用 gap（旧版内核不支持），改用非首个按钮的 margin-left */
+.footer-btn-gap {
+  margin-left: 16rpx;
 }
 
 .btn-danger {
@@ -143,7 +166,5 @@
   color: var(--danger);
   border: 1rpx solid var(--danger);
   border-radius: 12rpx;
-  font-size: 28rpx;
-  padding: 14rpx 0;
   text-align: center;
 }

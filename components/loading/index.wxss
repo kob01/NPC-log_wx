@@ -25,3 +25,5 @@
     transform: rotate(360deg);
   }
 }
+
+@import 'index-wxa-auto-dark.wxss'

@@ -25,7 +25,9 @@
     <view class="tl-body">
       <view class="tl-line"></view>
       <view class="group" wx:for="{{groups}}" wx:key="month" wx:for-item="group">
-        <view class="tl-month">{{group.label}}</view>
+        <view class="tl-month">
+          <view class="tl-month-pill">{{group.label}}</view>
+        </view>
         <view
           class="tl-row {{item.first ? 'tl-row-first' : ''}}"
           wx:for="{{group.items}}"

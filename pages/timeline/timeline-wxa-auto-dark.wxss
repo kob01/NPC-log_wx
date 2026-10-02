@@ -1,0 +1,55 @@
+/* 
+此文件为开发者工具生成，生成时间: 2026/10/2 01:31:23
+使用方法：
+在 timeline.wxss 文件末尾引入样式
+```
+@import "./timeline-wxa-auto-dark.wxss";
+```
+ */
+
+@media (prefers-color-scheme: dark) {
+    .search-bar {
+        background: rgba(0, 0, 0, 0);
+    }
+
+    .tl-month-pill {
+        background: rgba(0, 0, 0, 0);
+    }
+
+    .record-mask {
+        background: rgba(255, 255, 255, 0.85);
+    }
+
+    .ripple {
+        background: rgba(41, 125, 255, 0.18);
+    }
+
+    @keyframes ripple {
+        0% {
+            transform: scale(0.55);
+            opacity: 0.9;
+        }
+
+        100% {
+            transform: scale(1.5);
+            opacity: 0;
+        }
+    }
+
+    .mic-core {
+        background: rgb(41, 125, 255);
+        color: rgb(17, 17, 17);
+    }
+
+    .record-time {
+        color: rgb(17, 17, 17);
+    }
+
+    .record-text {
+        color: rgba(17, 17, 17, 0.85);
+    }
+
+    .record-hint {
+        color: rgba(17, 17, 17, 0.45);
+    }
+}

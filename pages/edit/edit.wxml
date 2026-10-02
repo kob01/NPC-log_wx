@@ -26,10 +26,10 @@
     </picker>
   </view>
 
-  <!-- 进度/记录 -->
+  <!-- 进度/记录（含感受，两者已合并为一个正文框） -->
   <view class="form-item">
-    <view class="label">进度 / 记录</view>
-    <textarea class="area" placeholder="详细记录…" maxlength="2000" value="{{content}}" data-key="content" bindinput="onInput" />
+    <view class="label">进度 / 记录<text class="sub-label">（含感受）</text></view>
+    <textarea class="area" placeholder="详细经过与当时的感受…" maxlength="4000" value="{{content}}" data-key="content" bindinput="onInput" />
   </view>
 
   <!-- 评价 -->
@@ -38,12 +38,6 @@
     <picker mode="selector" range="{{ratingOptions}}" value="{{ratingIndex}}" bindchange="onRatingChange">
       <view class="picker-line">{{ratingIndex >= 0 ? ratingOptions[ratingIndex] : '请选择评价'}} <text class="arrow">›</text></view>
     </picker>
-  </view>
-
-  <!-- 感受 -->
-  <view class="form-item">
-    <view class="label">感受</view>
-    <textarea class="area" placeholder="你的感受…" maxlength="1000" value="{{feeling}}" data-key="feeling" bindinput="onInput" />
   </view>
 
   <!-- 经验教训 -->

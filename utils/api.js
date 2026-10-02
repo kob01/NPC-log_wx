@@ -35,20 +35,18 @@ const event = {
   /** 详情 */
   detail: (id) => http.get("/api/event/detail", { id }),
   /** 新建 */
-  create: (data) =>
-    http.post("/api/event", data).then(afterEventWrite),
+  create: (data) => http.post("/api/event", data).then(afterEventWrite),
   /** 更新 */
-  update: (data) =>
-    http.put("/api/event", data).then(afterEventWrite),
+  update: (data) => http.put("/api/event", data).then(afterEventWrite),
   /** 删除 */
   remove: (id) => http.del(`/api/event?id=${id}`).then(afterEventWrite),
   /** 生成社媒分享文案，返回 {title,body,hashtags,degraded} */
   shareCopy: (data) =>
     http.post("/api/event/share-copy", data, { silent: true }),
-  /** 语音转写文本 → AI 解析成表单字段，返回 {fields,degraded} */
+  /** 语音转写文本 → AI 解析成表单字段，返回 {fields,degraded}（兼容口，正常链路已由 transcribe 一次带回） */
   parseVoiceText: (text) =>
     http.post("/api/event/parse-voice-text", { text }, { silent: true }),
-  /** 录音文件 → 后端 ASR 转文字，返回 {text,audioUrl}（录音同时落盘，audioUrl 随日志保存） */
+  /** 录音文件 → 后端 ASR 转文字 + AI 解析填表字段，一次返回 {text,audioUrl,fields,degraded}（录音同时落盘，audioUrl 随日志保存） */
   transcribe: (filePath) =>
     http.uploadTo("/api/event/transcribe", filePath, "file", {
       silent: true,
@@ -73,39 +71,38 @@ const memory = {
   ask: (question, limit = 8) =>
     http.post("/api/memory/ask", { question, limit }, { silent: true }),
   summary: (month) =>
-    http.get(
-      "/api/memory/summary",
-      month ? { month } : {},
-      { silent: true, cache: { key: `memory:summary:${month || "now"}`, ttl: 120 * SEC } },
-    ),
+    http.get("/api/memory/summary", month ? { month } : {}, {
+      silent: true,
+      cache: { key: `memory:summary:${month || "now"}`, ttl: 120 * SEC },
+    }),
   tags: () =>
-    http.get("/api/memory/tags", {}, {
-      silent: true,
-      cache: { key: "memory:tags", ttl: 120 * SEC },
-    }),
+    http.get(
+      "/api/memory/tags",
+      {},
+      {
+        silent: true,
+        cache: { key: "memory:tags", ttl: 120 * SEC },
+      },
+    ),
   report: (year) =>
-    http.get(
-      "/api/memory/report",
-      year ? { year } : {},
-      {
-        silent: true,
-        cache: { key: `memory:report:${year || "now"}`, ttl: 300 * SEC },
-      },
-    ),
-  persons: () =>
-    http.get("/api/memory/persons", {}, {
+    http.get("/api/memory/report", year ? { year } : {}, {
       silent: true,
-      cache: { key: "memory:persons", ttl: 300 * SEC },
+      cache: { key: `memory:report:${year || "now"}`, ttl: 300 * SEC },
     }),
-  person: (name, year) =>
+  persons: () =>
     http.get(
-      "/api/memory/person",
-      year ? { name, year } : { name },
+      "/api/memory/persons",
+      {},
       {
         silent: true,
-        cache: { key: `memory:person:${name}:${year || "all"}`, ttl: 120 * SEC },
+        cache: { key: "memory:persons", ttl: 300 * SEC },
       },
     ),
+  person: (name, year) =>
+    http.get("/api/memory/person", year ? { name, year } : { name }, {
+      silent: true,
+      cache: { key: `memory:person:${name}:${year || "all"}`, ttl: 120 * SEC },
+    }),
   footprints: (params = {}) =>
     http.get("/api/memory/footprints", params, {
       silent: true,
@@ -122,14 +119,23 @@ const memory = {
 // ==================== 组织 ====================
 const org = {
   mine: () =>
-    http.get("/api/organization/mine", {}, {
-      cache: { key: "org:mine", ttl: 60 * SEC },
-    }),
+    http.get(
+      "/api/organization/mine",
+      {},
+      {
+        cache: { key: "org:mine", ttl: 60 * SEC },
+      },
+    ),
   public: () =>
-    http.get("/api/organization/public", {}, {
-      cache: { key: "org:public", ttl: 60 * SEC },
-    }),
-  requests: (orgId) => http.get("/api/organization/requests", orgId ? { orgId } : {}),
+    http.get(
+      "/api/organization/public",
+      {},
+      {
+        cache: { key: "org:public", ttl: 60 * SEC },
+      },
+    ),
+  requests: (orgId) =>
+    http.get("/api/organization/requests", orgId ? { orgId } : {}),
   requestsCount: () =>
     http.get("/api/organization/requests/count", {}, { silent: true }),
   members: (orgId) => http.get("/api/organization/members", { orgId }),
@@ -138,9 +144,13 @@ const org = {
   leave: (orgId) =>
     http.post("/api/organization/leave", { orgId }).then(afterOrgWrite),
   audit: (orgId, userId, approved) =>
-    http.post("/api/organization/audit", { orgId, userId, approved }).then(afterOrgWrite),
+    http
+      .post("/api/organization/audit", { orgId, userId, approved })
+      .then(afterOrgWrite),
   setManager: (orgId, userId, role) =>
-    http.post("/api/organization/manager", { orgId, userId, role }).then(afterOrgWrite),
+    http
+      .post("/api/organization/manager", { orgId, userId, role })
+      .then(afterOrgWrite),
 };
 
 /** 组织关系一变，「我加入/可申请」两个列表都要立刻反映 */

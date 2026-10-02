@@ -15,10 +15,13 @@
   <!-- 头部信息 -->
   <view class="card">
     <view class="head-row">
-      <view class="tag tag-blue" wx:if="{{detail.type}}">{{detail.type}}</view>
+      <!-- 标题在最上，分类标签行内跟在标题文字后面（标题变长时一起换行） -->
+      <view class="head-main">
+        <text class="head-title">{{detail.event || '（无标题）'}}</text>
+        <text class="tag tag-blue head-tag" wx:if="{{detail.type}}">{{detail.type}}</text>
+      </view>
       <text class="head-time">{{detail.time}}</text>
     </view>
-    <view class="head-title">{{detail.event || '（无标题）'}}</view>
 
     <view class="meta" wx:if="{{detail.witness}}">见证者：{{detail.witness}}</view>
     <view class="meta" wx:if="{{detail.author}}">作者：{{detail.author}}</view>
@@ -45,15 +48,10 @@
     </view>
   </view>
 
-  <!-- 正文 -->
+  <!-- 正文（「进度/记录」与「感受」已合并为一个字段） -->
   <view class="card" wx:if="{{detail.content}}">
-    <view class="section-title">进度 / 记录</view>
+    <view class="section-title">进度 / 记录（含感受）</view>
     <view class="body-text">{{detail.content}}</view>
-  </view>
-
-  <view class="card" wx:if="{{detail.feeling}}">
-    <view class="section-title">感受</view>
-    <view class="body-text">{{detail.feeling}}</view>
   </view>
 
   <view class="card" wx:if="{{detail.experience}}">
@@ -83,15 +81,11 @@
     </view>
   </view>
 
-  <!-- 生成分享卡（浏览即可用） -->
-  <view class="share-row">
+  <!-- 底部操作：生成分享卡（浏览即可用）/ 编辑 / 删除 同排 -->
+  <view class="footer">
     <button class="btn-primary footer-btn" bindtap="onShowPoster">✨ 生成分享卡</button>
-  </view>
-
-  <!-- 底部操作 -->
-  <view class="footer" wx:if="{{canEdit}}">
-    <button class="btn-ghost footer-btn" bindtap="goEdit">编辑</button>
-    <button class="btn-danger footer-btn" bindtap="onDelete">删除</button>
+    <button class="btn-ghost footer-btn footer-btn-gap" wx:if="{{canEdit}}" bindtap="goEdit">编辑</button>
+    <button class="btn-danger footer-btn footer-btn-gap" wx:if="{{canEdit}}" bindtap="onDelete">删除</button>
   </view>
 </view>
 

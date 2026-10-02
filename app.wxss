@@ -323,3 +323,4 @@ image {
   background: var(--border);
   margin: 16rpx 0;
 }
+@import 'app-wxa-auto-dark.wxss'

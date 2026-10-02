@@ -7,7 +7,7 @@ Component({
   },
 
   properties: {
-    // 时间线条目：{id,time,event,type,summary,content,tags,persons,position,address,lng,lat,firstThumb,thumbs,score}
+    // 时间线条目：{id,time,event,type,summary,content,tags,persons,position,address,lng,lat,firstThumb,firstUrl,thumbs,score}
     entry: {
       type: Object,
       value: {},
@@ -22,6 +22,12 @@ Component({
         }
         this.setData({
           displayThumbs: thumbs.map(resolveFileUrl),
+          // 卡片上只放 300px 缩略图（省流量），但点开后是全屏，必须换成原图地址，
+          // 否则等于把缩略图放大三倍——这就是“大图发糊”的直接原因。
+          // 列表接口已经一并返回了 firstUrl（只是一个字符串，不传图字节）
+          previewUrls: entry.firstUrl
+            ? [resolveFileUrl(entry.firstUrl)]
+            : thumbs.map(resolveFileUrl),
           displayTags: (entry.tags || []).slice(0, 4),
           displayPersons: (entry.persons || []).slice(0, 3),
           bodyText: entry.summary || entry.content || "",
@@ -40,6 +46,7 @@ Component({
 
   data: {
     displayThumbs: [],
+    previewUrls: [],
     displayTags: [],
     displayPersons: [],
     bodyText: "",
@@ -53,9 +60,10 @@ Component({
     },
     onPreview(e) {
       const index = e.currentTarget.dataset.index;
+      const urls = this.data.previewUrls;
       wx.previewImage({
-        current: this.data.displayThumbs[index],
-        urls: this.data.displayThumbs,
+        current: urls[index] || urls[0],
+        urls,
       });
     },
   },

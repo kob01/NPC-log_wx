@@ -37,7 +37,6 @@ Page({
     ratingOptions,
     ratingIndex: -1,
     rating: "",
-    feeling: "",
     experience: "",
     location: { position: "", address: "", lng: null, lat: null },
     witness: "",
@@ -75,6 +74,10 @@ Page({
     this._isEdit = Boolean(options.id);
     const [date, timeStr] = nowDateTime().split(" ");
     this.setData({ date, timeStr });
+    // 记下进页时的默认时间：AI 解析出口径下「用户没动过」才允许覆盖（编辑旧日志时
+    // loadDetail 会改成原时间，天然偏离此快照，不会被 AI 结果误盖）
+    this._initDate = date;
+    this._initTimeStr = timeStr;
     // 首页录音后经 globalData 中转过来（只带音频临时文件与时长，转写+解析在本页进行）
     const app = getApp();
     const pendingVoice = app.globalData && app.globalData._pendingVoice;
@@ -146,7 +149,7 @@ Page({
     }
   },
 
-  /** 语音转写 + 录音留存：后端回传 {text, audioUrl}，无论文字识别成败都保留录音 */
+  /** 语音转写 + 录音留存：后端一次返回 {text, audioUrl, fields}，转写与 AI 解析均在服务端完成 */
   async transcribeAndParse(filePath) {
     this._transcribing = true;
     try {
@@ -170,9 +173,17 @@ Page({
         this.setData({
           "voice.text": text,
           content: this.data.content || text,
-          voiceStatus: "AI 解析中…",
         });
-        this.parseVoice(text);
+        if (data.fields) {
+          this.applyVoiceFields(data.fields);
+          this.setData({
+            voiceStatus: data.degraded
+              ? "AI 未启用，已保留原文"
+              : "AI 已解析并填表",
+          });
+        } else {
+          this.setData({ voiceStatus: "AI 解析失败，可对照原文手动填写" });
+        }
       } else {
         this.setData({ voiceStatus: message || "录音保存失败，可手动填写" });
       }
@@ -183,29 +194,21 @@ Page({
     }
   },
 
-  /** AI 解析口述文本，拆项填入表单 */
-  async parseVoice(text) {
-    try {
-      const { code, data } = await api.event.parseVoiceText(text);
-      if (Number(code) === 200 && data && data.fields) {
-        this.applyVoiceFields(data.fields);
-        this.setData({
-          voiceStatus: data.degraded
-            ? "AI 未启用，已保留原文"
-            : "AI 已解析并填表",
-        });
-      } else {
-        this.setData({ voiceStatus: "AI 解析失败，可对照原文手动填写" });
-      }
-    } catch (err) {
-      this.setData({ voiceStatus: "AI 解析失败，可对照原文手动填写" });
-    }
-  },
-
   /** 只填空白字段，不覆盖用户已输入内容 */
   applyVoiceFields(fields) {
     const d = this.data;
     const upd = {};
+    // 时间单独策略：date/timeStr 进页就预填了当前时间，无法按「空白」判定，
+    // 只在两者仍等于进页默认值（用户没手改）且格式合法时才用 AI 结果
+    if (fields.time) {
+      const m = String(fields.time).match(
+        /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/,
+      );
+      if (m && d.date === this._initDate && d.timeStr === this._initTimeStr) {
+        upd.date = m[1];
+        upd.timeStr = m[2];
+      }
+    }
     if (fields.event && !d.event) upd.event = fields.event;
     if (fields.type && d.typeIndex < 0) {
       const i = typeOptions.indexOf(fields.type);
@@ -221,7 +224,6 @@ Page({
         upd.rating = ratingOptions[ri];
       }
     }
-    if (fields.feeling && !d.feeling) upd.feeling = fields.feeling;
     if (fields.experience && !d.experience) upd.experience = fields.experience;
     if (fields.witness && !d.witness) upd.witness = fields.witness;
     if (fields.position && !d.location.position) {
@@ -303,7 +305,6 @@ Page({
         content: data.content || "",
         rating: data.rating || "",
         ratingIndex: ratingOptions.indexOf(data.rating),
-        feeling: data.feeling || "",
         experience: data.experience || "",
         witness: data.witness || "",
         location: {
@@ -399,7 +400,10 @@ Page({
     wx.chooseMedia({
       count: remaining,
       mediaType: ["image"],
-      sizeType: ["compressed"],
+      // 传原图：微信的 compressed 会先把长边压到 1080 上下，放大看就糊了。
+      // 尺寸与质量统一交给后端 sharp 封顶（长边 2560 / webp q88），
+      // 超过 MAX_UPLOAD_MB 的原图会被后端挡下并提示，不会静默失败
+      sizeType: ["original"],
       success: (res) => this.uploadImages(res.tempFiles || []),
     });
   },
@@ -430,7 +434,10 @@ Page({
 
   previewImage(e) {
     const index = e.currentTarget.dataset.index;
-    const urls = this.data.images.map((i) => i.displayUrl);
+    // 九宫格里用的是缩略图（省流量），点开大图必须换成原图地址，否则 300px 放大到全屏会糊
+    const urls = this.data.images.map((i) =>
+      resolveFileUrl(i.url || i.thumbUrl),
+    );
     wx.previewImage({ current: urls[index], urls });
   },
 
@@ -486,7 +493,6 @@ Page({
       type: d.type,
       content: d.content,
       rating: d.rating,
-      feeling: d.feeling,
       experience: d.experience,
       position: d.location.position,
       address: d.location.address || null,
@@ -566,6 +572,7 @@ Page({
             lng: payload.lng != null ? payload.lng : null,
             lat: payload.lat != null ? payload.lat : null,
             firstThumb: (first && (first.thumbUrl || first.url)) || "",
+            firstUrl: (first && first.url) || "",
           };
         }
         wx.showToast({

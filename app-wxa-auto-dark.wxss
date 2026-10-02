@@ -1,0 +1,102 @@
+/* 
+此文件为开发者工具生成，生成时间: 2026/10/2 01:31:23
+使用方法：
+在 app.wxss 文件末尾引入样式
+```
+@import "./app-wxa-auto-dark.wxss";
+```
+ */
+
+@media (prefers-color-scheme: dark) {
+    page {
+        --bg: rgb(23, 24, 25);
+        --card: rgb(17, 17, 17);
+        --card-sub: rgb(22, 22, 24);
+        --fill: rgb(28, 28, 28);
+        --fill-2: rgb(25, 26, 27);
+        --info-bg: rgb(19, 24, 30);
+        --mask: rgba(255, 255, 255, 0.5);
+        --text-1: rgb(236, 236, 236);
+        --text-body: rgb(209, 209, 209);
+        --text-2: rgb(149, 149, 149);
+        --text-3: rgb(99, 99, 99);
+        --text-4: rgb(69, 69, 69);
+        --text-inv: rgb(17, 17, 17);
+        --primary: rgb(41, 125, 255);
+        --primary-2: rgb(0, 108, 207);
+        --primary-weak: rgb(17, 28, 36);
+        --accent: rgb(205, 128, 255);
+        --accent-weak: rgb(30, 24, 34);
+        --border: rgb(29, 29, 29);
+        --border-2: rgb(33, 36, 39);
+        --divider: rgb(28, 28, 28);
+        --danger: rgb(238, 20, 40);
+        --danger-weak: rgb(32, 23, 22);
+        --success: rgb(0, 99, 0);
+        --warning: rgb(145, 52, 0);
+        --tag-blue-bg: rgb(17, 28, 36);
+        --tag-blue-fg: rgb(41, 125, 255);
+        --tag-purple-bg: rgb(30, 24, 34);
+        --tag-purple-fg: rgb(205, 128, 255);
+        --tag-geek-bg: rgb(21, 25, 32);
+        --tag-geek-fg: rgb(128, 140, 255);
+        --tag-cyan-bg: rgb(1, 25, 22);
+        --tag-cyan-fg: rgb(0, 96, 98);
+        --tag-gold-bg: rgb(24, 21, 0);
+        --tag-gold-fg: rgb(146, 80, 0);
+        --tag-green-bg: rgb(14, 22, 3);
+        --tag-green-fg: rgb(0, 99, 0);
+        --tag-orange-bg: rgb(27, 22, 5);
+        --tag-orange-fg: rgb(145, 52, 0);
+        --tag-red-bg: rgb(32, 23, 22);
+        --tag-red-fg: rgb(238, 20, 40);
+        --tag-gray-bg: rgb(28, 28, 28);
+        --tag-gray-fg: rgb(168, 168, 168);
+    }
+
+    .theme-dark {
+        --bg: rgb(244, 246, 249);
+        --card: rgb(225, 228, 231);
+        --card-sub: rgb(216, 218, 222);
+        --fill: rgb(209, 212, 216);
+        --fill-2: rgb(203, 205, 210);
+        --info-bg: rgb(209, 224, 246);
+        --mask: rgba(255, 255, 255, 0.65);
+        --text-1: rgb(32, 32, 32);
+        --text-body: rgb(52, 52, 52);
+        --text-2: rgb(87, 87, 87);
+        --text-3: rgb(113, 113, 113);
+        --text-4: rgb(145, 145, 145);
+        --text-inv: rgb(17, 17, 17);
+        --primary: rgb(0, 114, 224);
+        --primary-2: rgb(0, 100, 190);
+        --primary-weak: rgb(195, 217, 255);
+        --accent: rgb(160, 96, 225);
+        --accent-weak: rgb(244, 223, 255);
+        --border: rgb(203, 205, 210);
+        --border-2: rgb(193, 197, 203);
+        --divider: rgb(208, 211, 216);
+        --danger: rgb(179, 34, 50);
+        --danger-weak: rgb(255, 216, 217);
+        --success: rgb(0, 84, 0);
+        --warning: rgb(112, 47, 0);
+        --tag-blue-bg: rgb(195, 217, 255);
+        --tag-blue-fg: rgb(0, 88, 157);
+        --tag-purple-bg: rgb(244, 223, 255);
+        --tag-purple-fg: rgb(127, 79, 182);
+        --tag-geek-bg: rgb(222, 227, 255);
+        --tag-geek-fg: rgb(39, 86, 166);
+        --tag-cyan-bg: rgb(190, 224, 228);
+        --tag-cyan-fg: rgb(0, 85, 82);
+        --tag-gold-bg: rgb(227, 210, 176);
+        --tag-gold-fg: rgb(76, 54, 0);
+        --tag-green-bg: rgb(212, 229, 203);
+        --tag-green-fg: rgb(0, 68, 0);
+        --tag-orange-bg: rgb(241, 213, 191);
+        --tag-orange-fg: rgb(86, 43, 0);
+        --tag-red-bg: rgb(255, 216, 217);
+        --tag-red-fg: rgb(166, 38, 48);
+        --tag-gray-bg: rgb(203, 205, 210);
+        --tag-gray-fg: rgb(78, 78, 78);
+    }
+}

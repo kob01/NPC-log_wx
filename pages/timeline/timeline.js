@@ -208,6 +208,7 @@ Page({
       lng: item.lng != null ? item.lng : null,
       lat: item.lat != null ? item.lat : null,
       firstThumb: item.firstThumb || "",
+      firstUrl: item.firstUrl || "",
     };
   },
 
@@ -227,6 +228,7 @@ Page({
       lng: item.lng,
       lat: item.lat,
       firstThumb: item.firstThumb || "",
+      firstUrl: item.firstUrl || "",
       score: item.score,
     };
   },

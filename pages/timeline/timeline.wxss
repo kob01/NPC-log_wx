@@ -13,7 +13,7 @@
     right: 0;
     z-index: 10;
     /* 低于录音浮层(15)，录音时不抢在遮罩之上 */
-    padding: 20rpx 24rpx;
+    padding: 12rpx 24rpx;
     background: transparent;
 }
 
@@ -100,12 +100,20 @@
     position: relative;
 }
 
-/* 月份分割标题：滚动时 sticky 悬浮在左上角（低于顶部搜索栏 z-index:10，top 避开其高度） */
+/* 月份分割标题：滚动时 sticky 悬浮在左上角 */
 .tl-month {
     position: sticky;
+    /* 顶部 .search-bar 为 fixed，高 20+72+20=112rpx，悬浮位置需避开它，否则胶囊会被搜索栏压住 */
     top: 0;
+    /* 低于顶部搜索栏(10)与录音浮层(15) */
     z-index: 6;
-    padding: 24rpx 24rpx 16rpx 96rpx;
+    /* 左距 72rpx 与卡片左边缘齐平，同时避开 39rpx 处的竖线；上边距留小量，避免胶囊紧贴搜索栏底边 */
+    padding: 12rpx 24rpx 16rpx 72rpx;
+}
+
+/* 圆角胶囊底：卡片从下方滚过时不透字；颜色跟 --card，深色模式自动生效 */
+.tl-month-pill {
+    display: inline-block;
     font-size: 32rpx;
     font-weight: 600;
     color: var(--primary);
@@ -258,3 +266,5 @@
     color: rgba(255, 255, 255, 0.45);
     font-size: 24rpx;
 }
+
+@import 'timeline-wxa-auto-dark.wxss'
