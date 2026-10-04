@@ -1,7 +1,7 @@
 <view class="login page-root {{themeClass}}">
   <view class="brand">
     <view class="logo">◎</view>
-    <view class="brand-name">NPC日志</view>
+    <view class="brand-name">NPC存档</view>
   </view>
 
   <view class="form">

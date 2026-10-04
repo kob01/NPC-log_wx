@@ -22,7 +22,7 @@
   </view>
 
   <block wx:if="{{groups.length}}">
-    <view class="tl-body">
+    <view class="tl-body {{sheetVisible ? 'tl-body-shrunk' : ''}}">
       <view class="tl-line"></view>
       <view class="group" wx:for="{{groups}}" wx:key="month" wx:for-item="group">
         <view class="tl-month">
@@ -54,25 +54,51 @@
     — 没有更多了 —
   </view>
 
-  <!-- 底部录音悬浮按钮：按住录音，松开发送 -->
+  <!-- 底部录音按钮：按住 → 圆形扩大成底部面板；松手发送，左滑到最左侧 ✕ 取消
+       touchmove 必须留在按钮上（手势自 touchstart 起就锁定该节点），且用 catch 挡住页面滚动 -->
   <view
-    class="fab"
+    class="fab {{sheetVisible ? 'fab-hidden' : ''}}"
     wx:if="{{!searchMode}}"
     bindtouchstart="onMicStart"
+    catchtouchmove="onMicMove"
     bindtouchend="onMicEnd"
     bindtouchcancel="onMicEnd"
   >🎙</view>
 
-  <!-- 录音波纹浮层 -->
-  <view class="record-mask" wx:if="{{recording}}" catchtouchmove="noop">
-    <view class="ripple-wrap">
-      <view class="ripple r1"></view>
-      <view class="ripple r2"></view>
-      <view class="ripple r3"></view>
-      <view class="mic-core">🎙</view>
+  <!-- 录音时只压暗列表，界面不再被全屏遮罩接管 -->
+  <view class="record-veil" wx:if="{{sheetVisible}}" catchtouchmove="noop"></view>
+
+  <!-- 录音面板：起点与按钮重合的圆，置 recording 后过渡成底部约 1/3 屏的方形 -->
+  <view
+    class="record-sheet {{recording ? 'open' : ''}} {{canceling ? 'canceling' : ''}}"
+    wx:if="{{sheetVisible}}"
+    style="{{recording ? sheetStyleOpen : sheetStyleClosed}}"
+    catchtouchmove="noop"
+  >
+    <!-- 左滑命中区：整条左侧竖带都算取消，故判定只看横坐标 -->
+    <view class="sheet-cancel">
+      <view class="cancel-label">{{canceling ? '松开取消' : '左滑取消'}}</view>
+      <view class="cancel-icon">✕</view>
     </view>
-    <view class="record-time">{{recordSeconds}}″</view>
-    <view class="record-text">请说出这段日志…</view>
-    <view class="record-hint">松开发送 · 最长 60 秒</view>
+
+    <view class="sheet-main">
+      <view class="sheet-status">
+        <view class="rec-dot"></view>
+        <text class="sheet-time">{{recordTimeText}}</text>
+        <text class="sheet-limit" wx:if="{{recordSeconds >= recordMax - 10}}">剩 {{recordMax - recordSeconds}}″</text>
+      </view>
+
+      <!-- 波形：每根条子的基准高度/延迟/周期在 onLoad 生成一次，之后纯 CSS 抖动 -->
+      <view class="wave">
+        <view
+          class="wave-bar"
+          wx:for="{{waveBars}}"
+          wx:key="id"
+          style="{{item.style}}"
+        ></view>
+      </view>
+
+      <view class="sheet-hint">{{cancelHint}}</view>
+    </view>
   </view>
 </view>

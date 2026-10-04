@@ -1,7 +1,7 @@
 {
   "appid": "wx16b7f9571f326b5d",
   "projectname": "NPC-log_wx",
-  "description": "NPC 日志微信小程序",
+  "description": "NPC存档 · 人生记录小程序",
   "packOptions": {
     "ignore": [],
     "include": []

@@ -12,7 +12,7 @@
     left: 0;
     right: 0;
     z-index: 10;
-    /* 低于录音浮层(15)，录音时不抢在遮罩之上 */
+    /* 低于录音遮罩(18)，录音时不抢在遮罩之上 */
     padding: 12rpx 24rpx;
     background: transparent;
 }
@@ -84,6 +84,14 @@
     position: relative;
     /* 底部不留 padding：末行卡片的 margin 会塌陷到容器外，竖线不再多出一截尾巴 */
     padding: 8rpx 0 0;
+    transition: opacity 0.32s ease, transform 0.32s ease;
+}
+
+/* 录音时列表整体后退缩小，与底部面板拉开主次（只作用于列表，
+   不碰页面根节点：根节点一旦带 transform，内部 fixed 元素会跟着被缩放） */
+.tl-body-shrunk {
+    opacity: 0.6;
+    transform: scale(0.96) translateY(-8rpx);
 }
 
 /* 贯穿上下的竖线（与圆点中心对齐于 39rpx） */
@@ -105,7 +113,7 @@
     position: sticky;
     /* 顶部 .search-bar 为 fixed，高 20+72+20=112rpx，悬浮位置需避开它，否则胶囊会被搜索栏压住 */
     top: 0;
-    /* 低于顶部搜索栏(10)与录音浮层(15) */
+    /* 低于顶部搜索栏(10)与录音遮罩(18)/面板(19) */
     z-index: 6;
     /* 左距 72rpx 与卡片左边缘齐平，同时避开 39rpx 处的竖线；上边距留小量，避免胶囊紧贴搜索栏底边 */
     padding: 12rpx 24rpx 16rpx 72rpx;
@@ -171,100 +179,220 @@
     font-size: 60rpx;
     box-shadow: 0 6rpx 20rpx rgba(22, 119, 255, 0.4);
     z-index: 20;
+    /* 面板展开时按钮只淡出：不能 display:none / visibility:hidden，
+       否则本手势后续的 touchmove 拿不到节点，左滑取消就失效 */
+    transition: opacity 0.2s ease;
 }
 
-/* ==================== 录音波纹浮层（固定深色遮罩，不随主题变化） ==================== */
-.record-mask {
+.fab-hidden {
+    opacity: 0;
+    /* 降到遮罩与面板之下：已经锁定的手势不受层级变化影响，
+       但另一根手指误点这个隐形区域时不会再触发 touchend，避免录音被提前发送 */
+    z-index: 17;
+}
+
+/* ==================== 录音面板（由按钮圆形原位扩大到底部约 1/3 屏） ==================== */
+/* 只压暗、不接管：列表仍可见，避免原本全屏遮罩的「界面过大」 */
+.record-veil {
     position: fixed;
     top: 0;
     right: 0;
     bottom: 0;
     left: 0;
-    /* 低于 .fab(20)：按住时按钮始终在顶层，不被浮层打断 touch 序列 */
-    z-index: 15;
-    background: rgba(0, 0, 0, 0.85);
+    z-index: 18;
+    /* 轻度压暗就够：主次交给列表的缩小去表达，不再像原本全屏遮罩那样黑成一片 */
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.record-sheet {
+    position: fixed;
+    /* 收起态兜底几何（与 .fab 完全重合的 100rpx 圆）：
+       正常流程下由 JS 按视口算成 px 走内联 style，两态同单位才能稳定插值 */
+    left: 610rpx;
+    /* 内联 style 带 top + height 时这一行会被忽略，只当降级兜底 */
+    bottom: 60rpx;
+    width: 100rpx;
+    height: 100rpx;
+    border-radius: 50rpx 50rpx 50rpx 50rpx;
     display: flex;
+    align-items: stretch;
+    background: var(--primary);
+    /* 收起态沿用按钮的投影，与按钮重合的那一帧看不出两个圆 */
+    box-shadow: 0 6rpx 20rpx rgba(22, 119, 255, 0.4);
+    overflow: hidden;
+    z-index: 19;
+    /* 几何量同时过渡，视觉上就是圆角先撑开、再长成一个方形面板 */
+    transition:
+        left 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+        top 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+        width 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+        height 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+        border-radius 0.32s ease,
+        background-color 0.32s ease,
+        box-shadow 0.32s ease;
+}
+
+/* 展开态只换背景与放内容，几何量走内联 style（见 timeline.js 的 sheetStyles） */
+.record-sheet.open {
+    background: var(--card);
+    box-shadow: 0 -8rpx 30rpx rgba(0, 0, 0, 0.12);
+}
+
+/* 左滑进入取消区：整片面板转红底，取消态一眼可辨 */
+.record-sheet.open.canceling {
+    background: var(--danger-weak);
+}
+
+/* 左侧取消竖带：整块高度都是命中区，✕ 靠底部摆放 */
+.sheet-cancel {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    width: 176rpx;
+    /* ✕ 圆心落到离底约 110rpx：正好压在按住按钮那根手指的高度上，左滑时叉跟着手走 */
+    padding-bottom: 62rpx;
+    opacity: 0;
+    /* 回缩时不拖延（基础规则无延迟），展开时才等面板先撑开 */
+    transition: opacity 0.15s ease;
+}
+
+.record-sheet.open .sheet-cancel {
+    opacity: 1;
+    transition: opacity 0.2s ease 0.12s;
+}
+
+.cancel-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 96rpx;
+    height: 96rpx;
+    font-size: 40rpx;
+    color: var(--text-2);
+    border: 2rpx dashed var(--text-3);
+    border-radius: 50%;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.cancel-label {
+    margin-bottom: 12rpx;
+    font-size: 22rpx;
+    color: var(--text-3);
+}
+
+.record-sheet.canceling .cancel-icon {
+    color: var(--text-inv);
+    background: var(--danger);
+    border-color: var(--danger);
+    border-style: solid;
+    transform: scale(1.12);
+}
+
+.record-sheet.canceling .cancel-label {
+    color: var(--danger);
+}
+
+/* 中间主体：时长 + 波形 + 提示 */
+.sheet-main {
+    display: flex;
+    flex: 1;
+    min-width: 0;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 0 60rpx;
+    padding: 24rpx 32rpx 44rpx 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
 }
 
-.ripple-wrap {
-    position: relative;
-    width: 240rpx;
-    height: 240rpx;
+.record-sheet.open .sheet-main {
+    opacity: 1;
+    transition: opacity 0.2s ease 0.12s;
 }
 
-.ripple {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
+.sheet-status {
+    display: flex;
+    align-items: center;
+}
+
+/* 录音中的红色呼吸点 */
+.rec-dot {
+    width: 16rpx;
+    height: 16rpx;
+    margin-right: 14rpx;
     border-radius: 50%;
-    border: 2rpx solid rgba(22, 119, 255, 0.7);
-    background: rgba(22, 119, 255, 0.18);
-    animation: ripple 1.8s ease-out infinite;
+    background: var(--danger);
+    animation: breathe 1.2s ease-in-out infinite;
 }
 
-.r2 {
-    animation-delay: 0.6s;
-}
+@keyframes breathe {
 
-.r3 {
-    animation-delay: 1.2s;
-}
-
-@keyframes ripple {
-    0% {
-        transform: scale(0.55);
-        opacity: 0.9;
-    }
-
+    0%,
     100% {
-        transform: scale(1.5);
-        opacity: 0;
+        opacity: 0.35;
+        transform: scale(0.8);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.15);
     }
 }
 
-.mic-core {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 140rpx;
-    height: 140rpx;
-    line-height: 140rpx;
-    text-align: center;
-    border-radius: 50%;
-    background: #1677ff;
-    color: #fff;
-    font-size: 60rpx;
-    box-shadow: 0 0 40rpx rgba(22, 119, 255, 0.8);
-}
-
-.record-time {
-    margin-top: 48rpx;
-    color: #fff;
-    font-size: 40rpx;
+.sheet-time {
+    font-size: 56rpx;
     font-weight: 600;
+    color: var(--text-1);
 }
 
-.record-text {
-    margin-top: 24rpx;
-    max-height: 240rpx;
-    overflow: hidden;
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 30rpx;
-    line-height: 1.7;
-    text-align: center;
-}
-
-.record-hint {
-    margin-top: 40rpx;
-    color: rgba(255, 255, 255, 0.45);
+.sheet-limit {
+    margin-left: 16rpx;
     font-size: 24rpx;
+    color: var(--warning);
+}
+
+/* 波形条（旧内核不支持 flex gap，一律用 margin 拉开） */
+.wave {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 140rpx;
+    margin: 16rpx 0 12rpx;
+}
+
+.wave-bar {
+    width: 8rpx;
+    margin: 0 4rpx;
+    border-radius: 6rpx;
+    background: var(--primary);
+    animation-name: wave;
+    animation-duration: 0.7s;
+    animation-timing-function: ease-in-out;
+    animation-direction: alternate;
+    animation-iteration-count: infinite;
+}
+
+@keyframes wave {
+    from {
+        opacity: 0.5;
+        transform: scaleY(0.28);
+    }
+
+    to {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+}
+
+.record-sheet.canceling .wave-bar {
+    background: var(--danger);
+}
+
+.sheet-hint {
+    font-size: 24rpx;
+    color: var(--text-3);
 }
 
 @import 'timeline-wxa-auto-dark.wxss'

@@ -15,7 +15,7 @@
     "window": {
         "backgroundTextStyle": "light",
         "navigationBarBackgroundColor": "@navBgColor",
-        "navigationBarTitleText": "NPC日志",
+        "navigationBarTitleText": "NPC存档",
         "navigationBarTextStyle": "@navTxtStyle",
         "backgroundColor": "@bgColor"
     },
@@ -27,7 +27,7 @@
         "list": [
             {
                 "pagePath": "pages/timeline/timeline",
-                "text": "日志"
+                "text": "存档"
             },
             {
                 "pagePath": "pages/memory/memory",

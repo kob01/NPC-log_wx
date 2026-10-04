@@ -170,7 +170,7 @@ Page({
   onShareAppMessage() {
     const detail = this.data.detail || {};
     return {
-      title: detail.event || "NPC 日志分享",
+      title: detail.event || "NPC存档 · 记录这一刻",
       path: `/pages/detail/detail?id=${this.data.id}`,
     };
   },
@@ -178,7 +178,7 @@ Page({
   onShareTimeline() {
     const detail = this.data.detail || {};
     return {
-      title: detail.event || "NPC 日志分享",
+      title: detail.event || "NPC存档 · 记录这一刻",
       query: `id=${this.data.id}`,
     };
   },

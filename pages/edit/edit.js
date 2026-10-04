@@ -23,6 +23,53 @@ const visibilityOptions = ["仅自己可见", "组织可见"];
 const platformLabels = ["抖音", "小红书", "其他"];
 const platformValues = ["douyin", "xiaohongshu", "other"];
 
+// 后端 fileService 的图片格式白名单（jpg/jpeg/png/webp/heic）：
+// multer 是按「上传文件名的扩展名」校验的，会话文件常常没有后缀，得先补一个合法后缀再传
+const UPLOAD_EXT_RE = /\.(jpe?g|png|webp|heic)$/i;
+// 与后端 .env 的 MAX_UPLOAD_MB 默认值对齐：超上限在本地就挡下，省一趟注定失败的上传
+const MAX_UPLOAD_MB = 10;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
+// 开发者工具与低版本微信可能没有 chooseMessageFile：拿不到就整条入口不显示，
+// 免得用户点了只换来一句「不支持」
+const CAN_PICK_CHAT = typeof wx.chooseMessageFile === "function";
+
+/**
+ * 复制出一份带合法后缀的临时文件
+ * @param {string} src - 会话文件的临时路径
+ * @param {string} ext - 目标后缀（不含点）
+ * @returns {Promise<string>} 成功返回新路径；失败返回空串，由调用方退回原路径试传
+ */
+function copyWithExt(src, ext) {
+  if (
+    typeof wx.getFileSystemManager !== "function" ||
+    !wx.env ||
+    !wx.env.USER_DATA_PATH
+  ) {
+    return Promise.resolve("");
+  }
+  const dest = `${wx.env.USER_DATA_PATH}/chat-${Date.now()}-${Math.floor(
+    Math.random() * 1e6,
+  )}.${ext}`;
+  return new Promise((resolve) => {
+    wx.getFileSystemManager().copyFile({
+      srcPath: src,
+      filePath: dest,
+      success: () => resolve(dest),
+      fail: () => resolve(""),
+    });
+  });
+}
+
+/** 删临时副本：USER_DATA_PATH 只有 200MB 额度，用完必须还回去 */
+function removeTmpFile(p) {
+  if (!p || typeof wx.getFileSystemManager !== "function") return;
+  try {
+    wx.getFileSystemManager().unlinkFileSync(p);
+  } catch (e) {
+    /* 已经不在了，正合意 */
+  }
+}
+
 Page({
   behaviors: [require("../../utils/themeBehavior")],
   data: {
@@ -42,6 +89,8 @@ Page({
     witness: "",
     images: [],
     uploading: false,
+    // 是否展示「从微信聊天选图」入口（基础库不支持时隐藏）
+    canPickChat: CAN_PICK_CHAT,
     visibilityOptions,
     visibilityIndex: 0,
     orgOptions: [],
@@ -67,8 +116,13 @@ Page({
   _isEdit: false,
   // 本次是否由首页带录音跳转过来（这种场景不自动弹地图，免得打断转写）
   _hasPendingVoice: false,
+  // 聊天选图补后缀产生的临时副本，上传完即删，onUnload 兜底再清一次
+  _tmpFiles: [],
 
   async onLoad(options) {
+    // 数组放在 Page 选项上有跨实例共用风险，这里按页面实例各自建一份（先于登录判定，
+    // 未登录时 onUnload 兜底清理才有正确的空数组可用）
+    this._tmpFiles = [];
     if (!auth.checkLogin()) return;
     // 同步记录是否编辑，避免 onReady 早于 onLoad 的 await 时 this.data.id 还没赋值
     this._isEdit = Boolean(options.id);
@@ -116,6 +170,9 @@ Page({
       this._audio.destroy();
       this._audio = null;
     }
+    // 兜底：选完图还没传完就退出的话，副本会一直躺在本地目录里
+    (this._tmpFiles || []).forEach(removeTmpFile);
+    this._tmpFiles = [];
   },
 
   // ==================== 录音悬浮卡片 ====================
@@ -395,6 +452,8 @@ Page({
   },
 
   chooseImage() {
+    // 上一批还没传完就再起一批，先结束的那批会把 uploading 提前抹掉
+    if (this.data.uploading) return;
     const remaining = 9 - this.data.images.length;
     if (remaining <= 0) return;
     wx.chooseMedia({
@@ -406,6 +465,94 @@ Page({
       sizeType: ["original"],
       success: (res) => this.uploadImages(res.tempFiles || []),
     });
+  },
+
+  /**
+   * 从微信会话（单聊/群聊/文件传输助手）里选图：wx.chooseMessageFile
+   * 微信生态独有玩法：不要类目资质、不要后端配合，基础库 2.5.0+ 就有（本项目 3.x）。
+   * 两个前置条件都不在代码里：
+   * 1) 它属于隐私接口「收集你选中的文件」，需在 MP 后台「设置 - 服务内容声明 -
+   *    用户隐私保护指引」里勾上并写清用途，否则调用直接报 errno 112（补充声明约 5 分钟生效）；
+   *    app.json 的 requiredPrivateInfos 只管定位类接口，这里不需要加。
+   * 2) 朋友圈本身读不到图，需先长按图片「发送给朋友」，再回这里从会话里选。
+   */
+  pickFromChat() {
+    if (this.data.uploading) return;
+    const remaining = 9 - this.data.images.length;
+    if (remaining <= 0) return;
+    wx.chooseMessageFile({
+      count: remaining,
+      // 只放图片进来，避开用户误选压缩包/文档后的一串报错
+      type: "image",
+      success: (res) => this.onChatFiles(res.tempFiles || []),
+      fail: (err) => {
+        const msg = (err && err.errMsg) || "";
+        // 用户自己退回不算失败，不弹 toast 打扰
+        if (msg.indexOf("cancel") >= 0) return;
+        if (Number(err && err.errno) === 112) {
+          // 走到这里说明后台那项隐私声明还没勾上（或没等到生效）
+          wx.showToast({ title: "聊天文件未声明隐私项，暂不可选", icon: "none" });
+          return;
+        }
+        wx.showToast({ title: "没能打开微信聊天文件", icon: "none" });
+      },
+    });
+  },
+
+  /**
+   * 会话文件不能直接拿去传：先挡下后端收不了的，再给无后缀的路径补上合法后缀
+   * @param {Array<{path:string,name:string,size:number}>} files
+   */
+  async onChatFiles(files) {
+    if (!files.length) return;
+    const skippedFmt = [];
+    const skippedBig = [];
+    const picked = [];
+    files.forEach((f) => {
+      const extHit = (f.name || f.path || "").match(/\.[a-zA-Z0-9]+$/);
+      if (Number(f.size) > MAX_UPLOAD_BYTES) {
+        skippedBig.push(f);
+      } else if (extHit && !UPLOAD_EXT_RE.test(extHit[0])) {
+        // 明确带了 .gif/.bmp 这类后缀：后端收不了，当场说清楚比丢一句格式错误友好
+        skippedFmt.push(f);
+      } else {
+        picked.push(f);
+      }
+    });
+    const notes = [];
+    if (skippedFmt.length) notes.push(`${skippedFmt.length} 张格式不支持`);
+    if (skippedBig.length) {
+      notes.push(`${skippedBig.length} 张超过 ${MAX_UPLOAD_MB}MB`);
+    }
+    if (notes.length) {
+      wx.showToast({ title: notes.join("，") + "，已跳过", icon: "none" });
+    }
+
+    const tasks = [];
+    for (const f of picked) {
+      const raw = f.path || "";
+      if (!raw) continue;
+      if (UPLOAD_EXT_RE.test(raw)) {
+        tasks.push({ tempFilePath: raw });
+        continue;
+      }
+      // 微信会话里的图传下来多数没有后缀，后缀能从原文件名拿就用，拿不到就按 jpg 试
+      const nameExt = (f.name || "").match(/\.[a-zA-Z0-9]+$/);
+      const ext =
+        nameExt && UPLOAD_EXT_RE.test(nameExt[0])
+          ? nameExt[1].toLowerCase()
+          : "jpg";
+      const tmpPath = await copyWithExt(raw, ext);
+      if (tmpPath) {
+        this._tmpFiles.push(tmpPath);
+        tasks.push({ tempFilePath: tmpPath, tmpPath });
+      } else {
+        // 副本建不了（没文件管理器等）就把原路径交上去，成不成由后端判定，至少不静默丢图
+        tasks.push({ tempFilePath: raw });
+      }
+    }
+    if (!tasks.length) return;
+    this.uploadImages(tasks);
   },
 
   async uploadImages(files) {
@@ -420,6 +567,12 @@ Page({
         }
       } catch (err) {
         /* request 已提示，继续下一张 */
+      } finally {
+        // 补后缀用的副本传完就删（失败也删，重试时会重新选）
+        if (f.tmpPath) {
+          removeTmpFile(f.tmpPath);
+          this._tmpFiles = this._tmpFiles.filter((p) => p !== f.tmpPath);
+        }
       }
     }
     this.setData({ uploading: false });

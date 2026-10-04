@@ -317,7 +317,7 @@ Component({
               ctx.fillStyle = "#a0aec0";
               const footer =
                 (entry.author ? "@" + entry.author + "  " : "") +
-                "来自 NPC 日志";
+                "来自「NPC存档」";
               const fw = ctx.measureText(footer).width;
               ctx.fillText(footer, LW - pad - fw, LH - 32);
 

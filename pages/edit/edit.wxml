@@ -75,6 +75,14 @@
       </view>
       <view class="img-add" wx:if="{{images.length < 9}}" bindtap="chooseImage">＋</view>
     </view>
+    <!-- 微信生态独有入口：会话里的图（单聊/群/文件传输助手）能直接选，不需资质也不需后端改动 -->
+    <view class="chat-pick" wx:if="{{canPickChat && images.length < 9}}" bindtap="pickFromChat">
+      <view class="chat-pick-row">
+        <text class="chat-pick-main">💬 从微信聊天里选图</text>
+        <text class="arrow">›</text>
+      </view>
+      <view class="chat-pick-tip">朋友圈里的图长按「发送给朋友」，再回这里选</view>
+    </view>
     <view class="uploading" wx:if="{{uploading}}">图片上传中…</view>
   </view>
 
