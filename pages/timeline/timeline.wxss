@@ -294,7 +294,7 @@
     color: var(--danger);
 }
 
-/* 中间主体：时长 + 波形 + 提示 */
+/* 中间主体：时长 + 波形 */
 .sheet-main {
     display: flex;
     flex: 1;
@@ -302,7 +302,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 24rpx 32rpx 44rpx 0;
+    /* 取消区占掉了左侧 176rpx，右边补回同宽，时长与波形才真正落在屏幕中轴上 */
+    margin-right: 176rpx;
+    padding: 24rpx 0 72rpx;
     opacity: 0;
     transition: opacity 0.15s ease;
 }
@@ -391,8 +393,16 @@
 }
 
 .sheet-hint {
+    /* 脱主体贴底单独占整条面板宽：这句最长（带「最长 60 秒」），
+       留在被取消区挤过的半宽里会折行；绝对定位基准是 .record-sheet */
+    position: absolute;
+    right: 0;
+    /* 20rpx 而不更高：再往上就会与左侧 ✕ 圆（离底 62rpx 起）蹭上 */
+    bottom: 20rpx;
+    left: 0;
     font-size: 24rpx;
     color: var(--text-3);
+    text-align: center;
 }
 
 @import 'timeline-wxa-auto-dark.wxss'

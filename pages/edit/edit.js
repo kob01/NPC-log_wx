@@ -1,6 +1,7 @@
 const api = require("../../utils/api");
 const auth = require("../../utils/auth");
 const { resolveFileUrl, nowDateTime } = require("../../utils/format");
+const { SUPPORTED_EXT_RE, inspectImage } = require("../../utils/imageFormat");
 
 const typeOptions = [
   "工作",
@@ -23,12 +24,13 @@ const visibilityOptions = ["仅自己可见", "组织可见"];
 const platformLabels = ["抖音", "小红书", "其他"];
 const platformValues = ["douyin", "xiaohongshu", "other"];
 
-// 后端 fileService 的图片格式白名单（jpg/jpeg/png/webp/heic）：
-// multer 是按「上传文件名的扩展名」校验的，会话文件常常没有后缀，得先补一个合法后缀再传
-const UPLOAD_EXT_RE = /\.(jpe?g|png|webp|heic)$/i;
 // 与后端 .env 的 MAX_UPLOAD_MB 默认值对齐：超上限在本地就挡下，省一趟注定失败的上传
 const MAX_UPLOAD_MB = 10;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
+// multer 按「上传文件名的扩展名」校验，会话文件常常没有后缀，得先补一个合法后缀再传；
+// 能不能传交 utils/imageFormat 按文件头魔数判定 —— HEIC 虽在扩展名白名单里，但 sharp
+// 预编译包缺 HEVC 解码器，会变成一张小程序渲染不出来的裂图，属于无效上传，一并挡下
+
 // 开发者工具与低版本微信可能没有 chooseMessageFile：拿不到就整条入口不显示，
 // 免得用户点了只换来一句「不支持」
 const CAN_PICK_CHAT = typeof wx.chooseMessageFile === "function";
@@ -112,10 +114,8 @@ Page({
   _audio: null,
   // 录音上传+转写进行中（此期间拦住保存，避免默默丢录音）
   _transcribing: false,
-  // 是否为编辑已有日志（同步判定，供 onReady 决定是否自动定位）
-  _isEdit: false,
-  // 本次是否由首页带录音跳转过来（这种场景不自动弹地图，免得打断转写）
-  _hasPendingVoice: false,
+  // 选完图到真正起上传之间的那段把关进行中（读文件头是异步的，期间拦住再起一批）
+  _checking: false,
   // 聊天选图补后缀产生的临时副本，上传完即删，onUnload 兜底再清一次
   _tmpFiles: [],
 
@@ -124,8 +124,6 @@ Page({
     // 未登录时 onUnload 兜底清理才有正确的空数组可用）
     this._tmpFiles = [];
     if (!auth.checkLogin()) return;
-    // 同步记录是否编辑，避免 onReady 早于 onLoad 的 await 时 this.data.id 还没赋值
-    this._isEdit = Boolean(options.id);
     const [date, timeStr] = nowDateTime().split(" ");
     this.setData({ date, timeStr });
     // 记下进页时的默认时间：AI 解析出口径下「用户没动过」才允许覆盖（编辑旧日志时
@@ -137,7 +135,6 @@ Page({
     const pendingVoice = app.globalData && app.globalData._pendingVoice;
     if (pendingVoice && pendingVoice.tempFilePath) {
       app.globalData._pendingVoice = null;
-      this._hasPendingVoice = true;
       this.setData({
         voice: {
           tempFilePath: pendingVoice.tempFilePath,
@@ -154,14 +151,6 @@ Page({
       wx.setNavigationBarTitle({ title: "编辑日志" });
       this.setData({ id: options.id });
       this.loadDetail(options.id);
-    }
-  },
-
-  onReady() {
-    // 新建日志（非编辑、非带录音跳转）进入时，默认把地点定位到当前位置：
-    // 自动拉起地图选点，小程序原生地图会先定位到用户当前所在，确认/微调后即回填
-    if (!this._isEdit && !this._hasPendingVoice) {
-      this.chooseLocation({ auto: true });
     }
   },
 
@@ -425,9 +414,7 @@ Page({
     this.setData({ visibilityIndex: Number(e.detail.value) });
   },
 
-  chooseLocation(opt) {
-    // auto=true 表示新建日志进入页面时的自动定位：用户取消不打提示，避免刚进来就被 toast 打扰
-    const isAuto = Boolean(opt && opt.auto);
+  chooseLocation() {
     wx.chooseLocation({
       success: (res) => {
         this.setData({
@@ -440,7 +427,7 @@ Page({
         });
       },
       fail: () => {
-        if (!isAuto) wx.showToast({ title: "未选择地点", icon: "none" });
+        wx.showToast({ title: "未选择地点", icon: "none" });
       },
     });
   },
@@ -463,7 +450,13 @@ Page({
       // 尺寸与质量统一交给后端 sharp 封顶（长边 2560 / webp q88），
       // 超过 MAX_UPLOAD_MB 的原图会被后端挡下并提示，不会静默失败
       sizeType: ["original"],
-      success: (res) => this.uploadImages(res.tempFiles || []),
+      success: (res) =>
+        this.pickAndUpload(
+          (res.tempFiles || []).map((t) => ({
+            path: t.tempFilePath,
+            size: t.size,
+          })),
+        ),
     });
   },
 
@@ -484,14 +477,17 @@ Page({
       count: remaining,
       // 只放图片进来，避开用户误选压缩包/文档后的一串报错
       type: "image",
-      success: (res) => this.onChatFiles(res.tempFiles || []),
+      success: (res) => this.pickAndUpload(res.tempFiles || []),
       fail: (err) => {
         const msg = (err && err.errMsg) || "";
         // 用户自己退回不算失败，不弹 toast 打扰
         if (msg.indexOf("cancel") >= 0) return;
         if (Number(err && err.errno) === 112) {
           // 走到这里说明后台那项隐私声明还没勾上（或没等到生效）
-          wx.showToast({ title: "聊天文件未声明隐私项，暂不可选", icon: "none" });
+          wx.showToast({
+            title: "聊天文件未声明隐私项，暂不可选",
+            icon: "none",
+          });
           return;
         }
         wx.showToast({ title: "没能打开微信聊天文件", icon: "none" });
@@ -500,59 +496,91 @@ Page({
   },
 
   /**
-   * 会话文件不能直接拿去传：先挡下后端收不了的，再给无后缀的路径补上合法后缀
-   * @param {Array<{path:string,name:string,size:number}>} files
+   * 两条选图入口共用的把关：认格式 → 卡体积 → 补后缀，只把后端收得下的送进上传队列
+   * @param {Array<{path:string,name?:string,size?:number}>} files 微信返回的临时文件
    */
-  async onChatFiles(files) {
-    if (!files.length) return;
-    const skippedFmt = [];
-    const skippedBig = [];
-    const picked = [];
-    files.forEach((f) => {
-      const extHit = (f.name || f.path || "").match(/\.[a-zA-Z0-9]+$/);
-      if (Number(f.size) > MAX_UPLOAD_BYTES) {
-        skippedBig.push(f);
-      } else if (extHit && !UPLOAD_EXT_RE.test(extHit[0])) {
-        // 明确带了 .gif/.bmp 这类后缀：后端收不了，当场说清楚比丢一句格式错误友好
-        skippedFmt.push(f);
-      } else {
-        picked.push(f);
-      }
-    });
-    const notes = [];
-    if (skippedFmt.length) notes.push(`${skippedFmt.length} 张格式不支持`);
-    if (skippedBig.length) {
-      notes.push(`${skippedBig.length} 张超过 ${MAX_UPLOAD_MB}MB`);
-    }
-    if (notes.length) {
-      wx.showToast({ title: notes.join("，") + "，已跳过", icon: "none" });
-    }
-
+  async pickAndUpload(files) {
+    const list = (files || []).filter((f) => f && f.path);
+    if (!list.length) return;
+    // 判格式要异步读文件头，这段空窗里再点一次会起两批上传，先结束的那批会把
+    // uploading 提前抹掉 —— 与 chooseImage 里那条注释是同一个坑，这里单独拦一道
+    if (this._checking) return;
+    this._checking = true;
+    let rejected = [];
+    let oversize = 0;
     const tasks = [];
-    for (const f of picked) {
-      const raw = f.path || "";
-      if (!raw) continue;
-      if (UPLOAD_EXT_RE.test(raw)) {
-        tasks.push({ tempFilePath: raw });
-        continue;
+    try {
+      // 多张并发读比逐张等快一截
+      const inspected = await Promise.all(list.map((f) => inspectImage(f)));
+      const passed = [];
+      list.forEach((f, i) => {
+        const info = inspected[i];
+        if (!info.ok) {
+          rejected = rejected.concat([info]);
+        } else if (Number(f.size) > MAX_UPLOAD_BYTES) {
+          oversize += 1;
+        } else {
+          passed.push({ path: f.path, ext: info.ext });
+        }
+      });
+      for (const p of passed) {
+        if (SUPPORTED_EXT_RE.test(p.path)) {
+          tasks.push({ tempFilePath: p.path });
+          continue;
+        }
+        // 会话里的图、个别安卓机型的相册临时名常常没后缀，multer 会按扩展名拒收，
+        // 先复制一份按真实格式补上后缀（认不出来按 jpg 兜底）再传
+        const tmpPath = await copyWithExt(p.path, p.ext || "jpg");
+        if (tmpPath) {
+          this._tmpFiles.push(tmpPath);
+          tasks.push({ tempFilePath: tmpPath, tmpPath });
+        } else {
+          // 副本建不了（没文件管理器等）就把原路径交上去，成不成由后端判定，至少不静默丢图
+          tasks.push({ tempFilePath: p.path });
+        }
       }
-      // 微信会话里的图传下来多数没有后缀，后缀能从原文件名拿就用，拿不到就按 jpg 试
-      const nameExt = (f.name || "").match(/\.[a-zA-Z0-9]+$/);
-      const ext =
-        nameExt && UPLOAD_EXT_RE.test(nameExt[0])
-          ? nameExt[1].toLowerCase()
-          : "jpg";
-      const tmpPath = await copyWithExt(raw, ext);
-      if (tmpPath) {
-        this._tmpFiles.push(tmpPath);
-        tasks.push({ tempFilePath: tmpPath, tmpPath });
-      } else {
-        // 副本建不了（没文件管理器等）就把原路径交上去，成不成由后端判定，至少不静默丢图
-        tasks.push({ tempFilePath: raw });
+
+      const tip = this.buildSkipTip(rejected, oversize);
+      if (tasks.length) {
+        // 还有图能传：一句 toast 报数就够，别拿弹窗打断上传
+        if (tip) wx.showToast({ title: tip, icon: "none" });
+        // uploadImages 开头同步立 uploading，与这里无空窗
+        this.uploadImages(tasks);
+        return;
       }
+      // 一张都没过：把「为什么 + 怎么办」讲透，这段指引长到 toast 撑不住
+      const labels = rejected.map((r) => r.label);
+      if (labels.indexOf("HEIC") >= 0 || labels.indexOf("HEIF") >= 0) {
+        wx.showModal({
+          title: "图片格式不支持",
+          content:
+            "选的是 HEIC（iPhone 默认格式），后端转不了、小程序也显示不出来。" +
+            "请在 iPhone「设置 - 相机 - 格式」里选「兼容性最佳」后重拍，或转成 JPG 再选。",
+          showCancel: false,
+          confirmText: "知道了",
+        });
+      } else if (tip) {
+        wx.showToast({ title: tip, icon: "none" });
+      }
+    } catch (err) {
+      /* 临时文件读不了：不默默丢图，说一句让用户重选 */
+      wx.showToast({ title: "图片读取失败，请重试", icon: "none" });
+    } finally {
+      this._checking = false;
     }
-    if (!tasks.length) return;
-    this.uploadImages(tasks);
+  },
+
+  /** 一句跳过提示：点名不支持的格式，超体积的另算 */
+  buildSkipTip(rejected, oversize) {
+    const parts = [];
+    if (rejected.length) {
+      const labels = Array.from(
+        new Set(rejected.map((r) => r.label || "未知")),
+      );
+      parts.push(`${labels.join("/")} ${rejected.length} 张格式不支持`);
+    }
+    if (oversize) parts.push(`${oversize} 张超过 ${MAX_UPLOAD_MB}MB`);
+    return parts.length ? parts.join("，") + "，已跳过" : "";
   },
 
   async uploadImages(files) {

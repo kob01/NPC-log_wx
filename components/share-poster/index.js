@@ -4,6 +4,12 @@ const { resolveFileUrl } = require("../../utils/format");
 // 海报逻辑尺寸（3:4 竖版），导出时按设备像素比放大
 const LW = 600;
 const LH = 800;
+// 版式常量：内边距与配色（统一克制的靛蓝主色 + 高级灰阶）
+const PAD = 44;
+const PRIMARY = "#4a6cf7";
+const INK = "#1f2430";
+const BODY = "#5a6072";
+const MUTED = "#9aa0b0";
 
 /** 按最大宽度逐字换行（CJK 友好），支持手动 \n */
 function wrapText(ctx, text, maxWidth) {
@@ -27,6 +33,78 @@ function wrapText(ctx, text, maxWidth) {
   }
   if (line) lines.push(line);
   return lines;
+}
+
+/** 圆角矩形路径（不自动 fill/stroke） */
+function roundRectPath(ctx, x, y, w, h, r) {
+  const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+
+/** 文本超宽则截断并补省略号 */
+function ellipsisText(ctx, text, maxW) {
+  const s = String(text == null ? "" : text);
+  if (ctx.measureText(s).width <= maxW) return s;
+  let out = s;
+  while (out.length && ctx.measureText(out + "…").width > maxW) {
+    out = out.slice(0, -1);
+  }
+  return out + "…";
+}
+
+/**
+ * 话题标签胶囊：圆角背景 + 主色文字，横向排列自动换行
+ * @returns {number} 绘制结束后的 y（下一段内容的起点）
+ */
+function drawTagPills(ctx, tags, x, y, maxW, opt) {
+  const o = opt || {};
+  const fontSize = o.fontSize || 17;
+  const padX = o.padX || 16;
+  const h = o.h || 34;
+  const gapX = o.gapX || 12;
+  const gapY = o.gapY || 12;
+  const maxRows = o.maxRows || 2;
+  const max = o.max || tags.length;
+  const limit = o.limit || Infinity; // 底部不可越界线
+  const bg = o.bg || "rgba(74,108,247,0.10)";
+  const fg = o.fg || PRIMARY;
+
+  ctx.font = fontSize + "px sans-serif";
+  const prevBaseline = ctx.textBaseline;
+  ctx.textBaseline = "middle";
+  let cx = x;
+  let cy = y;
+  let row = 1;
+  let drawn = 0;
+  for (let i = 0; i < tags.length && drawn < max; i++) {
+    const raw = String(tags[i] || "").trim();
+    if (!raw) continue;
+    const label = raw.charAt(0) === "#" ? raw : "#" + raw;
+    const pillW = ctx.measureText(label).width + padX * 2;
+    if (cx + pillW > x + maxW && cx > x) {
+      if (row >= maxRows) break;
+      if (cy + h + gapY + h > limit) break; // 下一行放不下则停
+      cx = x;
+      cy += h + gapY;
+      row++;
+    }
+    if (cy + h > limit) break; // 当前行越界则停
+    roundRectPath(ctx, cx, cy, pillW, h, h / 2);
+    ctx.fillStyle = bg;
+    ctx.fill();
+    ctx.fillStyle = fg;
+    ctx.fillText(label, cx + padX, cy + h / 2 + 1);
+    cx += pillW + gapX;
+    drawn++;
+  }
+  ctx.textBaseline = prevBaseline;
+  return drawn ? cy + h : y;
 }
 
 Component({
@@ -72,11 +150,11 @@ Component({
     platform: "xiaohongshu",
     platforms: [
       { key: "xiaohongshu", label: "小红书" },
-      { key: "moments", label: "朋友圈" },
-      { key: "weibo", label: "微博" },
+      { key: "douyin", label: "抖音" },
     ],
     copy: null,
     tip: "",
+    canvasH: 789,
   },
 
   methods: {
@@ -230,179 +308,236 @@ Component({
             this._nodeRetried = false;
             const canvas = item.node;
             const dpr = wx.getSystemInfoSync().pixelRatio || 2;
-            canvas.width = LW * dpr;
-            canvas.height = LH * dpr;
             const ctx = canvas.getContext("2d");
-            ctx.scale(dpr, dpr);
 
-            // 背景
-            const grd = ctx.createLinearGradient(0, 0, 0, LH);
-            grd.addColorStop(0, "#fdfbfb");
-            grd.addColorStop(1, "#ebedee");
-            ctx.fillStyle = grd;
-            ctx.fillRect(0, 0, LW, LH);
+            // 版式常量：图片永远占满宽、原比例、不裁剪、贴顶；卡片高度随内容自适应
+            const GAP = 36; // 图片/头图与文案的间距
+            const BPAD = 44; // 卡片底部留白
+            const HEADER_H = 260; // 无图头图高
+            const MIN_H = LH; // 卡片最小高（短内容仍保持约 3:4）
+            const MAX_H = 2000; // 卡片最大高（防极端超长）
+            const MAX_BODY = 12; // 正文最多行
 
-            /**
-             * 文案区绘制
-             * @param {number} textX 文案左边界（竖图在左时为图片栏右侧）
-             * @param {number} textMaxW 文案最大宽度
-             * @param {number} y 起始 y
-             */
-            const drawText = (textX, textMaxW, y) => {
-              ctx.textBaseline = "top";
-              const pad = 40;
+            // 先测量文案高度（measureText 不依赖画布尺寸），据此算出总高
+            const layout = this.computeLayout(ctx, entry, copy, MAX_BODY);
 
-              // 元信息（类型 + 时间）
-              ctx.font = "12px sans-serif";
-              ctx.fillStyle = "#95a5a6";
-              const meta = [entry.time || "", entry.type || ""]
-                .filter(Boolean)
-                .join("  ·  ");
-              ctx.fillText(meta, textX, y);
-              y += 28;
+            const paint = (img) => {
+              if (this._drawSeq !== seq) {
+                resolve();
+                return;
+              }
+              const mediaH = img ? LW / (img.width / img.height) : HEADER_H;
+              const topY = mediaH + GAP;
+              let H = Math.round(topY + layout.h + BPAD);
+              H = Math.max(MIN_H, Math.min(MAX_H, H));
 
-              // 标题
-              ctx.font = "bold 30px sans-serif";
-              ctx.fillStyle = "#2c3e50";
-              const titleLines = wrapText(
-                ctx,
-                copy.title || entry.event || "",
-                textMaxW,
-              ).slice(0, 2);
-              titleLines.forEach((ln) => {
-                ctx.fillText(ln, textX, y);
-                y += 40;
-              });
+              // 重设画布尺寸（会重置 ctx 状态），再按 dpr 缩放
+              canvas.width = LW * dpr;
+              canvas.height = H * dpr;
+              ctx.scale(dpr, dpr);
 
-              // 正文（按剩余高度动态限行，防止溢出底部）
-              y += 6;
-              ctx.font = "20px sans-serif";
-              ctx.fillStyle = "#4a5568";
-              const maxBodyLines = Math.max(
-                3,
-                Math.min(10, Math.floor((LH - 170 - y) / 32)),
-              );
-              const bodyLines = wrapText(
-                ctx,
-                copy.body || "",
-                textMaxW,
-              ).slice(0, maxBodyLines);
-              bodyLines.forEach((ln) => {
-                ctx.fillText(ln, textX, y);
-                y += 32;
-              });
+              // 背景：干净白底 + 底部极浅渐变
+              const grd = ctx.createLinearGradient(0, 0, 0, H);
+              grd.addColorStop(0, "#ffffff");
+              grd.addColorStop(1, "#f5f6fa");
+              ctx.fillStyle = grd;
+              ctx.fillRect(0, 0, LW, H);
 
-              // 话题标签
-              const tags = (copy.hashtags || []).join(" ");
-              if (tags) {
-                y += 8;
-                ctx.font = "18px sans-serif";
-                ctx.fillStyle = "#1677ff";
-                const tagMax = Math.max(
-                  1,
-                  Math.min(3, Math.floor((LH - 90 - y) / 28)),
-                );
-                const tagLines = wrapText(ctx, tags, textMaxW).slice(0, tagMax);
-                tagLines.forEach((ln) => {
-                  ctx.fillText(ln, textX, y);
-                  y += 28;
-                });
+              // 媒体区：占满宽等比图（不裁剪），加载失败降级为头图
+              if (img) {
+                try {
+                  ctx.drawImage(img, 0, 0, LW, mediaH);
+                } catch (e) {
+                  this.drawHeaderBand(ctx, HEADER_H);
+                }
+              } else {
+                this.drawHeaderBand(ctx, HEADER_H);
               }
 
-              // 底部：地点 + 作者 + 水印
-              ctx.font = "16px sans-serif";
-              ctx.fillStyle = "#e05a5a";
-              const place = entry.position || entry.address || "";
-              if (place) ctx.fillText("📍 " + place, pad, LH - 60);
-              ctx.fillStyle = "#a0aec0";
-              const footer =
-                (entry.author ? "@" + entry.author + "  " : "") +
-                "来自「NPC存档」";
-              const fw = ctx.measureText(footer).width;
-              ctx.fillText(footer, LW - pad - fw, LH - 32);
+              // 文案区：按预计算布局全量绘制
+              this.drawContentLayout(ctx, layout, topY, H);
 
+              // 同步预览显示高度（592rpx 宽对应的等比高）
+              this.setData({ canvasH: Math.round((592 * H) / LW) });
               resolve();
             };
 
-            /**
-             * 封面按原图宽高比布局（不拉伸）：
-             * - 横图/方图在上：全宽等比绘制；接近方形导致过高时，
-             *   源图居中裁剪到目标框比例（drawImage 九参数）
-             * - 竖图在左：左栏 200×320 居中裁剪填充，文案排在图片右侧
-             */
-            const IMG_MAX_H = 320;
-            const V_IMG_W = 200;
-            const V_IMG_H = 320;
             if (coverSrc) {
               this.loadImage(canvas, coverSrc).then((img) => {
-                if (this._drawSeq !== seq) {
-                  resolve();
-                  return;
-                }
-                if (!img) {
-                  this.drawHeaderBand(ctx);
-                  drawText(40, LW - 80, 224);
-                  return;
-                }
-                const ratio = img.width / img.height;
-                try {
-                  if (ratio >= 1) {
-                    const dh = LW / ratio;
-                    if (dh <= IMG_MAX_H) {
-                      ctx.drawImage(img, 0, 0, LW, dh);
-                      drawText(40, LW - 80, dh + 24);
-                    } else {
-                      const cropH = img.width * (IMG_MAX_H / LW);
-                      const sy = (img.height - cropH) / 2;
-                      ctx.drawImage(
-                        img,
-                        0,
-                        sy,
-                        img.width,
-                        cropH,
-                        0,
-                        0,
-                        LW,
-                        IMG_MAX_H,
-                      );
-                      drawText(40, LW - 80, IMG_MAX_H + 24);
-                    }
-                  } else {
-                    const tr = V_IMG_W / V_IMG_H;
-                    let sx = 0;
-                    let sy = 0;
-                    let sw = img.width;
-                    let sh = img.height;
-                    if (ratio > tr) {
-                      sw = img.height * tr;
-                      sx = (img.width - sw) / 2;
-                    } else {
-                      sh = img.width / tr;
-                      sy = (img.height - sh) / 2;
-                    }
-                    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, V_IMG_W, V_IMG_H);
-                    drawText(V_IMG_W + 24, LW - V_IMG_W - 64, 28);
-                  }
-                } catch (e) {
-                  // 绘制异常时降级为无图版式
-                  drawText(40, LW - 80, 24);
-                }
+                paint(img && img.width ? img : null);
               });
             } else {
-              this.drawHeaderBand(ctx);
-              drawText(40, LW - 80, 224);
+              paint(null);
             }
           });
       });
     },
 
-    /** 无封面时的占位色带 */
-    drawHeaderBand(ctx) {
-      const grd = ctx.createLinearGradient(0, 0, LW, 200);
-      grd.addColorStop(0, "#1677ff");
-      grd.addColorStop(1, "#6aa9ff");
+    /**
+     * 测量文案布局（不绘制）：返回各段行数据与总高度 h
+     * 供自适应卡片高度计算，并与 drawContentLayout 严格一致
+     */
+    computeLayout(ctx, entry, copy, maxBody) {
+      const maxW = LW - PAD * 2;
+      const L = {
+        meta: "",
+        titleLines: [],
+        bodyLines: [],
+        tags: [],
+        tagRows: 0,
+        h: 0,
+      };
+      let h = 0;
+
+      const meta = [entry.time || "", entry.type || ""]
+        .filter(Boolean)
+        .join("   ·   ");
+      if (meta) {
+        L.meta = meta;
+        h += 32;
+      }
+
+      ctx.font = "bold 33px sans-serif";
+      L.titleLines = wrapText(
+        ctx,
+        copy.title || entry.event || "",
+        maxW - 18,
+      ).slice(0, 2);
+      h += L.titleLines.length * 44;
+
+      const bodyText = copy.body || "";
+      if (bodyText) {
+        ctx.font = "19px sans-serif";
+        L.bodyLines = wrapText(ctx, bodyText, maxW).slice(0, maxBody);
+        if (L.bodyLines.length) h += 12 + L.bodyLines.length * 32;
+      }
+
+      const tags = (copy.hashtags || []).filter(Boolean);
+      if (tags.length) {
+        ctx.font = "17px sans-serif";
+        const padX = 16;
+        const gapX = 12;
+        const max = 6;
+        let rows = 1;
+        let cx = 0;
+        let drawn = 0;
+        for (let i = 0; i < tags.length && drawn < max; i++) {
+          const raw = String(tags[i] || "").trim();
+          if (!raw) continue;
+          const label = raw.charAt(0) === "#" ? raw : "#" + raw;
+          const w = ctx.measureText(label).width + padX * 2;
+          if (cx + w > maxW && cx > 0) {
+            if (rows >= 2) break;
+            rows++;
+            cx = 0;
+          }
+          cx += w + gapX;
+          drawn++;
+        }
+        if (drawn) {
+          L.tags = tags.slice(0, max);
+          L.tagRows = rows;
+          h += 16 + (rows * 34 + (rows - 1) * 12);
+        }
+      }
+
+      L.h = h;
+      return L;
+    },
+
+    /** 按预计算布局全量绘制文案区（与 computeLayout 严格一致，不截断） */
+    drawContentLayout(ctx, L, topY, H) {
+      const x = PAD;
+      const maxW = LW - PAD * 2;
+      let y = topY;
+      ctx.textBaseline = "top";
+
+      if (L.meta) {
+        ctx.fillStyle = PRIMARY;
+        ctx.beginPath();
+        ctx.arc(x + 4, y + 7, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = "13px sans-serif";
+        ctx.fillStyle = MUTED;
+        ctx.fillText(ellipsisText(ctx, L.meta, maxW - 20), x + 16, y);
+        y += 32;
+      }
+
+      if (L.titleLines.length) {
+        const tx = x + 18;
+        const barH = (L.titleLines.length - 1) * 44 + 34;
+        roundRectPath(ctx, x, y + 1, 5, barH, 2.5);
+        ctx.fillStyle = PRIMARY;
+        ctx.fill();
+        ctx.font = "bold 33px sans-serif";
+        ctx.fillStyle = INK;
+        L.titleLines.forEach((ln) => {
+          ctx.fillText(ln, tx, y);
+          y += 44;
+        });
+      }
+
+      if (L.bodyLines.length) {
+        y += 12;
+        ctx.font = "19px sans-serif";
+        ctx.fillStyle = BODY;
+        L.bodyLines.forEach((ln) => {
+          ctx.fillText(ln, x, y);
+          y += 32;
+        });
+      }
+
+      if (L.tags.length) {
+        y += 16;
+        drawTagPills(ctx, L.tags, x, y, maxW, {
+          maxRows: L.tagRows,
+          max: 6,
+          limit: H,
+        });
+      }
+    },
+
+    /** 无封面时的品牌头图：柔和渐变 + 装饰圆 + 居中标题（按类型定制） */
+    drawHeaderBand(ctx, bandH) {
+      const H = bandH || 260;
+      const type = this.data.type || "single";
+      const grd = ctx.createLinearGradient(0, 0, LW, H);
+      grd.addColorStop(0, "#4a6cf7");
+      grd.addColorStop(0.55, "#6d7dff");
+      grd.addColorStop(1, "#9078f2");
       ctx.fillStyle = grd;
-      ctx.fillRect(0, 0, LW, 200);
+      ctx.fillRect(0, 0, LW, H);
+
+      // 装饰：半透明圆，营造层次
+      ctx.fillStyle = "rgba(255,255,255,0.10)";
+      ctx.beginPath();
+      ctx.arc(LW - 30, H - 20, 120, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(50, 24, 66, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.07)";
+      ctx.beginPath();
+      ctx.arc(LW * 0.5, H * 0.42, 150, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 居中标题（英文小字 + 中文大字）
+      const map = {
+        summary: { zh: "月度回顾", en: "MONTHLY REVIEW" },
+        footprint: { zh: "我的足迹", en: "FOOTPRINT MAP" },
+        single: { zh: "生活存档", en: "LIFE ARCHIVE" },
+      };
+      const t = map[type] || map.single;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
+      ctx.font = "bold 15px sans-serif";
+      ctx.fillText(t.en, LW / 2, H / 2 - 26);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 42px sans-serif";
+      ctx.fillText(t.zh, LW / 2, H / 2 + 16);
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
     },
 
     resolveCover(entry) {

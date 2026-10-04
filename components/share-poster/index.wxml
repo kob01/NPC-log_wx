@@ -15,7 +15,12 @@
       >{{item.label}}</view>
     </view>
 
-    <canvas type="2d" id="poster" class="sp-canvas"></canvas>
+    <canvas
+      type="2d"
+      id="poster"
+      class="sp-canvas"
+      style="height: {{canvasH}}rpx"
+    ></canvas>
 
     <view wx:if="{{tip}}" class="sp-tip">{{tip}}</view>
 
