@@ -64,7 +64,10 @@ function writeCache(key, data, ttl) {
     // 体积保护：单条 > 64KB 不落盘（小程序本地存储上限 10MB，且大对象序列化本身耗时）
     const size = JSON.stringify(data).length;
     if (size <= 64 * 1024) {
-      wx.setStorageSync(CFG.CACHE_KEY_PREFIX + full, { data, exp: Date.now() + ttl });
+      wx.setStorageSync(CFG.CACHE_KEY_PREFIX + full, {
+        data,
+        exp: Date.now() + ttl,
+      });
     }
   } catch (e) {
     /* 存储写满时忽略，不影响请求本身 */
@@ -139,7 +142,9 @@ function buildHeader(extra) {
 
 /** AI 类接口走长超时 */
 function timeoutOf(url) {
-  const isAi = (CFG.AI_URL_PREFIXES || []).some((p) => String(url).indexOf(p) === 0);
+  const isAi = (CFG.AI_URL_PREFIXES || []).some(
+    (p) => String(url).indexOf(p) === 0,
+  );
   return isAi ? CFG.AI_TIMEOUT : CFG.TIMEOUT;
 }
 
@@ -190,8 +195,14 @@ function once(options) {
  * @returns {Promise<{code:number,message:string,data:any}>}
  */
 async function request(options) {
-  const { url, method = "GET", data, silent, loading, loadingText = "加载中" } =
-    options;
+  const {
+    url,
+    method = "GET",
+    data,
+    silent,
+    loading,
+    loadingText = "加载中",
+  } = options;
   const isGet = String(method).toUpperCase() === "GET";
   const cache = options.cache;
   const cacheKey = cache && cache.key;
@@ -199,7 +210,8 @@ async function request(options) {
   // 1) 命中缓存直接返回（不发请求，也不显示 loading）
   if (isGet && cacheKey) {
     const hit = readCache(cacheKey);
-    if (hit !== undefined) return { code: 200, message: "ok", data: hit, fromCache: true };
+    if (hit !== undefined)
+      return { code: 200, message: "ok", data: hit, fromCache: true };
   }
 
   // 2) 在途去重：同一时刻同参数的 GET 只发一次，其余复用同一 Promise
@@ -240,7 +252,9 @@ async function request(options) {
         const body = res.data || {};
         const msg = body.message || `请求失败（${status}）`;
         if (attempt < maxRetry && retriableStatus(status)) {
-          await sleep(backoffDelay(attempt, res.header && res.header["Retry-After"]));
+          await sleep(
+            backoffDelay(attempt, res.header && res.header["Retry-After"]),
+          );
           attempt += 1;
           continue;
         }

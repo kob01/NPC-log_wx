@@ -1,0 +1,25 @@
+# 这些文件类型由微信开发者工具自带的格式化器负责：
+# 开发者工具在保存 / 新增页面、组件时会按自己的风格重写它们
+# （.json 固定 4 空格缩进，.wxss / .wxml 也各自有一套排版）。
+# 如果 prettier 也来改，两个工具就会轮流重写同一个文件，
+# 重新制造“提交后仍有变更、需要二次提交”的问题。
+# 因此这里只让 prettier 管 .js，其余类型单一归属开发者工具。
+*.json
+*.wxml
+*.wxss
+*.wxs
+
+# IDE / 云开发生成物与本地状态
+project.private.config.json
+.cloudbase/
+work_space/
+node_modules/
+miniprogram_npm/
+
+# 二进制资源
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.ico

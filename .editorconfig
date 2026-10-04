@@ -1,0 +1,21 @@
+# http://editorconfig.org
+# 微信开发者工具的内置编辑器会读这份文件，作用是把它的格式化行为钉死，
+# 免得每次保存 / 新建页面都换一种缩进或换行符。
+# 与 .prettierrc.json（.js 由 prettier 负责）以及 .gitattributes（eol=lf）保持一致。
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# 开发者工具生成并重写 app.json / 页面与组件的 .json 时固定 4 空格；
+# 仓库现状也是 4 空格，这里显式声明，避免每次新增页面都出现两种缩进混用
+[*.json]
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false

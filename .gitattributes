@@ -1,0 +1,21 @@
+# 换行策略统一：入库一律 LF，检出也一律 LF。
+# 本机 core.autocrlf=true 会把工作区文件写成 CRLF，而 prettier / .editorconfig 又要求 LF，
+# 内容没变、换行变了，git status 会把这些文件一直挂在“已修改”上（git diff 却是空的），
+# 看起来就像“提交后还剩了变更”。显式声明 eol=lf 覆盖 autocrlf，三方理解一致。
+* text=auto eol=lf
+
+# 小程序资源文件不做换行转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.svg text eol=lf
+*.mp3 binary
+*.mp4 binary
+*.m4a binary
+*.wav binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
