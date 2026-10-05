@@ -61,6 +61,81 @@
   margin-top: 20rpx;
 }
 
+/* 静默微信登录期间的占位（高度与表单接近，不让卡片塌一下再弹回来） */
+.auto-login {
+  min-height: 320rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.auto-login-text {
+  font-size: 28rpx;
+  color: var(--text-3);
+}
+
+.auto-login-skip {
+  margin-top: 24rpx;
+  padding: 8rpx 20rpx;
+  font-size: 26rpx;
+  color: var(--primary);
+}
+
+/* 微信登录区：后端未开放微信登录时整块隐去 */
+.wx-area {
+  margin-top: 8rpx;
+}
+
+.wx-divider {
+  display: flex;
+  align-items: center;
+  margin: 32rpx 0 24rpx;
+  font-size: 22rpx;
+  color: var(--text-4);
+}
+
+.wx-divider::before,
+.wx-divider::after {
+  content: "";
+  flex: 1;
+  height: 1rpx;
+  background: var(--border);
+}
+
+.wx-divider-text {
+  padding: 0 16rpx;
+}
+
+/* 微信绿不走主题 token：品牌色，深色模式下也不该变成蓝色 */
+.btn-wx {
+  background: #07c160;
+  color: var(--text-inv);
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  padding: 20rpx 0;
+  text-align: center;
+  border: none;
+}
+
+/* 原生 button 自带的 1px 描边在 ::after 上，不去掉会和微信绿拼不出一个整块 */
+.btn-wx::after {
+  border: none;
+}
+
+.btn-wx[disabled] {
+  opacity: 0.6;
+  color: var(--text-inv);
+}
+
+.wx-tip {
+  margin-top: 20rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
 .tip {
   margin-top: 28rpx;
   text-align: center;

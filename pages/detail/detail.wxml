@@ -81,6 +81,12 @@
     </view>
   </view>
 
+  <!-- 定时提醒入口：只能给本人可编辑的日志设（后端同样会按归属拦住） -->
+  <view class="card rm-entry" wx:if="{{canEdit}}" bindtap="goReminders">
+    <text class="rm-entry-text">🔔 给这条日志设个提醒</text>
+    <text class="rm-entry-arrow">›</text>
+  </view>
+
   <!-- 底部操作：生成分享卡（浏览即可用）/ 编辑 / 删除 同排 -->
   <view class="footer">
     <button class="btn-primary footer-btn" bindtap="onShowPoster">✨ 生成分享卡</button>

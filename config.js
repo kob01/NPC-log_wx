@@ -24,6 +24,11 @@ const AI_URL_PREFIXES = [
   "/api/event/parse-voice-text",
 ];
 
+// 需要走「长超时」的非 AI 接口：后端本身很快（不超 8s），但会同步出一趟网。
+// 与 AI_URL_PREFIXES 分开是有意：那边与后端 metrics.groupOf() 的 AI 分流一一对应，
+// 把非 AI 接口塞进去会让「改一边记得改另一边」这条约定不再成立。
+const SLOW_URL_PREFIXES = ["/api/reminder/test"];
+
 module.exports = {
   BASE_URL,
   // 与 Web 端保持一致的本地缓存 key
@@ -38,6 +43,10 @@ module.exports = {
   // AI 接口超时（要盖住后端 45s 闸门 + 网络往返）
   AI_TIMEOUT: 50000,
   AI_URL_PREFIXES,
+  // 不走 AI、但后端会同步出一趟网的接口（后端给它们的超时是 15s 写接口档）：
+  // /api/reminder/test 要现取一次微信 access_token 再下发，默认 8s 会误判成失败
+  SLOW_TIMEOUT: 20000,
+  SLOW_URL_PREFIXES,
   // 幂等 GET 在 429/503/超时后的退避重试（服务端过载时让客户端自己错峰）
   RETRY_MAX: 2,
   RETRY_BASE_DELAY: 300,

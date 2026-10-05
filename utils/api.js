@@ -26,6 +26,26 @@ const user = {
     }
     return res;
   },
+  /**
+   * 微信一键登录：code 来自 wx.login（一次性、约 5 分钟过期，用过就废）
+   * 后端回 4001=该微信未绑账号，4002=服务端未开启微信登录（详见 utils/wxLogin.js）
+   */
+  wxLogin: async (code) => {
+    const res = await http.post(
+      "/api/user/wx-login",
+      { code },
+      { silent: true },
+    );
+    if (Number(res.code) === 200) {
+      // 与账号密码登录同理：换人了就清掉上一位用户的本地结果缓存
+      http.invalidateCache();
+    }
+    return res;
+  },
+  /** 把当前微信绑到已登录账号（需 token，所以必须在登录之后调） */
+  bindWx: (code) => http.post("/api/user/bind-wx", { code }, { silent: true }),
+  /** 解绑微信（后端只清 openid，本地 token 仍有效） */
+  unbindWx: () => http.post("/api/user/unbind-wx", {}, { silent: true }),
 };
 
 // ==================== 日志事件 ====================
@@ -161,4 +181,46 @@ function afterOrgWrite(res) {
   return res;
 }
 
-module.exports = { user, event, memory, org };
+// ==================== 定时提醒 ====================
+/** 提醒一变就失效 config（额度/待授权数都写在 config 里） */
+function afterReminderWrite(res) {
+  if (Number(res && res.code) === 200) {
+    http.invalidateCache("reminder:");
+  }
+  return res;
+}
+
+const reminder = {
+  /** 能力开关 + 模板 ID + 剩余订阅次数（模板 ID 只能由服务端下发，两边必须同一个） */
+  config: () =>
+    http.get(
+      "/api/reminder/config",
+      {},
+      {
+        silent: true,
+        cache: { key: "reminder:config", ttl: 30 * SEC },
+      },
+    ),
+  list: (withDone) =>
+    http.get("/api/reminder/list", withDone ? { withDone: 1 } : {}, {
+      silent: true,
+    }),
+  create: (data) =>
+    http.post("/api/reminder", data, { silent: true }).then(afterReminderWrite),
+  update: (data) =>
+    http.put("/api/reminder", data, { silent: true }).then(afterReminderWrite),
+  setStatus: (id, enabled) =>
+    http
+      .post("/api/reminder/status", { id, enabled }, { silent: true })
+      .then(afterReminderWrite),
+  remove: (id) => http.del(`/api/reminder?id=${id}`).then(afterReminderWrite),
+  /** 上报一次订阅授权（只在 wx.requestSubscribeMessage 返回 accept 后调） */
+  authorize: (count) =>
+    http
+      .post("/api/reminder/authorize", { count }, { silent: true })
+      .then(afterReminderWrite),
+  /** 立即给自己发一条测试推送（验模板 ID / 字段映射 / IP 白名单 / state） */
+  test: () => http.post("/api/reminder/test", {}, { silent: true }),
+};
+
+module.exports = { user, event, memory, org, reminder };

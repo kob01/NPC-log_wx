@@ -44,6 +44,28 @@ function saveLogin(data) {
   }
 }
 
+/** 本地缓存的用户是否已绑定微信（登录响应里的 wx_bound；后端不下发 openid，只下发这个布尔） */
+function isWxBound() {
+  const user = getUser();
+  return !!(user && user.wx_bound);
+}
+
+/**
+ * 绑定/解绑成功后同步本地用户信息
+ * 不这么做的话「我的」页会拿着登录时的旧 wx_bound 一直显示相反的状态
+ * @param {boolean} v
+ */
+function markWxBound(v) {
+  const user = getUser();
+  if (!user) return;
+  user.wx_bound = !!v;
+  setUser(user);
+  const app = getApp();
+  if (app) {
+    app.globalData.userInfo = user;
+  }
+}
+
 /** 「只看自己日志」开关 */
 function getOnlyMine() {
   return !!wx.getStorageSync(ONLY_MINE_KEY);
@@ -78,6 +100,8 @@ module.exports = {
   saveLogin,
   clear,
   isAdmin,
+  isWxBound,
+  markWxBound,
   getOnlyMine,
   setOnlyMine,
   toLogin,

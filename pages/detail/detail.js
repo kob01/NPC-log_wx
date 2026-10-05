@@ -157,6 +157,18 @@ Page({
     wx.navigateTo({ url: `/pages/edit/edit?id=${this.data.id}` });
   },
 
+  /**
+   * 给这条日志设个到点提醒（提醒页会预填标题并直接展开表单）
+   * eventId 一并带上：通知里能说出「是哪条」，列表页也能反向跳到日志
+   */
+  goReminders() {
+    if (!this.data.detail) return;
+    const title = encodeURIComponent(this.data.detail.event || "");
+    wx.navigateTo({
+      url: `/pages/reminders/reminders?eventId=${this.data.id}&title=${title}`,
+    });
+  },
+
   onShowPoster() {
     if (!this.data.detail) return;
     this.setData({ showPoster: true });

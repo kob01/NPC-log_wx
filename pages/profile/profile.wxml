@@ -20,6 +20,18 @@
     </view>
   </view>
 
+  <view class="group" wx:if="{{wxAvailable}}">
+    <view class="cell" bindtap="onWxTap">
+      <view class="cell-left">
+        <text class="cell-title">微信登录</text>
+        <text class="cell-desc">{{wxBound ? '已绑定，下次打开自动进入' : '绑定后免输账号密码，定时提醒也靠它送达'}}</text>
+      </view>
+      <view class="tag {{wxBound ? 'tag-green' : 'tag-blue'}} wx-action">
+        {{wxBusy ? '处理中…' : (wxBound ? '已绑定 · 解绑' : '未绑定 · 绑定')}}
+      </view>
+    </view>
+  </view>
+
   <view class="group">
     <view class="cell" bindtap="goReport">
       <view class="cell-left"><text class="cell-title">年度回顾</text></view>
@@ -33,6 +45,16 @@
     <view class="divider"></view>
     <view class="cell" bindtap="goOrg">
       <view class="cell-left"><text class="cell-title">我的组织</text></view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="divider"></view>
+    <view class="cell" bindtap="goReminders">
+      <view class="cell-left">
+        <text class="cell-title">定时提醒</text>
+        <text class="cell-desc" wx:if="{{remindNeedAuth}}">{{remindNeedAuth}} 条因订阅次数用完被暂停</text>
+        <text class="cell-desc" wx:else>到点通过微信服务通知推送</text>
+      </view>
+      <view class="tag tag-red" wx:if="{{remindNeedAuth}}">{{remindNeedAuth}}</view>
       <text class="arrow">›</text>
     </view>
   </view>

@@ -1,0 +1,192 @@
+/* 定时提醒页 */
+/* ⚠ 一律不用 flex 的 gap：旧版 XWeb/iOS 内核会忽略它，间距得靠 margin 落实（项目既有约定） */
+
+.reminders {
+    padding-bottom: 40rpx;
+}
+
+.sum-title {
+    font-size: 32rpx;
+    font-weight: 600;
+    margin-bottom: 6rpx;
+}
+
+/* 续订按钮：靠右、不要被长文案挤掉 */
+.sub-btn {
+    flex: none;
+    margin-left: 16rpx;
+    padding: 12rpx 24rpx;
+    font-size: 26rpx;
+}
+
+.quota-row {
+    margin-top: 16rpx;
+}
+
+.quota-row .tag {
+    margin-bottom: 0;
+}
+
+.hint-gap {
+    margin-top: 16rpx;
+}
+
+.sub-tip {
+    font-size: 22rpx;
+    color: var(--text-3);
+    line-height: 1.5;
+    margin-bottom: 16rpx;
+}
+
+.link-row {
+    margin-top: 16rpx;
+}
+
+.link {
+    font-size: 24rpx;
+    color: var(--primary);
+}
+
+.link-sep {
+    font-size: 24rpx;
+    color: var(--text-4);
+    margin: 0 12rpx;
+}
+
+.link-danger {
+    color: var(--danger);
+}
+
+/* ---------- 表单 ---------- */
+.fld {
+    margin-bottom: 20rpx;
+}
+
+.fld-label {
+    font-size: 24rpx;
+    color: var(--text-2);
+    margin-bottom: 8rpx;
+}
+
+.fld-input {
+    background: var(--fill-2);
+    border-radius: 12rpx;
+    padding: 16rpx 20rpx;
+    font-size: 28rpx;
+}
+
+.fld-area {
+    width: 100%;
+    height: 120rpx;
+    background: var(--fill-2);
+    border-radius: 12rpx;
+    padding: 16rpx 20rpx;
+    font-size: 26rpx;
+}
+
+.picker-box {
+    background: var(--fill-2);
+    border-radius: 12rpx;
+    padding: 16rpx 24rpx;
+    font-size: 28rpx;
+    color: var(--text-1);
+}
+
+.picker-gap {
+    margin-left: 16rpx;
+}
+
+.picker-line {
+    background: var(--fill-2);
+    border-radius: 12rpx;
+    padding: 16rpx 20rpx;
+    font-size: 28rpx;
+}
+
+.arrow {
+    color: var(--text-3);
+}
+
+.form-actions {
+    margin-top: 8rpx;
+}
+
+.act-btn {
+    font-size: 28rpx;
+}
+
+.act-gap {
+    margin-left: 16rpx;
+}
+
+.add-card {
+    padding: 20rpx 24rpx;
+}
+
+/* ---------- 列表行 ---------- */
+.rm-card {
+    background: var(--card);
+    border-radius: 20rpx;
+    padding: 24rpx;
+    margin: 20rpx 24rpx;
+    box-shadow: var(--shadow);
+}
+
+.rm-title {
+    font-size: 30rpx;
+    font-weight: 600;
+}
+
+.rm-meta {
+    margin-top: 6rpx;
+    font-size: 24rpx;
+    color: var(--text-2);
+}
+
+.rm-time {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.dot {
+    margin: 0 10rpx;
+    color: var(--text-4);
+}
+
+.rm-right {
+    text-align: right;
+    flex: none;
+    margin-left: 16rpx;
+}
+
+.rm-tag {
+    margin: 0 0 8rpx 0;
+}
+
+.rm-switch {
+    transform: scale(0.8);
+    transform-origin: right center;
+}
+
+.rm-remark {
+    margin-top: 12rpx;
+    font-size: 24rpx;
+    color: var(--text-2);
+    line-height: 1.5;
+}
+
+.rm-err {
+    margin-top: 10rpx;
+    font-size: 22rpx;
+    color: var(--warning);
+}
+
+.rm-actions {
+    margin-top: 16rpx;
+    padding-top: 16rpx;
+    border-top: 1rpx solid var(--divider);
+}
+
+.rm-actions .link {
+    margin-right: 28rpx;
+}

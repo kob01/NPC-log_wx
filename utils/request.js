@@ -140,12 +140,16 @@ function buildHeader(extra) {
   return header;
 }
 
-/** AI 类接口走长超时 */
+/** AI 类接口走长超时（非 AI 但同步出网的接口走 SLOW_TIMEOUT，见 config.js） */
 function timeoutOf(url) {
   const isAi = (CFG.AI_URL_PREFIXES || []).some(
     (p) => String(url).indexOf(p) === 0,
   );
-  return isAi ? CFG.AI_TIMEOUT : CFG.TIMEOUT;
+  if (isAi) return CFG.AI_TIMEOUT;
+  const isSlow = (CFG.SLOW_URL_PREFIXES || []).some(
+    (p) => String(url).indexOf(p) === 0,
+  );
+  return isSlow ? CFG.SLOW_TIMEOUT || CFG.TIMEOUT : CFG.TIMEOUT;
 }
 
 /** 可重试的状态码：只针对幂等 GET */

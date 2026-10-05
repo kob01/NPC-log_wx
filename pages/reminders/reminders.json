@@ -1,0 +1,9 @@
+{
+    "navigationBarTitleText": "定时提醒",
+    "enablePullDownRefresh": true,
+    "backgroundTextStyle": "dark",
+    "usingComponents": {
+        "empty-state": "/components/empty-state/index",
+        "loading": "/components/loading/index"
+    }
+}

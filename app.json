@@ -10,7 +10,8 @@
         "pages/edit/edit",
         "pages/report/report",
         "pages/persons/persons",
-        "pages/org/org"
+        "pages/org/org",
+        "pages/reminders/reminders"
     ],
     "window": {
         "backgroundTextStyle": "light",

@@ -136,6 +136,24 @@
   margin-left: 20rpx;
 }
 
+/* 定时提醒入口（整张卡就是按钮，与地点卡同样语义） */
+.rm-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rm-entry-text {
+  font-size: 28rpx;
+  color: var(--text-body);
+}
+
+.rm-entry-arrow {
+  font-size: 32rpx;
+  color: var(--text-3);
+  margin-left: 16rpx;
+}
+
 .footer {
   display: flex;
   gap: 16rpx;

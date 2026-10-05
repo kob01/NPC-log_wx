@@ -78,6 +78,13 @@
   color: var(--text-4);
 }
 
+/* 微信登录行的操作胶囊：.tag 默认带下边距（给多标签换行用），放进 cell 里要抹平 */
+.wx-action {
+  margin: 0;
+  padding: 8rpx 20rpx;
+  font-size: 24rpx;
+}
+
 .logout-wrap {
   padding: 40rpx 24rpx;
 }
