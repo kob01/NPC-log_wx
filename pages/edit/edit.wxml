@@ -140,9 +140,12 @@
       <text class="voice-play" catchtap="togglePlay">{{playing ? '⏸' : '▶'}}</text>
       <text class="voice-dur">{{voice.duration}}″</text>
       <text class="voice-status">{{voiceStatus}}</text>
+      <text class="voice-retry" wx:if="{{voiceRetryable}}" catchtap="retryTranscribe">重试</text>
       <text class="voice-fold" catchtap="toggleVoiceCollapsed">{{voiceCollapsed ? '∨' : '∧'}}</text>
       <text class="voice-close" catchtap="closeVoicePanel">✕</text>
     </view>
     <view class="voice-text" wx:if="{{!voiceCollapsed && voice.text}}">{{voice.text}}</view>
+    <!-- 失败成因单独一行完整展示：头部 .voice-status 是单行省略，装不下“额度不足需充值”这种长句 -->
+    <view class="voice-reason" wx:if="{{!voiceCollapsed && voiceReason}}">{{voiceReason}}</view>
   </view>
 </view>

@@ -1,11 +1,11 @@
 <view class="reminders page-root {{themeClass}}">
-  <!-- 额度卡：这一页的一切成败都取决于「有没有绑定微信」+「还有没有订阅次数」 -->
+  <!-- 额度卡：微信那一路的一切成败取决于「有没有绑定」+「还有没有次数」；邮件通道不受这两条限制 -->
   <view class="card">
     <view class="row-between">
       <view class="flex-1">
         <view class="sum-title">剩余提醒次数 {{cfg.quota || 0}}</view>
         <view class="text-2 text-sm">
-          微信限制：授权一次只能推送一条，用完需再授权
+          微信限制：授权一次只能推送一条；邮件提醒不消耗这些次数
         </view>
       </view>
       <button
@@ -21,11 +21,16 @@
       <view class="tag {{cfg.enabled ? 'tag-blue' : 'tag-orange'}}">
         {{cfg.enabled ? '服务端可推送' : '服务端未配模板'}}
       </view>
+      <view class="tag {{cfg.mailEnabled ? 'tag-blue' : 'tag-orange'}}">
+        {{cfg.mailEnabled ? '邮件通道可用' : '服务端未配邮件'}}
+      </view>
       <view class="tag tag-gray" wx:if="{{cfg.pending}}">{{cfg.pending}} 条待发</view>
     </view>
     <view class="hint-bar hint-gap" wx:if="{{hint}}">{{hint}}</view>
     <view class="link-row">
       <text class="link" bindtap="onTest">发一条测试</text>
+      <text class="link-sep" wx:if="{{cfg && cfg.mailEnabled}}">·</text>
+      <text class="link" wx:if="{{cfg && cfg.mailEnabled}}" bindtap="onTestMail">发一封测试邮件</text>
       <text class="link-sep">·</text>
       <text class="link" bindtap="toggleDone">{{withDone ? '只看进行中' : '含已结束'}}</text>
       <text class="link-sep" wx:if="{{cfg && !cfg.wxBound}}">·</text>
@@ -36,7 +41,7 @@
   <!-- 新建 / 编辑表单 -->
   <view class="card" wx:if="{{showForm}}">
     <view class="section-title">{{form.id ? '编辑提醒' : '新建提醒'}}</view>
-    <view class="sub-tip">{{subHint}}</view>
+    <view class="sub-tip">{{needWxSub ? subHint : emailHint}}</view>
 
     <view class="fld">
       <view class="fld-label">提醒内容</view>
@@ -60,6 +65,10 @@
           <view class="picker-box picker-gap">{{form.timeStr || '选择时间'}}</view>
         </picker>
       </view>
+      <view class="quick-row">
+        <view class="quick-chip" bindtap="onPickNow">现在</view>
+        <text class="quick-tip">按服务器时间填到下一分钟，仍可手动微调</text>
+      </view>
     </view>
 
     <view class="fld">
@@ -71,8 +80,55 @@
       </picker>
     </view>
 
+    <!-- 自定义间隔：只在选到「自定义间隔」时才出现（推完一次隔这么久再推下一次） -->
+    <view class="fld" wx:if="{{repeats[form.repeatIndex].value === 'custom'}}">
+      <view class="fld-label">间隔</view>
+      <view class="row">
+        <input
+          class="fld-input interval-input"
+          type="number"
+          maxlength="3"
+          placeholder="数值"
+          value="{{form.intervalValue}}"
+          bindinput="onIntervalInput"
+        />
+        <picker class="interval-unit" mode="selector" range="{{intervalUnits}}" range-key="label" value="{{form.intervalUnitIndex}}" bindchange="onIntervalUnitChange">
+          <view class="picker-box">
+            {{intervalUnits[form.intervalUnitIndex].label}} <text class="arrow">›</text>
+          </view>
+        </picker>
+      </view>
+      <view class="quick-row">
+        <text class="quick-tip">到点推送后隔这么久再推下一次，可填 1~{{intervalMax}}</text>
+      </view>
+    </view>
+
     <view class="fld">
-      <view class="fld-label">备注（可选，会一起推送到通知里）</view>
+      <view class="fld-label">推送渠道</view>
+      <picker mode="selector" range="{{channels}}" range-key="label" value="{{form.channelIndex}}" bindchange="onChannelChange">
+        <view class="picker-line">
+          {{channels[form.channelIndex].label}} <text class="arrow">›</text>
+        </view>
+      </picker>
+      <view class="quick-row" wx:if="{{channels[form.channelIndex].value !== 'wx' && !cfg.mailEnabled}}">
+        <text class="quick-tip">服务端还没配邮件通道，这条提醒会先存着不发</text>
+      </view>
+    </view>
+
+    <view class="fld" wx:if="{{channels[form.channelIndex].value !== 'wx'}}">
+      <view class="fld-label">接收邮箱</view>
+      <input
+        class="fld-input"
+        placeholder="留空即发到账号邮箱"
+        maxlength="100"
+        value="{{form.email}}"
+        data-key="email"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="fld">
+      <view class="fld-label">备注（可选，会一起推到通知与邮件里）</view>
       <textarea
         class="fld-area"
         placeholder="补充一句说明"
@@ -90,7 +146,7 @@
 
     <view class="row form-actions">
       <button class="btn-primary flex-1 act-btn" loading="{{saving}}" bindtap="onSave">
-        保存并续订一次
+        {{channels[form.channelIndex].value === 'email' ? '保存' : '保存并续订一次'}}
       </button>
       <button class="btn-ghost flex-1 act-btn act-gap" bindtap="onCancelForm">取消</button>
     </view>
@@ -113,6 +169,8 @@
             <text class="rm-time">{{item.timeText}}</text>
             <text class="dot">·</text>
             <text>{{item.repeatText}}</text>
+            <text class="dot">·</text>
+            <text>{{item.channelText}}</text>
           </view>
         </view>
         <view class="rm-right">
@@ -128,6 +186,7 @@
       </view>
 
       <view class="rm-remark" wx:if="{{item.remark}}">{{item.remark}}</view>
+      <view class="rm-remark" wx:elif="{{item.channel !== 'wx'}}">{{item.email || cfg.accountEmail || '未填接收邮箱'}}</view>
       <view class="rm-err" wx:if="{{item.lastError && item.status !== 1}}">
         上次：{{item.lastError}}
       </view>

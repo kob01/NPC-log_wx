@@ -52,7 +52,7 @@
       <view class="cell-left">
         <text class="cell-title">定时提醒</text>
         <text class="cell-desc" wx:if="{{remindNeedAuth}}">{{remindNeedAuth}} 条因订阅次数用完被暂停</text>
-        <text class="cell-desc" wx:else>到点通过微信服务通知推送</text>
+        <text class="cell-desc" wx:else>到点通过微信服务通知或邮件推送</text>
       </view>
       <view class="tag tag-red" wx:if="{{remindNeedAuth}}">{{remindNeedAuth}}</view>
       <text class="arrow">›</text>

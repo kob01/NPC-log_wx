@@ -326,6 +326,26 @@
     text-overflow: ellipsis;
 }
 
+/* 识别失败后的原地重试：用 margin 不用 flex gap（旧内核不支持 gap） */
+.voice-retry {
+    margin: 0 12rpx;
+    padding: 2rpx 18rpx;
+    border: 1rpx solid #4d9fff;
+    border-radius: 24rpx;
+    color: #4d9fff;
+    font-size: 22rpx;
+    line-height: 1.7;
+}
+
+/* 失败成因整行展示、不省略：让用户看出是“服务额度不足”而不是自己没录好 */
+.voice-reason {
+    margin-top: 12rpx;
+    color: #f5a623;
+    font-size: 24rpx;
+    line-height: 1.5;
+    word-break: break-all;
+}
+
 .voice-fold {
     color: #888;
     font-size: 30rpx;

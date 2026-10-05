@@ -182,7 +182,9 @@ function afterOrgWrite(res) {
 }
 
 // ==================== 定时提醒 ====================
-/** 提醒一变就失效 config（额度/待授权数都写在 config 里） */
+/**
+ * 提醒一变就失效 config（额度/待授权数/账号邮箱都写在 config 里）
+ */
 function afterReminderWrite(res) {
   if (Number(res && res.code) === 200) {
     http.invalidateCache("reminder:");
@@ -219,8 +221,16 @@ const reminder = {
     http
       .post("/api/reminder/authorize", { count }, { silent: true })
       .then(afterReminderWrite),
-  /** 立即给自己发一条测试推送（验模板 ID / 字段映射 / IP 白名单 / state） */
-  test: () => http.post("/api/reminder/test", {}, { silent: true }),
+  /**
+   * 立即给自己发一条测试推送（验模板 ID / 字段映射 / IP 白名单 / state）
+   * channel='email' 时验的是 SMTP 与收件地址，不消耗也不需要订阅次数
+   */
+  test: (channel) =>
+    http.post(
+      "/api/reminder/test",
+      { channel: channel || "wx" },
+      { silent: true },
+    ),
 };
 
 module.exports = { user, event, memory, org, reminder };

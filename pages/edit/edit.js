@@ -103,6 +103,10 @@ Page({
     voice: null,
     voiceCollapsed: false,
     voiceStatus: "",
+    // 识别失败的具体原因（额度不足/超时/未配置）：卡片正文整行展示，头部只放短句
+    voiceReason: "",
+    // 失败后给一个原地重试入口（录音临时文件还在，不必重录）
+    voiceRetryable: false,
     playing: false,
     // 随日志留存的录音（相对路径 + 时长秒），详情页据此回放
     audioUrl: "",
@@ -197,9 +201,23 @@ Page({
 
   /** 语音转写 + 录音留存：后端一次返回 {text, audioUrl, fields}，转写与 AI 解析均在服务端完成 */
   async transcribeAndParse(filePath) {
+    const target =
+      filePath || (this.data.voice && this.data.voice.tempFilePath);
+    if (!target) {
+      this.setData({
+        voiceStatus: "录音文件已失效",
+        voiceReason: "请重新录制",
+      });
+      return;
+    }
     this._transcribing = true;
+    this.setData({
+      voiceStatus: "识别中…",
+      voiceReason: "",
+      voiceRetryable: false,
+    });
     try {
-      const { code, data, message } = await api.event.transcribe(filePath);
+      const { code, data, message } = await api.event.transcribe(target);
       if (Number(code) === 200 && data && data.audioUrl) {
         // 录音已落盘，记下路径与时长，保存日志时一并写入
         this.setData({
@@ -211,14 +229,19 @@ Page({
         });
         const text = data.text || "";
         if (!text) {
+          // 后端把成因一并带回来（额度不足 / 超时 / 未配置 / 没听清），
+          // 全归成一句“识别失败”会让用户反复重录，而真正的问题是不知情的账户问题
           this.setData({
-            voiceStatus: "语音识别失败，可手动填写（录音已保留）",
+            voiceStatus: "识别失败，可重试",
+            voiceReason: data.failReason || "语音识别未返回文字，录音已保留",
+            voiceRetryable: true,
           });
           return;
         }
         this.setData({
           "voice.text": text,
           content: this.data.content || text,
+          voiceRetryable: false,
         });
         if (data.fields) {
           this.applyVoiceFields(data.fields);
@@ -226,18 +249,45 @@ Page({
             voiceStatus: data.degraded
               ? "AI 未启用，已保留原文"
               : "AI 已解析并填表",
+            voiceReason: data.degraded
+              ? "文字已识别，但 AI 解析未启用（已把原文放进正文）"
+              : "",
           });
         } else {
-          this.setData({ voiceStatus: "AI 解析失败，可对照原文手动填写" });
+          this.setData({
+            voiceStatus: "解析失败，可手动填写",
+            voiceReason:
+              "文字已识别但 AI 未能拆字段，可对照原文手动填，或点重试",
+            voiceRetryable: true,
+          });
         }
       } else {
-        this.setData({ voiceStatus: message || "录音保存失败，可手动填写" });
+        this.setData({
+          voiceStatus: "识别失败，可重试",
+          voiceReason: message || "录音保存失败，可手动填写",
+          voiceRetryable: true,
+        });
       }
     } catch (err) {
-      this.setData({ voiceStatus: "录音保存失败，可手动填写" });
+      this.setData({
+        voiceStatus: "上传失败，可重试",
+        voiceReason: "录音没传上去（网络或服务异常），可点重试",
+        voiceRetryable: true,
+      });
     } finally {
       this._transcribing = false;
     }
+  },
+
+  /** 识别失败后原地重试：本地录音临时文件还在，直接再跑一次转写，不要求用户重录 */
+  retryTranscribe() {
+    if (this._transcribing) return;
+    const p = this.data.voice && this.data.voice.tempFilePath;
+    if (!p) {
+      wx.showToast({ title: "录音文件已失效，请重新录制", icon: "none" });
+      return;
+    }
+    this.transcribeAndParse(p);
   },
 
   /** 只填空白字段，不覆盖用户已输入内容 */
@@ -298,6 +348,8 @@ Page({
       voice: null,
       voiceCollapsed: false,
       voiceStatus: "",
+      voiceReason: "",
+      voiceRetryable: false,
       playing: false,
       audioUrl: "",
       audioDuration: null,
