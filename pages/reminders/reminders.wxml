@@ -64,10 +64,7 @@
         <picker mode="time" value="{{form.timeStr}}" bindchange="onTimeChange">
           <view class="picker-box picker-gap">{{form.timeStr || '选择时间'}}</view>
         </picker>
-      </view>
-      <view class="quick-row">
         <view class="quick-chip" bindtap="onPickNow">现在</view>
-        <text class="quick-tip">按服务器时间填到下一分钟，仍可手动微调</text>
       </view>
     </view>
 
@@ -202,7 +199,7 @@
     </view>
 
     <empty-state
-      wx:if="{{!list.length}}"
+      wx:if="{{!list.length && !showForm}}"
       icon="🔔"
       text="还没有提醒，点上面「新建提醒」试试"
     />

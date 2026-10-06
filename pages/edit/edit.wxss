@@ -5,7 +5,7 @@
 
 .form-item {
     background: var(--card);
-    border-radius: 18rpx;
+    border-radius: var(--radius);
     padding: 24rpx;
     margin-bottom: 20rpx;
 }
@@ -14,6 +14,13 @@
     font-size: 28rpx;
     font-weight: 600;
     margin-bottom: 16rpx;
+}
+
+/* 标题行：左侧标题 + 右侧行内入口（图片区的「从聊天选图」） */
+.label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .req {
@@ -28,13 +35,16 @@
     color: var(--text-3, #8c8c8c);
 }
 
+/* 多行文本框：auto-height 随内容撑高，初始 2 行，最多撑到 5 行（行高 40rpx + 上下 padding 36rpx） */
 .area {
     width: 100%;
-    min-height: 120rpx;
+    min-height: 116rpx;
+    max-height: 236rpx;
     padding: 18rpx;
     background: var(--bg);
-    border-radius: 12rpx;
+    border-radius: var(--radius);
     font-size: 28rpx;
+    line-height: 40rpx;
     box-sizing: border-box;
 }
 
@@ -43,7 +53,7 @@
     height: 76rpx;
     padding: 0 18rpx;
     background: var(--bg);
-    border-radius: 12rpx;
+    border-radius: var(--radius);
     font-size: 28rpx;
     box-sizing: border-box;
 }
@@ -59,7 +69,7 @@
     padding: 0 24rpx;
     margin-right: 20rpx;
     background: var(--bg);
-    border-radius: 12rpx;
+    border-radius: var(--radius);
     font-size: 28rpx;
     text-align: center;
 }
@@ -79,7 +89,7 @@
     height: 76rpx;
     padding: 0 18rpx;
     background: var(--bg);
-    border-radius: 12rpx;
+    border-radius: var(--radius);
     font-size: 28rpx;
 }
 
@@ -93,7 +103,7 @@
     /* 右侧给绝对定位的「✕ 清除」留位，否则长地点/地址会被按钮压住 */
     padding: 20rpx 150rpx 20rpx 18rpx;
     background: var(--bg);
-    border-radius: 12rpx;
+    border-radius: var(--radius);
     min-height: 76rpx;
 }
 
@@ -136,7 +146,7 @@
 .img {
     width: 160rpx;
     height: 160rpx;
-    border-radius: 12rpx;
+    border-radius: var(--radius);
 }
 
 .img-del {
@@ -159,7 +169,7 @@
     line-height: 156rpx;
     text-align: center;
     border: 2rpx dashed var(--text-4);
-    border-radius: 12rpx;
+    border-radius: var(--radius);
     color: var(--text-4);
     font-size: 60rpx;
 }
@@ -170,30 +180,23 @@
 }
 
 /* ==================== 从微信聊天选图 ==================== */
-/* wx.chooseMessageFile 的入口：九宫格里的「＋」是相册/拍摄，这里另给一条整块可点的入口 */
+/* wx.chooseMessageFile 的入口：九宫格里的「＋」是相册/拍摄，这里挂在图片标题行最右侧 */
 .chat-pick {
-    margin-top: 4rpx;
-    padding: 16rpx 20rpx;
-    background: var(--card-sub);
-    border-radius: 12rpx;
-}
-
-.chat-pick-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    /* 标题行是 flex，用 margin 撑间距而不是 gap（旧内核不支持） */
+    margin-left: 16rpx;
+    font-weight: 400;
 }
 
 .chat-pick-main {
     font-size: 26rpx;
     color: var(--primary);
+    white-space: nowrap;
 }
 
-/* 提示文字单独一行：两行堆叠才不会在窄屏上把箭头挤出去 */
-.chat-pick-tip {
-    margin-top: 6rpx;
-    font-size: 22rpx;
-    color: var(--text-3);
+.chat-pick .arrow {
+    margin-left: 6rpx;
 }
 
 .org-tip {
@@ -221,7 +224,7 @@
     line-height: 40rpx;
     text-align: center;
     border: 2rpx solid var(--text-4);
-    border-radius: 8rpx;
+    border-radius: var(--radius);
     color: var(--text-inv);
 }
 
@@ -245,7 +248,7 @@
     height: 64rpx;
     padding: 0 18rpx;
     background: var(--bg);
-    border-radius: 12rpx;
+    border-radius: var(--radius);
     font-size: 26rpx;
 }
 
@@ -271,6 +274,8 @@
     left: 0;
     right: 0;
     bottom: 0;
+    /* 高于原生 input/textarea 层，否则滚动到提交栏下方的输入框会盖住按钮，点“保存修改”会穿透聚焦到下层输入框 */
+    z-index: 50;
     padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
     background: var(--card);
     box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
@@ -285,7 +290,7 @@
     bottom: calc(180rpx + env(safe-area-inset-bottom));
     z-index: 30;
     background: #1f1f1f;
-    border-radius: 20rpx;
+    border-radius: var(--radius);
     padding: 20rpx 24rpx;
     box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.25);
 }
@@ -331,7 +336,7 @@
     margin: 0 12rpx;
     padding: 2rpx 18rpx;
     border: 1rpx solid #4d9fff;
-    border-radius: 24rpx;
+    border-radius: var(--radius-pill);
     color: #4d9fff;
     font-size: 22rpx;
     line-height: 1.7;

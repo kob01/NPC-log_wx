@@ -23,14 +23,14 @@
     height: 72rpx;
     padding: 0 24rpx;
     background: var(--card);
-    border-radius: 40rpx;
+    border-radius: var(--radius-pill);
     box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
 }
 
-.search-icon {
-    font-size: 26rpx;
+/* 展开态搜索框内的放大镜：SVG 自身已是灰色，不再叠加 opacity；不参与伸缩以免被输入框挤扁 */
+.search-box .search-glyph {
     margin-right: 12rpx;
-    opacity: 0.5;
+    flex-shrink: 0;
 }
 
 .search-input {
@@ -47,11 +47,18 @@
 .search-collapsed {
     display: flex;
     align-items: center;
+    justify-content: center;
+    width: 56rpx;
     height: 56rpx;
-    padding: 0 18rpx;
-    border-radius: 30rpx;
+    padding: 0;
+    border-radius: var(--radius-pill);
     background: var(--card);
     box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.08);
+}
+
+.search-glyph {
+    width: 32rpx;
+    height: 32rpx;
 }
 
 .top-bar {
@@ -64,13 +71,18 @@
 .add-btn {
     display: flex;
     align-items: center;
+    justify-content: center;
+    width: 56rpx;
     height: 56rpx;
-    padding: 0 18rpx;
+    padding: 0;
     margin-left: 16rpx;
-    border-radius: 30rpx;
+    border-radius: var(--radius-pill);
     background: var(--primary);
-    color: var(--text-inv);
-    font-size: 30rpx;
+}
+
+.add-glyph {
+    width: 32rpx;
+    height: 32rpx;
 }
 
 .search-hint {
@@ -367,7 +379,7 @@
 .wave-bar {
     width: 8rpx;
     margin: 0 4rpx;
-    border-radius: 6rpx;
+    border-radius: var(--radius-pill);
     background: var(--primary);
     animation-name: wave;
     animation-duration: 0.7s;

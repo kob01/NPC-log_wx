@@ -4,20 +4,20 @@ const { resolveFileUrl, nowDateTime } = require("../../utils/format");
 const { SUPPORTED_EXT_RE, inspectImage } = require("../../utils/imageFormat");
 
 const typeOptions = [
-  "工作",
-  "爱好",
-  "大事件",
-  "学习",
-  "运动",
-  "旅游",
   "吃喝",
-  "社交",
-  "家庭",
   "生活",
-  "其他",
+  "运动",
+  "爱好",
+  "学习",
   "Her",
-  "衣",
+  "旅游",
+  "家庭",
+  "社交",
+  "大事件",
   "待办",
+  "衣",
+  "工作",
+  "其他",
 ];
 const ratingOptions = ["非常好", "好", "一般", "差", "非常差"];
 const visibilityOptions = ["仅自己可见", "组织可见"];

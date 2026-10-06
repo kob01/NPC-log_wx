@@ -31,6 +31,10 @@ page {
   --border-2: #e3e6eb;
   --divider: #f0f0f0;
 
+  /* 圆角：卡片/按钮/输入框等矩形一律 --radius；胶囊与圆角条用 --radius-pill（渲染端按短边自动裁剪，无需跟高度对齐）；正圆仍写 50% */
+  --radius: 6rpx;
+  --radius-pill: 999rpx;
+
   /* 状态色 */
   --danger: #f5222d;
   --danger-weak: #fff1f0;
@@ -132,7 +136,7 @@ image {
 /* 卡片 */
 .card {
   background: var(--card);
-  border-radius: 20rpx;
+  border-radius: var(--radius);
   padding: 24rpx;
   margin: 20rpx 24rpx;
   box-shadow: var(--shadow);
@@ -140,7 +144,7 @@ image {
 
 .card-flat {
   background: var(--card);
-  border-radius: 20rpx;
+  border-radius: var(--radius);
   padding: 24rpx;
 }
 
@@ -180,7 +184,7 @@ image {
   align-items: center;
   padding: 2rpx 14rpx;
   margin: 0 8rpx 8rpx 0;
-  border-radius: 8rpx;
+  border-radius: var(--radius);
   font-size: 22rpx;
   line-height: 1.7;
   background: var(--tag-gray-bg);
@@ -265,7 +269,7 @@ image {
 .btn-primary {
   background: var(--primary);
   color: var(--text-inv);
-  border-radius: 12rpx;
+  border-radius: var(--radius);
   font-size: 30rpx;
   padding: 20rpx 0;
   text-align: center;
@@ -281,7 +285,7 @@ image {
   background: var(--card);
   color: var(--primary);
   border: 1rpx solid var(--primary);
-  border-radius: 12rpx;
+  border-radius: var(--radius);
   font-size: 28rpx;
   padding: 14rpx 0;
   text-align: center;
@@ -293,7 +297,7 @@ image {
   color: var(--text-2);
   font-size: 24rpx;
   padding: 16rpx 20rpx;
-  border-radius: 12rpx;
+  border-radius: var(--radius);
   line-height: 1.5;
 }
 
@@ -306,7 +310,7 @@ image {
   display: inline-block;
   padding: 8rpx 24rpx;
   margin-right: 16rpx;
-  border-radius: 30rpx;
+  border-radius: var(--radius-pill);
   font-size: 26rpx;
   background: var(--card);
   color: var(--text-2);
@@ -323,4 +327,5 @@ image {
   background: var(--border);
   margin: 16rpx 0;
 }
+
 @import 'app-wxa-auto-dark.wxss'

@@ -18,7 +18,7 @@
     display: inline-block;
     padding: 8rpx 26rpx;
     margin-right: 16rpx;
-    border-radius: 30rpx;
+    border-radius: var(--radius-pill);
     font-size: 26rpx;
     background: var(--bg);
     color: var(--text-2);
@@ -36,7 +36,7 @@
     height: 64rpx;
     padding: 0 8rpx 0 24rpx;
     background: var(--bg);
-    border-radius: 32rpx;
+    border-radius: var(--radius-pill);
 }
 
 .tag-input {
@@ -48,7 +48,7 @@
     padding: 8rpx 26rpx;
     background: var(--primary);
     color: var(--text-inv);
-    border-radius: 28rpx;
+    border-radius: var(--radius-pill);
     font-size: 24rpx;
 }
 
@@ -82,7 +82,7 @@
 
 .map-btn {
     padding: 6rpx 16rpx;
-    border-radius: 20rpx;
+    border-radius: var(--radius-pill);
     font-size: 22rpx;
     line-height: 1.4;
     text-align: center;
@@ -128,7 +128,7 @@
 .li-thumb {
     width: 80rpx;
     height: 80rpx;
-    border-radius: 10rpx;
+    border-radius: var(--radius);
     margin-left: 16rpx;
     flex-shrink: 0;
 }

@@ -14,7 +14,7 @@
 .year-picker {
   padding: 12rpx 36rpx;
   background: var(--card);
-  border-radius: 30rpx;
+  border-radius: var(--radius-pill);
   font-size: 28rpx;
   font-weight: 600;
 }
@@ -37,7 +37,7 @@
 .stats {
   display: flex;
   background: var(--card);
-  border-radius: 20rpx;
+  border-radius: var(--radius);
   margin: 0 24rpx 20rpx;
   padding: 30rpx 0;
 }
@@ -97,14 +97,14 @@
   flex: 1;
   height: 16rpx;
   background: var(--fill);
-  border-radius: 10rpx;
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
 .bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--primary-2), var(--primary));
-  border-radius: 10rpx;
+  border-radius: var(--radius-pill);
 }
 
 .bar-count {

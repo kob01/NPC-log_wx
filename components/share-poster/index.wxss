@@ -15,7 +15,7 @@
     width: 640rpx;
     max-height: 88vh;
     background: var(--card);
-    border-radius: 24rpx;
+    border-radius: var(--radius);
     padding: 24rpx;
     box-sizing: border-box;
     display: flex;
@@ -55,7 +55,7 @@
     font-size: 26rpx;
     color: var(--text-2);
     background: var(--fill-2);
-    border-radius: 32rpx;
+    border-radius: var(--radius);
     padding: 10rpx 0;
 }
 
@@ -73,7 +73,7 @@
 .sp-canvas {
     width: 592rpx;
     height: 789rpx;
-    border-radius: 16rpx;
+    border-radius: var(--radius);
     background: #f5f6f8;
     /* 面板超高时整体滚动，不能让 flex 把画布压扁（海报会变形） */
     flex-shrink: 0;

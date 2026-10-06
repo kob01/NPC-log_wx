@@ -181,7 +181,8 @@ Page({
     const fab = this.rpx(100); // 与 .fab 同尺寸
     // 展开高：约 1/3 屏，但不低于内容所需高度（波形 + 时长 + 提示）
     const sheetH = Math.round(Math.max(h * 0.34, this.rpx(430)));
-    const radius = Math.round(this.rpx(32));
+    // 展开态顶部圆角与全局矩形圆角 token --radius（app.wxss）保持一致，改那里也要改这里
+    const radius = Math.round(this.rpx(6));
     return {
       sheetStyleClosed:
         `left:${Math.round(w - this.rpx(40) - fab)}px;` +

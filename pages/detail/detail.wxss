@@ -70,7 +70,7 @@
 
 .audio-btn {
   padding: 10rpx 32rpx;
-  border-radius: 40rpx;
+  border-radius: var(--radius-pill);
   background: var(--primary);
   color: var(--text-inv);
   font-size: 28rpx;
@@ -183,6 +183,6 @@
   background: var(--card);
   color: var(--danger);
   border: 1rpx solid var(--danger);
-  border-radius: 12rpx;
+  border-radius: var(--radius);
   text-align: center;
 }

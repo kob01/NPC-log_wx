@@ -5,7 +5,7 @@
 
 .group {
     background: var(--card);
-    border-radius: 20rpx;
+    border-radius: var(--radius);
     margin: 0 24rpx 24rpx;
     padding: 0 28rpx;
 }

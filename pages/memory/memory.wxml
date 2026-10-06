@@ -1,7 +1,7 @@
 <view class="memory page-root {{themeClass}}">
   <!-- 1. AI 问答 -->
   <view class="card">
-    <view class="section-title">⚡ 问一下你的日记</view>
+    <view class="section-title">问一下你的日记</view>
     <textarea
       class="ask-input"
       placeholder="例如：去年我和家人去哪旅游了？"
@@ -34,7 +34,7 @@
 
   <!-- 2. 热门标签 -->
   <view class="card" wx:if="{{tags.length}}">
-    <view class="section-title">🏷 热门标签</view>
+    <view class="section-title">热门标签</view>
     <view class="tag-cloud">
       <view
         class="tag tag-geekblue"
@@ -51,7 +51,7 @@
   <!-- 3. 月度摘要 -->
   <view class="card">
     <view class="row-between">
-      <view class="section-title" style="margin-bottom:0">📅 本月摘要</view>
+      <view class="section-title" style="margin-bottom:0">本月摘要</view>
       <text class="link-btn" bindtap="onSummary">{{summaryLoading ? '生成中' : (summary ? '重新生成' : '生成摘要')}}</text>
     </view>
     <view class="hint-bar" wx:if="{{summaryNotConfigured}}" style="margin-top:16rpx">AI 未配置，暂无法生成摘要。</view>
@@ -74,7 +74,7 @@
 
   <!-- 4. 记忆搜索 -->
   <view class="card">
-    <view class="section-title">🔍 记忆搜索</view>
+    <view class="section-title">记忆搜索</view>
     <view class="search-box">
       <input
         class="search-input"

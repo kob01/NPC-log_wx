@@ -1,7 +1,11 @@
 <view class="persons page-root {{themeClass}}">
   <!-- 搜索人物 -->
   <view class="search-box">
-    <text class="search-icon">🔍</text>
+    <image
+      class="search-glyph"
+      mode="aspectFit"
+      src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjOGE4Zjk4Ij48cGF0aCBkPSJNMTAgMi43NWE3LjI1IDcuMjUgMCAwMTUuNjMgMTEuODJsNC45IDQuOWEuNzUuNzUgMCAwMS0uOTggMS4xM2wtLjA4LS4wNy00LjktNC45QTcuMjUgNy4yNSAwIDExMTAgMi43NXptMCAxLjVhNS43NSA1Ljc1IDAgMTAwIDExLjUgNS43NSA1Ljc1IDAgMDAwLTExLjV6Ii8+PC9zdmc+"
+    />
     <input
       class="search-input"
       placeholder="搜索人物"
@@ -20,7 +24,7 @@
       data-name="{{item.person}}"
       bindtap="selectPerson"
     >
-      <view class="p-avatar">{{item.initial}}</view>
+      <view class="p-avatar" style="background: {{item.avatarColor}}; color: {{item.avatarFg}};">{{item.initial}}</view>
       <view class="p-name ellipsis">{{item.person}}</view>
       <view class="p-count">{{item.count}} 条</view>
     </view>
