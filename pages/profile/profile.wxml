@@ -12,16 +12,6 @@
   </view>
 
   <view class="group">
-    <view class="cell">
-      <view class="cell-left">
-        <text class="cell-title">只看自己日志</text>
-        <text class="cell-desc">开启后列表/足迹/统计仅统计本人数据</text>
-      </view>
-      <switch checked="{{onlyMine}}" color="#1677ff" bindchange="onToggleOnlyMine" />
-    </view>
-  </view>
-
-  <view class="group">
     <view class="cell" bindtap="goReport">
       <view class="cell-left"><text class="cell-title">年度回顾</text></view>
       <text class="arrow">›</text>

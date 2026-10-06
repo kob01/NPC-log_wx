@@ -8,8 +8,8 @@
  */
 // 【临时】指向本地 node 服务（NPC-log_node 默认 3000 端口，若 .env 改了 PORT 需同步）；
 // ⚠️ 真机预览必须用手机能访问的局域网 IP，localhost 会被解析到手机自身
-// const BASE_URL = "http://192.168.3.24:3000";
-const BASE_URL = "http://47.116.208.170";
+const BASE_URL = "http://192.168.3.24:3000";
+// const BASE_URL = "http://47.116.208.170";
 
 // 需要走「长超时」的 AI 接口前缀：后端这些接口要等外部 LLM/ASR，普通 8s 会误判失败。
 // 与后端 src/utils/metrics.js 的 groupOf() 分流保持一致，改一边记得改另一边。
@@ -33,7 +33,7 @@ module.exports = {
   // 与 Web 端保持一致的本地缓存 key
   TOKEN_KEY: "NPC_token",
   USER_KEY: "NPC_user",
-  ONLY_MINE_KEY: "npc_only_mine",
+  ONLY_MINE_KEY: "npc_only_mine", // 日志列表查看范围（'all'|'mine'|'others'，旧版可能为布尔）
   // 「用户主动退出登录」的一次性标记：微信一键登录的账号一点退出就会被
   // 静默登录立刻送回首页，看起来像退出没生效（见 pages/login/login.js 的 onLoad）
   MANUAL_LOGOUT_KEY: "npc_manual_logout",

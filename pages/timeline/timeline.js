@@ -18,6 +18,17 @@ const SHEET_FRAME_MS = 40;
 const HINT_SEND = `松开发送 · 左滑 ✕ 取消 · 最长 ${RECORD_MAX} 秒`;
 const HINT_CANCEL = "松开手指，取消本次录音";
 
+// 列表查看范围：三态循环 all（全部）→ mine（只看自己）→ others（只看组织内他人）
+const SCOPE_ORDER = ["all", "mine", "others"];
+const SCOPE_HINT = { all: "全部日志", mine: "只看自己", others: "只看他人" };
+// 图标（base64 内联，免额外网络请求）：灰单人=all，蓝单人=mine，蓝双人=others
+const PERSON_ICON =
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM4YThmOTgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCIvPjwvc3ZnPg==";
+const PERSON_ICON_ON =
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNjc3ZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCIvPjwvc3ZnPg==";
+const USERS_ICON =
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNjc3ZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTcgMjF2LTJhNCA0IDAgMCAwLTQtNEg1YTQgNCAwIDAgMC00IDR2MiIvPjxjaXJjbGUgY3g9IjkiIGN5PSI3IiByPSI0Ii8+PHBhdGggZD0iTTIzIDIxdi0yYTQgNCAwIDAgMC0zLTMuODciLz48cGF0aCBkPSJNMTYgMy4xM2E0IDQgMCAwIDEgMCA3Ljc1Ii8+PC9zdmc+";
+
 /** 取触点横坐标：touchend 时 touches 已空，需回落 changedTouches；都拿不到返回 -1 */
 function touchX(e) {
   const touches = e && e.touches && e.touches.length ? e.touches : null;
@@ -43,6 +54,14 @@ Page({
     keyword: "",
     searchMode: false,
     searchExpanded: false,
+    // 列表查看范围（本页局部状态，真值存 auth，切换即重拉）：all/mine/others
+    filterScope: "all",
+    // 三态图标：灰单人(all)/蓝单人(mine)/蓝双人(others)
+    personIcon: PERSON_ICON,
+    personIconOn: PERSON_ICON_ON,
+    usersIcon: USERS_ICON,
+    // 顶部三分之一处的低存在感文字提示（切换筛选时闪现一句，自动消失）
+    hintText: "",
     // 后端语义召回被并发闸门拒时置 true（列表仍能给出关键词结果，只用来提示质量下降）
     semanticSkipped: false,
     // 录音面板：sheetVisible 管节点挂载，recording 管「圆 → 底部方形」的展开态
@@ -64,10 +83,10 @@ Page({
   // 游标：已加载部分里时间最旧那条的 event_id（存实例上，不进 data）
   _cursor: null,
   _version: 0, // 列表版本号，用于丢弃过期的异步结果
-  _scopeMine: null, // 列表是在哪个「只看自己」范围下取的，范围变了要重拉
   _loadFailed: false, // 上次加载是否被限流/网络错误打断（不打断 hasMore 语义）
   _searching: false, // 搜索单飞，避免连续点击变成多个并发 AI 请求
   _searchTimer: null,
+  _hintTimer: null, // 顶部轻提示自动消失定时器
   _recorder: null, // wx RecorderManager
   _recordTimer: null,
   _down: false, // 手指是否按住录音键（防授权返回时已松手仍启动录音）
@@ -82,6 +101,8 @@ Page({
     this._cursor = null;
     this._loaded = false;
     this._loadFailed = false;
+    // 从本地记住的列表筛选初始化展示态（请求范围直接读 auth.getFilterScope()，不依赖这里的展示态）
+    this.setData({ filterScope: auth.getFilterScope() });
     this.measure();
     // 波形静态参数与面板两态几何都只算一次，后续靠 CSS 动画与类切换驱动
     this.setData(
@@ -95,16 +116,13 @@ Page({
 
   onShow() {
     if (!auth.checkLogin()) return;
-    // 首次进入时 _loaded 还是 false，交给下面的分支判定，这里只认「已经取过一次数据」
-    const scopeChanged = this._loaded && this._scopeMine !== auth.getOnlyMine();
-    // 新增/保存/删除后回到列表，或「只看自己日志」范围被切过：
-    // 两种情况下手上的数据都是另一种口径，必须重拉，否则看到的仍是旧快照
+    // 新增/保存/删除后回到列表：手上的数据是旧快照，必须重拉。
+    // 列表查看范围已降为本页局部状态，切换由 onCycleScope 直接触发 reset，
+    // 不再需要像以前那样在 onShow 里对比全局开关是否被切过
     const app = getApp();
-    if (scopeChanged || (app.globalData && app.globalData.timelineDirty)) {
-      if (app.globalData) app.globalData.timelineDirty = false;
+    if (app.globalData && app.globalData.timelineDirty) {
+      app.globalData.timelineDirty = false;
       this._loaded = true;
-      // 范围变了，搜出来的结果同样不属于当前范围：连关键词一起清掉
-      if (scopeChanged) this.setData({ keyword: "" });
       this.reset();
       return;
     }
@@ -116,6 +134,27 @@ Page({
       this._loaded = true;
       this.reset();
     }
+  },
+
+  /** 循环列表查看范围：全部 → 只看自己 → 只看他人 → 全部；写入本地偏好后按新范围重拉 */
+  onCycleScope() {
+    const idx = SCOPE_ORDER.indexOf(this.data.filterScope || "all");
+    const next = SCOPE_ORDER[(idx + 1) % SCOPE_ORDER.length];
+    auth.setFilterScope(next);
+    this.setData({ filterScope: next });
+    // 低存在感文字提示：在屏幕上方三分之一处闪现一句当前范围，不打断浏览
+    this.showHint(SCOPE_HINT[next]);
+    this.reset();
+  },
+
+  /** 顶部轻提示：显示一句文字，1.2s 后自动收起（wx.showToast 不能自定义位置，故用固定视图） */
+  showHint(text) {
+    this.setData({ hintText: text });
+    if (this._hintTimer) clearTimeout(this._hintTimer);
+    this._hintTimer = setTimeout(() => {
+      this._hintTimer = null;
+      this.setData({ hintText: "" });
+    }, 1200);
   },
 
   /** 列表滑动时收起搜索框（已输入关键词时不打断浏览搜索结果） */
@@ -132,6 +171,7 @@ Page({
   onUnload() {
     this.clearRecordTimer();
     if (this._sheetTimer) clearTimeout(this._sheetTimer);
+    if (this._hintTimer) clearTimeout(this._hintTimer);
   },
 
   // ==================== 录音（长按 🎙 展开面板，松手带音频跳编辑页转写） ====================
@@ -533,7 +573,10 @@ Page({
         // 让后端跳过带可见性子句的 COUNT(*)（突发时这一句最贵）
         params.withTotal = 0;
       }
-      const { code, data } = await api.event.page(params);
+      const { code, data } = await api.event.page(
+        params,
+        auth.getFilterScope(),
+      );
       if (version !== this._version) return; // 已被新的 reset/搜索覆盖，丢弃过期结果
       if (Number(code) === 200 && data) {
         const items = (data.items || []).map(this.fromListItem);
@@ -573,8 +616,6 @@ Page({
     this._version += 1;
     this._cursor = null;
     this._loadFailed = false;
-    // 记住本次加载的范围，供 onShow 判断切过开关没有
-    this._scopeMine = auth.getOnlyMine();
     this.setData({
       entries: [],
       groups: [],
@@ -630,7 +671,11 @@ Page({
     this._searching = true;
     try {
       this.setData({ loading: true, searchMode: true });
-      const { code, data } = await api.memory.search(q, 20);
+      const { code, data } = await api.memory.search(
+        q,
+        20,
+        auth.getFilterScope(),
+      );
       const list =
         Number(code) === 200 && data
           ? (data.list || []).map(this.fromMemoryItem)

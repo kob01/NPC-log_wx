@@ -77,7 +77,10 @@
         <view class="tag tag-orange">{{item.statusText}}</view>
       </view>
       <view class="o-reason" wx:if="{{item.reasonText}}">申请理由：{{item.reasonText}}</view>
-      <view class="o-meta"><text>{{item.applyText}}</text></view>
+      <view class="o-meta">
+        <text>{{item.applyText}}</text>
+        <text class="hist-link" data-org="{{item.orgId}}" data-user="{{item.userId}}" data-org-name="{{item.org_name}}" data-reason="{{item.reasonText}}" data-apply="{{item.applyText}}" bindtap="openMyApplication">查看记录 ›</text>
+      </view>
     </view>
     <empty-state wx:if="{{!applications.length}}" text="没有进行中的申请，已出结果的看「审批结束」" />
   </block>
@@ -111,6 +114,7 @@
       <view class="o-meta">
         <text>申请人</text>
         <text class="applicant">{{item.nameText}}</text>
+        <text class="hist-link" data-org="{{item.orgId}}" data-user="{{item.userId}}" data-name="{{item.nameText}}" data-org-name="{{item.org_name}}" data-reason="{{item.reasonText}}" data-apply="{{item.applyText}}" bindtap="openPendingHistory">查看记录 ›</text>
       </view>
       <view class="o-reason" wx:if="{{item.reasonText}}">申请理由：{{item.reasonText}}</view>
       <!-- 申请时间挤到操作条左侧：与右侧按钮同排，卡片不会被顶高 -->
@@ -186,21 +190,21 @@
 
   <!-- 审批记录详情：列表只放结论，理由收在这里 -->
   <view class="mask" wx:if="{{detailOpen}}" bindtap="closeDetail"></view>
-  <view class="popup form-pop" wx:if="{{detailOpen}}">
+  <view class="popup" wx:if="{{detailOpen}}">
     <view class="popup-head">
       <text class="popup-title ellipsis">{{detail.org_name}}</text>
       <text class="popup-close" bindtap="closeDetail">✕</text>
     </view>
-    <view class="form-body">
-      <view class="d-row">
+    <scroll-view class="popup-body" scroll-y>
+      <view class="d-row" wx:if="{{detailMode === 'record'}}">
         <text class="d-label">方向</text>
         <text class="d-val">{{detail.directionText}}</text>
       </view>
-      <view class="d-row">
+      <view class="d-row" wx:if="{{detail.nameText}}">
         <text class="d-label">申请人</text>
         <text class="d-val">{{detail.nameText}}</text>
       </view>
-      <view class="d-row">
+      <view class="d-row" wx:if="{{detailMode === 'record'}}">
         <text class="d-label">结果</text>
         <text class="d-val">{{detail.resultText}}</text>
       </view>
@@ -212,20 +216,36 @@
         <text class="d-label">申请理由</text>
         <text class="d-box">{{detail.reasonText}}</text>
       </view>
-      <view class="d-row">
-        <text class="d-label">处理时间</text>
-        <text class="d-val">{{detail.auditText}}</text>
+      <!-- 处理记录时间线：成员行只留最近一轮，多次拒绝/通过都从历史表取，全部列出 -->
+      <view class="d-hist-title">
+        <text>处理记录</text>
+        <text class="d-hint" wx:if="{{historyLoading}}">加载中…</text>
       </view>
-      <view class="d-row">
-        <text class="d-label">处理人</text>
-        <text class="d-val">{{detail.auditorText || '未记录'}}</text>
+      <view class="d-hist" wx:if="{{historyList.length}}">
+        <view class="h-item" wx:for="{{historyList}}" wx:key="index">
+          <view class="h-head">
+            <text class="h-result {{item.ok === 1 ? 'ok' : 'no'}}">{{item.resultText}}</text>
+            <text class="h-time">{{item.timeText}}</text>
+            <text class="h-auditor" wx:if="{{item.auditorText}}">· {{item.auditorText}}</text>
+          </view>
+          <view class="h-line" wx:if="{{item.applyReasonText}}">
+            <text class="h-cap">申请理由</text>
+            <view class="h-reason">{{item.applyReasonText}}</view>
+          </view>
+          <view class="h-line" wx:if="{{item.reasonText}}">
+            <text class="h-cap">{{item.ok === 1 ? '处理说明' : '拒绝理由'}}</text>
+            <view class="h-reason {{item.ok === 1 ? '' : 'no'}}">{{item.reasonText}}</view>
+          </view>
+        </view>
       </view>
-      <view class="d-row" wx:if="{{detail.rejectText}}">
-        <text class="d-label">拒绝理由</text>
-        <text class="d-box no">{{detail.rejectText}}</text>
-      </view>
+      <view class="d-empty" wx:elif="{{!historyLoading}}">暂无处理记录</view>
+    </scroll-view>
+    <!-- 待审批（管理者）：当场给通过/拒绝；已结束且可重新申请（本人）：给重新申请 -->
+    <view class="popup-foot" wx:if="{{detail.canAudit === 1}}">
+      <button class="mini-btn primary" data-org="{{detail.orgId}}" data-user="{{detail.userId}}" data-name="{{detail.nameText}}" data-approved="1" bindtap="onAuditGlobal">通过</button>
+      <button class="mini-btn danger" data-org="{{detail.orgId}}" data-user="{{detail.userId}}" data-name="{{detail.nameText}}" data-approved="0" bindtap="onAuditGlobal">拒绝</button>
     </view>
-    <view class="popup-foot" wx:if="{{detail.canReapply === 1}}">
+    <view class="popup-foot" wx:elif="{{detail.canReapply === 1}}">
       <button class="mini-btn primary" data-id="{{detail.orgId}}" data-name="{{detail.org_name}}" bindtap="onApply">重新申请</button>
     </view>
   </view>

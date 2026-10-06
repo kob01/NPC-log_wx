@@ -1,6 +1,7 @@
 /**
  * wx.request / wx.uploadFile 的 Promise 封装
- * - 自动前缀 BASE_URL、注入 Authorization 与 X-Only-Mine
+ * - 自动前缀 BASE_URL、注入 Authorization；「只看自己」由调用方按接口逐请求传 onlyMine:true
+ *   （分析类接口在 api.js 里恒为 true，日志列表按页内筛选传），不再全局注入
  * - HTTP 401：清 token 跳登录（并发只跳一次）；业务 code!==200：toast 错误（相同文案 1.5s 去重）
  * - silent:true 时不弹 toast，交由调用方处理（如「AI 未配置」降级）
  *
@@ -32,14 +33,22 @@ function showError(msg) {
 // 只缓存调用方显式声明了 cache 的只读接口，写接口一律不缓存。
 const memoryCache = {};
 
-function cacheKeyOf(key) {
-  // 「只看自己日志」开关会改变同一个接口的返回内容，必须进 key，
-  // 否则切开关后会读到另一种范围的数据
-  return `${key}|${auth.getOnlyMine() ? "mine" : "all"}|${auth.getToken() ? "1" : "0"}`;
+/** 归一化本次请求的查看范围：优先 options.scope，兼容旧的 options.onlyMine 布尔 */
+function scopeOf(options) {
+  const s = options.scope;
+  if (s === "mine" || s === "others") return s;
+  if (options.onlyMine) return "mine";
+  return "all";
 }
 
-function readCache(key) {
-  const full = cacheKeyOf(key);
+function cacheKeyOf(key, scope) {
+  // 查看范围（all/mine/others）会改变同一接口的返回内容，必须进 key，
+  // 否则切换范围后会读到另一种范围的数据
+  return `${key}|${scope}|${auth.getToken() ? "1" : "0"}`;
+}
+
+function readCache(key, scope) {
+  const full = cacheKeyOf(key, scope);
   if (memoryCache[full] && memoryCache[full].exp > Date.now()) {
     return memoryCache[full].data;
   }
@@ -56,9 +65,9 @@ function readCache(key) {
   return undefined;
 }
 
-function writeCache(key, data, ttl) {
+function writeCache(key, data, ttl, scope) {
   if (!(ttl > 0) || data === undefined || data === null) return;
-  const full = cacheKeyOf(key);
+  const full = cacheKeyOf(key, scope);
   memoryCache[full] = { data, exp: Date.now() + ttl };
   try {
     // 体积保护：单条 > 64KB 不落盘（小程序本地存储上限 10MB，且大对象序列化本身耗时）
@@ -98,14 +107,14 @@ function invalidateCache(prefix) {
 // ==================== 在途去重 ====================
 const inflight = {};
 
-function requestKeyOf(method, url, data) {
+function requestKeyOf(method, url, data, scope) {
   let q = "";
   try {
     q = data ? JSON.stringify(data) : "";
   } catch (e) {
     q = "";
   }
-  return `${method} ${url}${q ? `?${q}` : ""}|${auth.getOnlyMine() ? "mine" : "all"}`;
+  return `${method} ${url}${q ? `?${q}` : ""}|${scope}`;
 }
 
 // ==================== 401 single-flight ====================
@@ -125,7 +134,7 @@ function handleUnauthorized() {
   }, 800);
 }
 
-function buildHeader(extra) {
+function buildHeader(extra, scope) {
   const header = Object.assign(
     { "Content-Type": "application/json" },
     extra || {},
@@ -134,8 +143,11 @@ function buildHeader(extra) {
   if (token) {
     header.Authorization = `Bearer ${token}`;
   }
-  if (auth.getOnlyMine()) {
+  // 查看范围逐请求决定：mine 带 X-Only-Mine，others 带 X-View-Scope（后端据此收窄可见范围）
+  if (scope === "mine") {
     header["X-Only-Mine"] = "1";
+  } else if (scope === "others") {
+    header["X-View-Scope"] = "others";
   }
   return header;
 }
@@ -178,7 +190,7 @@ function once(options) {
       method,
       data,
       timeout: timeoutOf(url),
-      header: buildHeader(header),
+      header: buildHeader(header, scopeOf(options)),
       success: resolve,
       fail: (err) => reject(Object.assign(err, { __networkError: true })),
     });
@@ -208,19 +220,21 @@ async function request(options) {
     loading,
     loadingText = "加载中",
   } = options;
+  // 逐请求的查看范围（all/mine/others）：既决定请求头，也进缓存/在途去重 key，避免串范围
+  const scope = scopeOf(options);
   const isGet = String(method).toUpperCase() === "GET";
   const cache = options.cache;
   const cacheKey = cache && cache.key;
 
   // 1) 命中缓存直接返回（不发请求，也不显示 loading）；force 时跳过这一步真发请求
   if (isGet && cacheKey && !options.force) {
-    const hit = readCache(cacheKey);
+    const hit = readCache(cacheKey, scope);
     if (hit !== undefined)
       return { code: 200, message: "ok", data: hit, fromCache: true };
   }
 
   // 2) 在途去重：同一时刻同参数的 GET 只发一次，其余复用同一 Promise
-  const key = requestKeyOf(String(method).toUpperCase(), url, data);
+  const key = requestKeyOf(String(method).toUpperCase(), url, data, scope);
   if (isGet && options.dedupe !== false && inflight[key]) {
     return inflight[key];
   }
@@ -272,7 +286,7 @@ async function request(options) {
         // 业务失败（HTTP 200 + code!==200）不重试：交由调用方按 message 降级
         if (!silent) showError(body.message);
       } else if (isGet && cacheKey) {
-        writeCache(cacheKey, body.data, cache.ttl);
+        writeCache(cacheKey, body.data, cache.ttl, scope);
       }
       return body;
     }

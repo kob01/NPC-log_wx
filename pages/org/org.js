@@ -55,6 +55,11 @@ Page({
     // 记录详情弹层：列表只放结论，理由点开看
     detailOpen: false,
     detail: {},
+    // 详情弹层模式：record=已结束的审批记录，pending=待审批当场看历史
+    detailMode: "record",
+    // 点开详情时拉取的完整审批往来（多次拒绝全部可查）
+    historyList: [],
+    historyLoading: false,
     canManage: false,
     manageOpen: false,
     curOrg: {},
@@ -203,7 +208,88 @@ Page({
     const idx = Number(e.currentTarget.dataset.index);
     const row = this.data.records[idx];
     if (!row) return;
-    this.setData({ detailOpen: true, detail: row });
+    // 先清空上一份历史再拉：否则切到另一条记录会短暂看到上一条的处理记录
+    this.setData({
+      detailOpen: true,
+      detailMode: "record",
+      detail: row,
+      historyList: [],
+      historyLoading: true,
+    });
+    this.loadHistory(row.orgId, row.userId);
+  },
+
+  /**
+   * 待审批卡片：点开看这个申请人之前的审批往来（多次拒绝的理由都在这），
+   * 弹层底部直接给通过/拒绝，管理者不用切走就能结合历史当场决定
+   */
+  openPendingHistory(e) {
+    const { org, user, name, orgName, reason, apply } = e.currentTarget.dataset;
+    this.setData({
+      detailOpen: true,
+      detailMode: "pending",
+      detail: {
+        orgId: org,
+        userId: user,
+        org_name: orgName,
+        nameText: name,
+        reasonText: reason || "",
+        applyText: apply || "",
+        canAudit: 1,
+      },
+      historyList: [],
+      historyLoading: true,
+    });
+    this.loadHistory(org, user);
+  },
+
+  /**
+   * 我的申请（进行中）：点开看这个组织之前几轮的审批往来，为什么被拒一目了然。
+   * 与待审批的区别：不给通过/拒绝按钮（canAudit 不为 1），也不能重新申请（本就在审）
+   */
+  openMyApplication(e) {
+    const { org, user, orgName, reason, apply } = e.currentTarget.dataset;
+    this.setData({
+      detailOpen: true,
+      detailMode: "pending",
+      detail: {
+        orgId: org,
+        userId: user,
+        org_name: orgName,
+        nameText: "",
+        reasonText: reason || "",
+        applyText: apply || "",
+      },
+      historyList: [],
+      historyLoading: true,
+    });
+    this.loadHistory(org, user);
+  },
+
+  /**
+   * 拉某人申请某组织的完整审批往来：成员行只留最近一轮（被拒后重新申请还会清空），
+   * 多次拒绝必须从历史表取
+   */
+  async loadHistory(orgId, userId) {
+    if (!orgId || !userId) {
+      this.setData({ historyLoading: false });
+      return;
+    }
+    try {
+      const { code, data } = await api.org.history(orgId, userId);
+      if (Number(code) !== 200) return;
+      const list = (data || []).map((r) => ({
+        ok: Number(r.status) === 1 ? 1 : 0,
+        resultText: Number(r.status) === 1 ? "已通过" : "已拒绝",
+        timeText: fmtTime(r.audit_time),
+        auditorText: r.auditor_name || "",
+        applyReasonText: r.apply_reason || "",
+        reasonText: r.reason || "",
+      }));
+      this.setData({ historyList: list });
+    } finally {
+      this.setData({ historyLoading: false });
+    }
   },
 
   closeDetail() {
@@ -273,6 +359,8 @@ Page({
   onAuditGlobal(e) {
     const { org, user, approved, name } = e.currentTarget.dataset;
     this.doAudit(org, user, approved === "1", name, () => {
+      // 从详情弹层里点的通过/拒绝：处理完关掉弹层，否则会停在这条已处理的记录上
+      this.setData({ detailOpen: false });
       this.loadPendingAll();
       this.loadRecords();
       this.loadMyOrgs();

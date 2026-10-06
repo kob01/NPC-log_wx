@@ -122,6 +122,13 @@
   font-weight: 600;
 }
 
+/* 待审批卡片上的「查看记录」入口：点开看这个申请人之前的审批往来 */
+.hist-link {
+  margin-left: 16rpx;
+  color: var(--primary);
+  font-weight: 400;
+}
+
 .dot {
   margin: 0 8rpx;
 }
@@ -438,4 +445,99 @@
 
 .d-box.no {
   color: var(--danger);
+}
+
+/* 详情里的「处理记录」时间线：一次审批一行，多次拒绝全部列出 */
+.d-hist-title {
+  display: flex;
+  align-items: center;
+  margin-top: 28rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid var(--border);
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.d-hint {
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.d-hist {
+  margin-top: 8rpx;
+}
+
+.h-item {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid var(--border);
+}
+
+.h-item:last-child {
+  border-bottom: none;
+}
+
+.h-head {
+  display: flex;
+  align-items: center;
+}
+
+.h-result {
+  flex-shrink: 0;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.h-result.ok {
+  color: var(--success);
+}
+
+.h-result.no {
+  color: var(--danger);
+}
+
+/* 时间与处理人挤在同一行，用外边距拉开而不是 gap（旧内核 flex gap 不生效）*/
+.h-time {
+  margin-left: 16rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+
+.h-auditor {
+  margin-left: 8rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+
+/* 一轮里的一段理由：小标题 + 底色块 */
+.h-line {
+  margin-top: 10rpx;
+}
+
+.h-cap {
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+/* 理由单独包一块底色；拒绝用危险色提醒 */
+.h-reason {
+  margin-top: 6rpx;
+  padding: 12rpx 16rpx;
+  font-size: 26rpx;
+  color: var(--text-2);
+  background: var(--bg);
+  border-radius: var(--radius);
+  word-break: break-all;
+}
+
+.h-reason.no {
+  color: var(--danger);
+}
+
+.d-empty {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
 }

@@ -1,5 +1,5 @@
 /**
- * 登录态管理：token / user / onlyMine 的读写与页面拦截
+ * 登录态管理：token / user / 列表查看范围（scope）的读写与页面拦截
  */
 const {
   TOKEN_KEY,
@@ -99,9 +99,14 @@ function markHasPassword(v) {
   patchUser({ has_password: !!v });
 }
 
-/** 「只看自己日志」开关 */
-function getOnlyMine() {
-  return !!wx.getStorageSync(ONLY_MINE_KEY);
+/**
+ * 日志列表「查看范围」筛选（本地记住，仅作用于列表页及其搜索）
+ * @returns {'all'|'mine'|'others'} 兼容旧的布尔存储：true → 'mine'，其余 → 'all'
+ */
+function getFilterScope() {
+  const v = wx.getStorageSync(ONLY_MINE_KEY);
+  if (v === "mine" || v === "others") return v;
+  return v === true ? "mine" : "all";
 }
 
 /**
@@ -122,8 +127,9 @@ function consumeManualLogout() {
   return hit;
 }
 
-function setOnlyMine(v) {
-  wx.setStorageSync(ONLY_MINE_KEY, !!v);
+/** 写入列表查看范围偏好（'all'|'mine'|'others'） */
+function setFilterScope(scope) {
+  wx.setStorageSync(ONLY_MINE_KEY, scope || "all");
 }
 
 /** 跳转登录页（reLaunch 清空页面栈，避免返回到需鉴权页） */
@@ -156,8 +162,8 @@ module.exports = {
   patchUser,
   markWxBound,
   markHasPassword,
-  getOnlyMine,
-  setOnlyMine,
+  getFilterScope,
+  setFilterScope,
   markManualLogout,
   consumeManualLogout,
   toLogin,

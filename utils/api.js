@@ -5,6 +5,10 @@
  * 只读聚合类接口统一带上 {cache:{key,ttl}}：突发时同参数请求只发一次、
  * 并且直接命中本地缓存；任何写操作都会按前缀失效相关缓存（见下方 invalidate 调用）。
  * TTL 单位毫秒，取值依据：后端同类结果本身有 5 分钟进程内缓存，客户端再长就会看到过期数据。
+ *
+ * 「只看自己」范围（逐请求 scope，对应后端 X-Only-Mine / X-View-Scope 头）：
+ * - 分析类接口（AI 回忆/问答/摘要/标签/年度回顾/人物图谱/地图足迹）恒为 mine，只统计本人数据；
+ * - 日志列表 event.page 与列表内检索 memory.search 由调用方按页内筛选传 scope（all/mine/others）。
  */
 const http = require("./request");
 const md5 = require("./md5");
@@ -92,8 +96,8 @@ const user = {
 
 // ==================== 日志事件 ====================
 const event = {
-  /** 分页/游标列表（游标翻页时带 withTotal=0，让后端跳过 COUNT(*)） */
-  page: (params) => http.get("/api/event/list", params),
+  /** 分页/游标列表（游标翻页时带 withTotal=0，让后端跳过 COUNT(*)）；scope 由列表页筛选传入（all/mine/others） */
+  page: (params, scope) => http.get("/api/event/list", params, { scope }),
   /** 详情 */
   detail: (id) => http.get("/api/event/detail", { id }),
   /** 新建 */
@@ -128,13 +132,22 @@ function afterEventWrite(res) {
 }
 
 // ==================== AI 超级记忆 ====================
+// 除 search 外，本组接口都恒定只看自己（onlyMine: true → scope 'mine'）：AI 回忆/年度回顾/
+// 人物图谱/地图足迹只统计本人数据。search 例外——它被日志列表页的搜索框复用，
+// 范围要跟随列表筛选，故由调用方逐次传入第三个参数 scope（all/mine/others）。
 const memory = {
-  search: (q, limit = 8) => http.get("/api/memory/search", { q, limit }),
+  search: (q, limit = 8, scope) =>
+    http.get("/api/memory/search", { q, limit }, { scope }),
   ask: (question, limit = 8) =>
-    http.post("/api/memory/ask", { question, limit }, { silent: true }),
+    http.post(
+      "/api/memory/ask",
+      { question, limit },
+      { silent: true, onlyMine: true },
+    ),
   summary: (month) =>
     http.get("/api/memory/summary", month ? { month } : {}, {
       silent: true,
+      onlyMine: true,
       cache: { key: `memory:summary:${month || "now"}`, ttl: 120 * SEC },
     }),
   tags: () =>
@@ -143,12 +156,14 @@ const memory = {
       {},
       {
         silent: true,
+        onlyMine: true,
         cache: { key: "memory:tags", ttl: 120 * SEC },
       },
     ),
   report: (year) =>
     http.get("/api/memory/report", year ? { year } : {}, {
       silent: true,
+      onlyMine: true,
       cache: { key: `memory:report:${year || "now"}`, ttl: 300 * SEC },
     }),
   persons: () =>
@@ -157,17 +172,20 @@ const memory = {
       {},
       {
         silent: true,
+        onlyMine: true,
         cache: { key: "memory:persons", ttl: 300 * SEC },
       },
     ),
   person: (name, year) =>
     http.get("/api/memory/person", year ? { name, year } : { name }, {
       silent: true,
+      onlyMine: true,
       cache: { key: `memory:person:${name}:${year || "all"}`, ttl: 120 * SEC },
     }),
   footprints: (params = {}) =>
     http.get("/api/memory/footprints", params, {
       silent: true,
+      onlyMine: true,
       cache: {
         key: `memory:foot:${params.year || "all"}:${params.tag || ""}`,
         ttl: 300 * SEC,
@@ -221,6 +239,9 @@ const org = {
         force: !!force,
       },
     ),
+  /** 某人申请某组织的完整审批往来（点开一条记录看全部拒绝/通过轮次） */
+  history: (orgId, userId) =>
+    http.get("/api/organization/audit-history", { orgId, userId }),
   /** @param {string} [reason] 申请理由，可选，会展示给该组织管理者 */
   apply: (orgId, reason) =>
     http.post("/api/organization/apply", { orgId, reason }).then(afterOrgWrite),

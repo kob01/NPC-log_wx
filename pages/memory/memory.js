@@ -27,36 +27,13 @@ Page({
 
   // 输入防抖定时器（不进 data，避免无谓的 setData）
   _searchTimer: null,
-  // 上一次加载时用的「只看自己」范围（null = 本页还没加载过）
-  _scopeMine: null,
 
   onShow() {
     if (!auth.checkLogin()) return;
-    const mine = auth.getOnlyMine();
-    // 切过「只看自己日志」开关：另一种范围下问出来的结果留着会串数据，先清掉
-    if (this._scopeMine !== null && this._scopeMine !== mine) {
-      this.clearResults();
-    }
-    this._scopeMine = mine;
-    // tags 已在 api.js 里带 120s 缓存，这里每次 onShow 调用要么命中缓存、要么在途复用，
-    // 不会因频繁进出页面反复打聚合接口（缓存 key 带了范围，切开关必然重取）
+    // 本页已固定只看自己（api.memory.* 恒带 onlyMine），范围不再随全局开关变动，
+    // 无需再在 onShow 里对比范围、清理另一种范围下的旧结果
+    // tags 已在 api.js 里带 120s 缓存，这里每次 onShow 调用要么命中缓存、要么在途复用
     this.loadTags();
-  },
-
-  /** 只清范围相关的衍生结果（输入框里的词一并清，避免关键词配不上结果） */
-  clearResults() {
-    this.setData({
-      question: "",
-      askResult: null,
-      askError: "",
-      askNotConfigured: false,
-      summary: null,
-      summaryNotConfigured: false,
-      keyword: "",
-      searchList: [],
-      searchTotal: 0,
-      searched: false,
-    });
   },
 
   async loadTags() {
@@ -144,7 +121,7 @@ Page({
     const limit = size || this.data.limit;
     try {
       this.setData({ searching: true, searched: true });
-      const { code, data } = await api.memory.search(q, limit);
+      const { code, data } = await api.memory.search(q, limit, "mine");
       if (Number(code) === 200 && data) {
         this.setData({
           searchList: data.list || [],

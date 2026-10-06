@@ -20,19 +20,31 @@
       <text class="search-clear" wx:if="{{keyword}}" bindtap="onClear">✕</text>
     </view>
     <view class="top-bar" wx:else>
-      <view class="search-collapsed" bindtap="expandSearch">
-        <image
-          class="search-glyph"
-          mode="aspectFit"
-          src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjOGE4Zjk4Ij48cGF0aCBkPSJNMTAgMi43NWE3LjI1IDcuMjUgMCAwMTUuNjMgMTEuODJsNC45IDQuOWEuNzUuNzUgMCAwMS0uOTggMS4xM2wtLjA4LS4wNy00LjktNC45QTcuMjUgNy4yNSAwIDExMTAgMi43NXptMCAxLjVhNS43NSA1Ljc1IDAgMTAwIDExLjUgNS43NSA1Ljc1IDAgMDAwLTExLjV6Ii8+PC9zdmc+"
-        />
-      </view>
-      <view class="add-btn" bindtap="goEdit">
-        <image
-          class="add-glyph"
-          mode="aspectFit"
-          src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48cGF0aCBkPSJNMTIgNXYxNE01IDEyaDE0Ii8+PC9zdmc+"
-        />
+      <view class="top-actions">
+        <view class="search-collapsed" bindtap="expandSearch">
+          <image
+            class="search-glyph"
+            mode="aspectFit"
+            src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjOGE4Zjk4Ij48cGF0aCBkPSJNMTAgMi43NWE3LjI1IDcuMjUgMCAwMTUuNjMgMTEuODJsNC45IDQuOWEuNzUuNzUgMCAwMS0uOTggMS4xM2wtLjA4LS4wNy00LjktNC45QTcuMjUgNy4yNSAwIDExMTAgMi43NXptMCAxLjVhNS43NSA1Ljc1IDAgMTAwIDExLjUgNS43NSA1Ljc1IDAgMDAwLTExLjV6Ii8+PC9zdmc+"
+          />
+        </view>
+        <view
+          class="mine-btn {{filterScope !== 'all' ? 'mine-btn-on' : ''}}"
+          bindtap="onCycleScope"
+        >
+          <image
+            class="mine-glyph"
+            mode="aspectFit"
+            src="{{filterScope === 'others' ? usersIcon : (filterScope === 'mine' ? personIconOn : personIcon)}}"
+          />
+        </view>
+        <view class="add-btn" bindtap="goEdit">
+          <image
+            class="add-glyph"
+            mode="aspectFit"
+            src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48cGF0aCBkPSJNMTIgNXYxNE01IDEyaDE0Ii8+PC9zdmc+"
+          />
+        </view>
       </view>
     </view>
   </view>
@@ -117,4 +129,7 @@
       <view class="sheet-hint">{{cancelHint}}</view>
     </view>
   </view>
+
+  <!-- 顶部三分之一处的轻提示：切换「只看自己」时闪现一句，固定于页面根之下（祖先无 transform） -->
+  <view class="top-hint" wx:if="{{hintText}}">{{hintText}}</view>
 </view>

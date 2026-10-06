@@ -6,7 +6,6 @@ Page({
   data: {
     user: {},
     isAdmin: false,
-    onlyMine: false,
     avatarText: "?",
     // 提醒待授权数（只用来打徽标，拉失败不影响这一页）
     remindNeedAuth: 0,
@@ -20,7 +19,6 @@ Page({
     this.setData({
       user,
       isAdmin: auth.isAdmin(),
-      onlyMine: auth.getOnlyMine(),
       avatarText: name ? name.charAt(0).toUpperCase() : "?",
     });
     this.loadRemindBadge();
@@ -41,13 +39,6 @@ Page({
     } catch (err) {
       /* 徽标拿不到就算了，不打扰用户 */
     }
-  },
-
-  onToggleOnlyMine(e) {
-    const v = e.detail.value;
-    auth.setOnlyMine(v);
-    this.setData({ onlyMine: v });
-    wx.showToast({ title: v ? "已开启只看自己" : "已关闭", icon: "none" });
   },
 
   goReport() {
