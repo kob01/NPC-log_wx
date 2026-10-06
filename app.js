@@ -1,4 +1,5 @@
 const auth = require("./utils/auth");
+const appVisit = require("./utils/appVisit");
 
 App({
   globalData: {
@@ -16,6 +17,31 @@ App({
       this.globalData.userInfo = user;
     }
     this.initTheme();
+    // 访问打点：起网络类型监听。真正的「这一次打开」由下面的 onShow 记（那才拿得到 scene）
+    appVisit.init();
+  },
+
+  /**
+   * 每次进前台记一行访问（点开次数就按这张表数）。
+   * 必须挂在 App 而不是页面上：用户点进来可能一屏未看就退回微信，
+   * 而登录拦截页恰好就是那种「到了但没进得去」的地方。
+   */
+  onShow(options) {
+    // fire-and-forget：内部已全包 try/catch，这里再兜一层底，打点绝不允许把启动链路弄失败
+    try {
+      Promise.resolve(appVisit.onAppShow(options)).catch(() => {});
+    } catch (e) {
+      /* 忽略 */
+    }
+  },
+
+  /** 切后台/退回微信：给刚才那一行收尾（停留时长由服务端算，发不出去也不影响记录本身） */
+  onHide() {
+    try {
+      appVisit.onAppHide();
+    } catch (e) {
+      /* 忽略 */
+    }
   },
 
   /**

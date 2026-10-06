@@ -8,8 +8,8 @@
  */
 // 【临时】指向本地 node 服务（NPC-log_node 默认 3000 端口，若 .env 改了 PORT 需同步）；
 // ⚠️ 真机预览必须用手机能访问的局域网 IP，localhost 会被解析到手机自身
-const BASE_URL = "http://192.168.3.24:3000";
-// const BASE_URL = "http://47.116.208.170";
+// const BASE_URL = "http://192.168.3.24:3000";
+const BASE_URL = "http://47.116.208.170";
 
 // 需要走「长超时」的 AI 接口前缀：后端这些接口要等外部 LLM/ASR，普通 8s 会误判失败。
 // 与后端 src/utils/metrics.js 的 groupOf() 分流保持一致，改一边记得改另一边。
@@ -37,6 +37,19 @@ module.exports = {
   // 「用户主动退出登录」的一次性标记：微信一键登录的账号一点退出就会被
   // 静默登录立刻送回首页，看起来像退出没生效（见 pages/login/login.js 的 onLoad）
   MANUAL_LOGOUT_KEY: "npc_manual_logout",
+  // ==================== 访问打点（见 utils/appVisit.js）====================
+  // 总开关：置 false 就彻底不上报（只改端上，不动后端也能关）
+  VISIT_TRACK: true,
+  // 当前这次打开的 {visitKey, closeKey}：onHide 收尾后用掉即清。
+  // 必须落存储而不是只放内存：小程序被系统回收时 JS 模块会重启，
+  // 而「上次根本没机会上报关闭」正是最需要补记的那种情况
+  VISIT_PENDING_KEY: "npc_visit_pending",
+  // open 上报失败（断网/后端重启）时攒下的待发报文，下次进前台先补发
+  VISIT_RETRY_KEY: "npc_visit_retry",
+  VISIT_RETRY_MAX: 20,
+  // 两次 onShow 间隔小于这个值就合并成一次：部分安卓机型一次前后台切换会连发两次 onShow，
+  // 不合并的话「打开次数」会被虚高一倍
+  VISIT_MERGE_MS: 5000,
   // 结果缓存落盘的 key 前缀（冷启动秒开用）
   CACHE_KEY_PREFIX: "npc_cache_",
   // 普通接口超时：后端读接口分级超时是 8s，客户端不需要同步等 60s。

@@ -333,4 +333,22 @@ const reminder = {
     ),
 };
 
-module.exports = { user, event, memory, org, reminder };
+// ==================== 访问打点 ====================
+/**
+ * 一次「点开小程序」上报一行（表与字段含义见 NPC-log_node 的 note_app_visit）
+ *
+ * 两个接口都是软鉴权（后端鉴权白名单 + 路由自己解 token），所以：
+ * - 本地没 token 也记得上（新用户、刚退出、登录过期都算一次点开）；
+ * - 永远不会回 401，也就不会误触发 request.js 里的「清 token 跳登录页」——
+ *   打点是纯后台动作，绝不能把用户从当前页踢走。
+ * 统一 silent：上报失败不弹任何东西（用户看不见也管不了）。
+ * 不带 cache/dedupe：写接口，且每行都带唯一的 visit_key，去重没有意义。
+ */
+const visit = {
+  /** 记一次点开，拿回 {visitId, closeKey}（closeKey 要存住，收尾时凭它回填） */
+  open: (payload) => http.post("/api/visit/open", payload, { silent: true }),
+  /** 收尾一次访问；orphan:true 表示「上次没等到关闭上报」，只改状态不算时长 */
+  close: (payload) => http.post("/api/visit/close", payload, { silent: true }),
+};
+
+module.exports = { user, event, memory, org, reminder, visit };
