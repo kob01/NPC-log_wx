@@ -154,8 +154,6 @@
     padding: 12rpx 0;
 }
 
-.act-gap {}
-
 .add-card {
     padding: 20rpx 24rpx;
 }

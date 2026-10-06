@@ -1,5 +1,5 @@
 <!--
-此文件为开发者工具生成，生成时间: 2026/10/6 20:50:31
+此文件为开发者工具生成，生成时间: 2026/10/6 23:11:18
 使用方法：
 在 D:\code\NPC\NPC-log_wx\pages\timeline\timeline.wxml 引入模板
 
@@ -21,43 +21,78 @@
       <view class="search-bar">
         <view class="top-bar">
           <view class="search-collapsed">
-            <text class="search-icon sk-transparent sk-text-18-7500-138 sk-text">🔍</text>
+            <image class="search-glyph sk-image" mode="aspectFit"></image>
           </view>
-          <view class="add-btn sk-transparent sk-text-18-7500-711 sk-text">＋</view>
+          <view class="add-btn">
+            <image class="add-glyph sk-image" mode="aspectFit"></image>
+          </view>
         </view>
       </view>
       <view class="tl-body">
         <view class="tl-line"></view>
         <view class="group">
           <view class="tl-month">
-            <view class="tl-month-pill sk-transparent sk-text-18-7500-243 sk-text">2026年10月</view>
+            <view class="tl-month-pill sk-transparent sk-text-18-7500-312 sk-text">2026年10月</view>
           </view>
           <view class="tl-row tl-row-first">
             <view class="tl-dot"></view>
             <view is="components/event-card/index">
               <view class="ec-card card-index--ec-card">
+                <view class="ec-mine-bar card-index--ec-mine-bar"></view>
                 <view class="ec-head card-index--ec-head">
-                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-322 sk-text">N3来了</view>
-                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-671 sk-text">10-06 20:12</text>
+                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-598 sk-text">N1仅自己</view>
+                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-69 sk-text">10-06 23:36</text>
                 </view>
                 <view class="ec-media card-index--ec-media">
-                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-185 sk-text">N3加入了，经验总结认为有人气才有未来。</view>
+                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-550 sk-text">记录吃杂粮煎饼的体验，觉得味道一般，总结出不要辣的经验。</view>
+                  <image lazy-load="true" class="ec-thumb card-index--ec-thumb sk-image" data-index="0" mode="aspectFill"></image>
                 </view>
                 <view class="ec-tags card-index--ec-tags">
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-780 sk-text">N3</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-373 sk-text">加入</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-961 sk-text">人气</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-270 sk-text">未来</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-135 sk-text">N1</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-898 sk-text">仅自己</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-624 sk-text">无正文</view>
                 </view>
                 <view class="ec-foot card-index--ec-foot">
                   <view class="ec-foot-left card-index--ec-foot-left">
-                    <view class="tag card-index--tag tag-blue card-index--tag-blue ec-type card-index--ec-type sk-transparent sk-text-20-5882-973 sk-text">大事件</view>
+                    <view class="tag card-index--tag tag-blue card-index--tag-blue ec-type card-index--ec-type sk-transparent sk-text-20-5882-351 sk-text">吃喝</view>
                   </view>
                   <view class="ec-foot-right card-index--ec-foot-right">
-                    <text class="ec-author card-index--ec-author sk-transparent sk-text-18-7500-859 sk-text">N3</text>
                     <view class="ec-loc card-index--ec-loc ellipsis card-index--ellipsis">
                       <text class="ec-loc-icon card-index--ec-loc-icon sk-transparent sk-opacity">@</text>
-                      <text class="sk-transparent sk-text-18-7500-46 sk-text">故宫博物院</text>
+                      <text class="sk-transparent sk-text-18-7500-481 sk-text">什刹海-后海</text>
+                    </view>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view class="tl-row">
+            <view class="tl-dot"></view>
+            <view is="components/event-card/index">
+              <view class="ec-card card-index--ec-card">
+                <view class="ec-mine-bar card-index--ec-mine-bar"></view>
+                <view class="ec-head card-index--ec-head">
+                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-24 sk-text">测麻了</view>
+                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-865 sk-text">10-06 23:03</text>
+                </view>
+                <view class="ec-media card-index--ec-media">
+                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-273 sk-text">和教主一起测试UI，感觉测麻了。</view>
+                  <image lazy-load="true" class="ec-thumb card-index--ec-thumb sk-image" data-index="0" mode="aspectFill"></image>
+                </view>
+                <view class="ec-tags card-index--ec-tags">
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-250 sk-text">测试</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-775 sk-text">UI</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-932 sk-text">经验总结</view>
+                  <view class="tag card-index--tag tag-purple card-index--tag-purple sk-transparent sk-text-20-5882-79 sk-text">教主</view>
+                </view>
+                <view class="ec-foot card-index--ec-foot">
+                  <view class="ec-foot-left card-index--ec-foot-left">
+                    <view class="tag card-index--tag tag-blue card-index--tag-blue ec-type card-index--ec-type sk-transparent sk-text-20-5882-55 sk-text">其他</view>
+                  </view>
+                  <view class="ec-foot-right card-index--ec-foot-right">
+                    <view class="ec-loc card-index--ec-loc ellipsis card-index--ellipsis">
+                      <text class="ec-loc-icon card-index--ec-loc-icon sk-transparent sk-opacity">@</text>
+                      <text class="sk-transparent sk-text-18-7500-579 sk-text">慧谷时空</text>
                     </view>
                   </view>
                 </view>
@@ -69,26 +104,27 @@
             <view is="components/event-card/index">
               <view class="ec-card card-index--ec-card">
                 <view class="ec-head card-index--ec-head">
-                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-549 sk-text">N2的公事</view>
-                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-567 sk-text">10-06 14:47</text>
+                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-364 sk-text">N3来了</view>
+                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-791 sk-text">10-06 20:12</text>
                 </view>
                 <view class="ec-media card-index--ec-media">
-                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-286 sk-text">在钟山风景名胜区紫金山索道处理N2的公事，测试权限，无经验总结。</view>
+                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-455 sk-text">N3加入了，经验总结认为有人气才有未来。</view>
                 </view>
                 <view class="ec-tags card-index--ec-tags">
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-604 sk-text">N2</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-210 sk-text">公事</view>
-                  <view class="tag card-index--tag tag-purple card-index--tag-purple sk-transparent sk-text-20-5882-88 sk-text">N2</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-942 sk-text">N3</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-485 sk-text">加入</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-654 sk-text">人气</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-493 sk-text">未来</view>
                 </view>
                 <view class="ec-foot card-index--ec-foot">
                   <view class="ec-foot-left card-index--ec-foot-left">
-                    <view class="tag card-index--tag tag-blue card-index--tag-blue ec-type card-index--ec-type sk-transparent sk-text-20-5882-565 sk-text">大事件</view>
+                    <view class="tag card-index--tag tag-blue card-index--tag-blue ec-type card-index--ec-type sk-transparent sk-text-20-5882-908 sk-text">大事件</view>
                   </view>
                   <view class="ec-foot-right card-index--ec-foot-right">
-                    <text class="ec-author card-index--ec-author sk-transparent sk-opacity">n2</text>
+                    <text class="ec-author card-index--ec-author sk-transparent sk-text-18-7500-524 sk-text">N3</text>
                     <view class="ec-loc card-index--ec-loc ellipsis card-index--ellipsis">
                       <text class="ec-loc-icon card-index--ec-loc-icon sk-transparent sk-opacity">@</text>
-                      <text class="sk-transparent sk-text-18-7500-598 sk-text">钟山风景名胜区-紫金山索道</text>
+                      <text class="sk-transparent sk-text-18-7500-752 sk-text">故宫博物院</text>
                     </view>
                   </view>
                 </view>
@@ -100,180 +136,23 @@
             <view is="components/event-card/index">
               <view class="ec-card card-index--ec-card">
                 <view class="ec-head card-index--ec-head">
-                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-895 sk-text">全选的全组织</view>
-                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-271 sk-text">10-06 14:39</text>
+                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-156 sk-text">N2的公事</view>
+                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-444 sk-text">10-06 14:47</text>
                 </view>
                 <view class="ec-media card-index--ec-media">
-                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-736 sk-text">全选的全组织工作收尾，无经验总结。</view>
+                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-265 sk-text">在钟山风景名胜区紫金山索道处理N2的公事，测试权限，无经验总结。</view>
                 </view>
                 <view class="ec-tags card-index--ec-tags">
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-15 sk-text">全选</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-80 sk-text">全组织</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-200 sk-text">收尾</view>
-                </view>
-                <view class="ec-foot card-index--ec-foot">
-                  <view class="ec-foot-left card-index--ec-foot-left">
-                    <view class="tag card-index--tag tag-blue card-index--tag-blue ec-type card-index--ec-type sk-transparent sk-text-20-5882-835 sk-text">爱好</view>
-                  </view>
-                  <view class="ec-foot-right card-index--ec-foot-right">
-                    <text class="ec-author card-index--ec-author sk-transparent sk-text-18-7500-459 sk-text">Meizu</text>
-                  </view>
-                </view>
-              </view>
-            </view>
-          </view>
-          <view class="tl-row">
-            <view class="tl-dot"></view>
-            <view is="components/event-card/index">
-              <view class="ec-card card-index--ec-card">
-                <view class="ec-head card-index--ec-head">
-                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-345 sk-text">90后的Queen</view>
-                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-771 sk-text">10-06 14:38</text>
-                </view>
-                <view class="ec-media card-index--ec-media">
-                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-411 sk-text">这是一条测试内容，标题为90后的Queen，正文仅含测试二字，无经验总结。</view>
-                </view>
-                <view class="ec-tags card-index--ec-tags">
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-408 sk-text">测试</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-703 sk-text">90后</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-795 sk-text">Queen</view>
-                </view>
-                <view class="ec-foot card-index--ec-foot">
-                  <view class="ec-foot-left card-index--ec-foot-left">
-                    <view class="tag card-index--tag tag-blue card-index--tag-blue ec-type card-index--ec-type sk-transparent sk-text-20-5882-802 sk-text">工作</view>
-                  </view>
-                  <view class="ec-foot-right card-index--ec-foot-right">
-                    <text class="ec-author card-index--ec-author sk-transparent sk-text-18-7500-433 sk-text">Meizu</text>
-                  </view>
-                </view>
-              </view>
-            </view>
-          </view>
-          <view class="tl-row">
-            <view class="tl-dot"></view>
-            <view is="components/event-card/index">
-              <view class="ec-card card-index--ec-card">
-                <view class="ec-head card-index--ec-head">
-                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-568 sk-text">N1的Queen</view>
-                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-65 sk-text">10-06 14:37</text>
-                </view>
-                <view class="ec-media card-index--ec-media">
-                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-253 sk-text">标题为“N1的Queen”，正文、经验总结与地点均无内容。</view>
-                </view>
-                <view class="ec-tags card-index--ec-tags">
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-305 sk-text">N1</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-913 sk-text">Queen</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-660 sk-text">无正文</view>
-                </view>
-                <view class="ec-foot card-index--ec-foot">
-                  <view class="ec-foot-left card-index--ec-foot-left"></view>
-                  <view class="ec-foot-right card-index--ec-foot-right">
-                    <text class="ec-author card-index--ec-author sk-transparent sk-text-18-7500-604 sk-text">Meizu</text>
-                  </view>
-                </view>
-              </view>
-            </view>
-          </view>
-          <view class="tl-row">
-            <view class="tl-dot"></view>
-            <view is="components/event-card/index">
-              <view class="ec-card card-index--ec-card">
-                <view class="ec-head card-index--ec-head">
-                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-703 sk-text">全组织</view>
-                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-799 sk-text">10-06 14:36</text>
-                </view>
-                <view class="ec-media card-index--ec-media">
-                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-547 sk-text">2026年10月6日记录了一条标题为“全组织”的条目，正文、经验总结与地点均为空。</view>
-                </view>
-                <view class="ec-tags card-index--ec-tags">
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-361 sk-text">全组织</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-779 sk-text">记录</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-331 sk-text">空内容</view>
-                </view>
-                <view class="ec-foot card-index--ec-foot">
-                  <view class="ec-foot-left card-index--ec-foot-left"></view>
-                  <view class="ec-foot-right card-index--ec-foot-right">
-                    <text class="ec-author card-index--ec-author sk-transparent sk-text-18-7500-720 sk-text">Meizu</text>
-                  </view>
-                </view>
-              </view>
-            </view>
-          </view>
-          <view class="tl-row">
-            <view class="tl-dot"></view>
-            <view is="components/event-card/index">
-              <view class="ec-card card-index--ec-card">
-                <view class="ec-head card-index--ec-head">
-                  <view class="ec-mine-bar card-index--ec-mine-bar"></view>
-                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-964 sk-text">N1仅自己</view>
-                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-624 sk-text">10-06 14:36</text>
-                </view>
-                <view class="ec-media card-index--ec-media">
-                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-176 sk-text">N1仅自己，无正文、经验总结和地点信息。</view>
-                </view>
-                <view class="ec-tags card-index--ec-tags">
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-261 sk-text">N1</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-465 sk-text">仅自己</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-346 sk-text">无正文</view>
-                </view>
-              </view>
-            </view>
-          </view>
-          <view class="tl-row">
-            <view class="tl-dot"></view>
-            <view is="components/event-card/index">
-              <view class="ec-card card-index--ec-card">
-                <view class="ec-head card-index--ec-head">
-                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-92 sk-text">语音咋挂了</view>
-                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-529 sk-text">10-05 23:33</text>
-                </view>
-                <view class="ec-media card-index--ec-media">
-                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-213 sk-text">用户反映语音通话挂断，未提供更多细节。</view>
-                  <image lazy-load="true" class="ec-thumb card-index--ec-thumb sk-image" data-index="0" mode="aspectFill"></image>
-                </view>
-                <view class="ec-tags card-index--ec-tags">
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-344 sk-text">语音</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-619 sk-text">通话</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-410 sk-text">挂断</view>
-                </view>
-                <view class="ec-foot card-index--ec-foot">
-                  <view class="ec-foot-left card-index--ec-foot-left"></view>
-                  <view class="ec-foot-right card-index--ec-foot-right">
-                    <text class="ec-author card-index--ec-author sk-transparent sk-text-18-7500-664 sk-text">Meizu</text>
-                  </view>
-                </view>
-              </view>
-            </view>
-          </view>
-        </view>
-        <view class="group">
-          <view class="tl-month">
-            <view class="tl-month-pill sk-transparent sk-text-18-7500-930 sk-text">2026年9月</view>
-          </view>
-          <view class="tl-row tl-row-first">
-            <view class="tl-dot"></view>
-            <view is="components/event-card/index">
-              <view class="ec-card card-index--ec-card">
-                <view class="ec-head card-index--ec-head">
-                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-45 sk-text">能够握紧的就别放了，能够拥抱的就别拉扯。</view>
-                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-670 sk-text">09-22 23:52</text>
-                </view>
-                <view class="ec-media card-index--ec-media">
-                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-898 sk-text">深夜感慨时间如一场有去无回的旅行，提醒自己珍惜当下，能够握紧的就别放，能够拥抱的就别拉扯。</view>
-                  <image lazy-load="true" class="ec-thumb card-index--ec-thumb sk-image" data-index="0" mode="aspectFill"></image>
-                </view>
-                <view class="ec-tags card-index--ec-tags">
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-198 sk-text">珍惜</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-164 sk-text">放手</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-776 sk-text">拥抱</view>
-                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-8 sk-text">感悟</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-52 sk-text">N2</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-304 sk-text">公事</view>
+                  <view class="tag card-index--tag tag-purple card-index--tag-purple sk-transparent sk-text-20-5882-425 sk-text">N2</view>
                 </view>
               </view>
             </view>
           </view>
         </view>
       </view>
-      <view class="fab sk-transparent sk-text-18-3673-314 sk-text" style="background-position-x: 50%;">🎙</view>
+      <view class="fab sk-transparent sk-text-18-3673-582 sk-text" style="background-position-x: 50%;">🎙</view>
     </view>
   </view>
 </template>
