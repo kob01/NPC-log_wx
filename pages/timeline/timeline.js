@@ -467,6 +467,9 @@ Page({
       // 归属作者：列表混进同组织的他人日志时，卡片底栏地址前会标出是谁写的；
       // 自己的日志（is_mine）留空串，卡片据此不显示这个名字
       author: item.is_mine ? "" : item.author || "",
+      // 卡片左边缘蓝竖条只认 is_mine：不让卡片靠 author 是否为空反推，
+      // 否则遇到没昵称又确实是本人的日志就会被错标成他人
+      isMine: !!item.is_mine,
     };
   },
 
@@ -593,7 +596,12 @@ Page({
     if (!pending.id || !pending.event) return;
     if (this.data.entries.some((e) => String(e.id) === String(pending.id)))
       return;
-    const merged = [pending, ...this.data.entries];
+    // 本地这条必是本人刚写的，补上 isMine：后端第一页回来前它已经在列表里，
+    // 否则刚存的那条会先不出竖条，拉到数据后再闪一下
+    const merged = [
+      Object.assign({}, pending, { isMine: true }),
+      ...this.data.entries,
+    ];
     this.setData({ entries: merged, groups: this.buildGroups(merged) });
   },
 

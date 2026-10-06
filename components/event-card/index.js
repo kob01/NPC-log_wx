@@ -7,7 +7,7 @@ Component({
   },
 
   properties: {
-    // 时间线条目：{id,time,event,type,summary,content,tags,persons,position,address,lng,lat,firstThumb,firstUrl,thumbs,score}
+    // 时间线条目：{id,time,event,type,summary,content,tags,persons,position,address,lng,lat,firstThumb,firstUrl,thumbs,score,isMine}
     entry: {
       type: Object,
       value: {},
@@ -34,6 +34,9 @@ Component({
           displayTime: shortTime(entry.time),
           scorePercent:
             entry.score != null ? Math.round(entry.score * 100) : null,
+          // 贴卡片左边缘的蓝竖条：只认明确为 true 的归属标记，
+          // 未映射 isMine 的页面（report/persons）一律不出
+          showMineBar: entry.isMine === true,
         });
       },
     },
@@ -52,6 +55,7 @@ Component({
     bodyText: "",
     displayTime: "",
     scorePercent: null,
+    showMineBar: false,
   },
 
   methods: {

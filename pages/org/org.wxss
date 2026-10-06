@@ -228,25 +228,6 @@
   color: var(--text-3);
 }
 
-.popup-tabs {
-  display: flex;
-  border-bottom: 1rpx solid var(--divider);
-}
-
-.ptab {
-  flex: 1;
-  text-align: center;
-  padding: 20rpx 0;
-  font-size: 28rpx;
-  color: var(--text-2);
-}
-
-.ptab.active {
-  color: var(--primary);
-  font-weight: 600;
-  border-bottom: 4rpx solid var(--primary);
-}
-
 .popup-body {
   flex: 1;
   box-sizing: border-box;
@@ -258,18 +239,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* 申请理由整宽换行到第二排，与人名/按钮同属一条记录 */
-  flex-wrap: wrap;
   padding: 24rpx 0;
   border-bottom: 1rpx solid var(--divider);
-}
-
-.p-reason {
-  width: 100%;
-  margin-top: 8rpx;
-  font-size: 22rpx;
-  color: var(--text-3);
-  word-break: break-all;
 }
 
 .p-name {

@@ -1,9 +1,25 @@
 .ec-card {
+  /* 小竖条以卡片为定位基准 */
+  position: relative;
   background: var(--card);
   border-radius: 20rpx;
   padding: 24rpx;
   margin: 0 24rpx 20rpx;
   box-shadow: var(--shadow);
+}
+
+/* 自己的日志标记：贴卡片左边缘的主题蓝小竖条。不占流，标题/正文左边缘位置不变 */
+.ec-mine-bar {
+  position: absolute;
+  left: 0;
+  /* 卡片 padding-top 24rpx + 首行行盒中线 22.4rpx（28rpx × 1.6）− 半条高 15rpx，
+     让竖条压在首行标题文字的垂直中轴上 */
+  top: 31rpx;
+  width: 6rpx;
+  height: 30rpx;
+  /* 左侧不做圆角：贴边时圆角会在卡片边缘露出一截浅色缺口 */
+  border-radius: 0 3rpx 3rpx 0;
+  background: var(--primary);
 }
 
 /* 顶栏：标题贴左，时间贴右 */

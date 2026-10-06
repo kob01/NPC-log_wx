@@ -1,4 +1,8 @@
 <view class="ec-card" bindtap="onTap">
+  <!-- 自己的日志：贴卡片左边缘的主题蓝小竖条。绝对定位不占流，
+       标题仍与正文左对齐，他人卡不渲染也不影响任何位置 -->
+  <view class="ec-mine-bar" wx:if="{{showMineBar}}"></view>
+
   <!-- 顶栏：事件标题贴左，时间贴右 -->
   <view class="ec-head">
     <view class="ec-title ellipsis">{{entry.event || '（无标题）'}}</view>

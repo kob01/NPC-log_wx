@@ -33,7 +33,8 @@
         <text wx:if="{{item.createdText}}">{{item.createdText}}</text>
       </view>
       <view class="o-actions">
-        <button class="mini-btn primary" wx:if="{{item.my_status === 1 && item.is_manager === 1}}" data-id="{{item.id}}" bindtap="openManage">管理</button>
+        <!-- 名单入口人人都有：管理者在这里升降级/移出成员，普通成员只读名单 -->
+        <button class="mini-btn {{item.is_manager === 1 ? 'primary' : 'ghost'}}" wx:if="{{item.my_status === 1}}" data-id="{{item.id}}" bindtap="openMembers">{{item.is_manager === 1 ? '管理' : '成员'}}</button>
         <button class="mini-btn danger" wx:if="{{item.my_status === 1}}" data-id="{{item.id}}" bindtap="onLeave">退出</button>
       </view>
     </view>
@@ -122,41 +123,24 @@
     <empty-state wx:if="{{!pendingAll.length}}" text="没有待审批的申请" />
   </block>
 
-  <!-- 管理弹层 -->
+  <!-- 成员名单弹层：待审批只看顶部 tab，这里不再放一份重复的 -->
   <view class="mask" wx:if="{{manageOpen}}" bindtap="closeManage"></view>
   <view class="popup" wx:if="{{manageOpen}}">
     <view class="popup-head">
-      <text class="popup-title ellipsis">管理 · {{curOrg.org_name}}</text>
+      <text class="popup-title ellipsis">{{curOrg.is_manager === 1 ? '管理' : '组织成员'}} · {{curOrg.org_name}}</text>
       <text class="popup-close" bindtap="closeManage">✕</text>
     </view>
-    <view class="popup-tabs">
-      <view class="ptab {{manageTab === 'requests' ? 'active' : ''}}" data-mt="requests" bindtap="switchManageTab">待审批({{requests.length}})</view>
-      <view class="ptab {{manageTab === 'members' ? 'active' : ''}}" data-mt="members" bindtap="switchManageTab">成员</view>
-    </view>
     <scroll-view class="popup-body" scroll-y>
-      <block wx:if="{{manageTab === 'requests'}}">
-        <!-- 理由同一行的第二排（.p-row 已开 flex-wrap + .p-reason 整宽），另起循环会把理由与人对不上 -->
-        <view class="p-row" wx:for="{{requests}}" wx:key="userId">
-          <text class="p-name">{{item.nameText}}</text>
-          <view class="p-btns">
-            <text class="p-btn ok" data-user="{{item.userId}}" data-name="{{item.nameText}}" data-approved="1" bindtap="onAudit">通过</text>
-            <text class="p-btn no" data-user="{{item.userId}}" data-name="{{item.nameText}}" data-approved="0" bindtap="onAudit">拒绝</text>
-          </view>
-          <view class="p-reason" wx:if="{{item.reasonText}}">申请理由：{{item.reasonText}}</view>
+      <view class="p-row" wx:for="{{members}}" wx:key="id">
+        <text class="p-name">{{item.nameText}}<text class="p-role">{{item.roleText}}</text></text>
+        <!-- 操作按钮只给管理者：普通成员是看名单，不是管名单 -->
+        <view class="p-btns" wx:if="{{curOrg.is_manager === 1}}">
+          <text class="p-btn ok" wx:if="{{item.role !== 2 && item.role !== 1}}" data-user="{{item.id}}" data-role="1" bindtap="onSetManager">提升</text>
+          <text class="p-btn no" wx:if="{{item.role === 1}}" data-user="{{item.id}}" data-role="0" bindtap="onSetManager">降级</text>
+          <text class="p-btn no" wx:if="{{item.canKick === 1}}" data-user="{{item.id}}" data-name="{{item.nameText}}" bindtap="onKick">移出</text>
         </view>
-        <empty-state wx:if="{{!requests.length}}" text="无待审批" />
-      </block>
-      <block wx:else>
-        <view class="p-row" wx:for="{{members}}" wx:key="id">
-          <text class="p-name">{{item.nameText}}<text class="p-role">{{item.roleText}}</text></text>
-          <view class="p-btns">
-            <text class="p-btn ok" wx:if="{{item.role !== 2 && item.role !== 1}}" data-user="{{item.id}}" data-role="1" bindtap="onSetManager">提升</text>
-            <text class="p-btn no" wx:if="{{item.role === 1}}" data-user="{{item.id}}" data-role="0" bindtap="onSetManager">降级</text>
-            <text class="p-btn no" wx:if="{{item.canKick === 1}}" data-user="{{item.id}}" data-name="{{item.nameText}}" bindtap="onKick">移出</text>
-          </view>
-        </view>
-        <empty-state wx:if="{{!members.length}}" text="无成员" />
-      </block>
+      </view>
+      <empty-state wx:if="{{!members.length}}" text="无成员" />
     </scroll-view>
     <!-- 管理者才能改资料 / 解散；启停用不开放，由系统管理员在 Web 端处理 -->
     <view class="popup-foot" wx:if="{{curOrg.is_manager === 1}}">

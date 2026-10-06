@@ -57,9 +57,7 @@ Page({
     detail: {},
     canManage: false,
     manageOpen: false,
-    manageTab: "requests",
     curOrg: {},
-    requests: [],
     members: [],
     // 新建/编辑组织表单（formId=0 为新建）
     formOpen: false,
@@ -280,7 +278,7 @@ Page({
       this.loadMyOrgs();
       this.loadApplications();
       if (Number(this.data.curOrg.id) === Number(org) && this.data.manageOpen) {
-        this.refreshManage(org);
+        this.loadMembers(org);
       }
     });
   },
@@ -335,56 +333,36 @@ Page({
     after && after();
   },
 
-  openManage(e) {
+  /**
+   * 打开成员名单：管理者与普通成员同一个入口，差别只在名单里给不给操作按钮
+   * 待审批不在这里：顶部「待审批」tab 就是同一份数据的跳组织视图，不重复放一份
+   */
+  openMembers(e) {
     const id = e.currentTarget.dataset.id;
     const org = this.data.myOrgs.find((o) => Number(o.id) === Number(id)) || {};
-    this.setData({ manageOpen: true, curOrg: org, manageTab: "requests" });
-    this.refreshManage(id);
+    this.setData({ manageOpen: true, curOrg: org });
+    this.loadMembers(id);
   },
 
-  async refreshManage(orgId) {
-    const [req, mem] = await Promise.all([
-      api.org.requests(orgId),
-      api.org.members(orgId),
-    ]);
-    if (Number(req.code) === 200)
-      this.setData({
-        requests: (req.data || []).map((r) =>
-          Object.assign({}, r, {
-            nameText: displayName(r),
-            reasonText: r.apply_reason || "",
-          }),
-        ),
-      });
-    if (Number(mem.code) === 200) {
-      // 登录用户快照里的 id 就是 user_id；移自己没意义（该用退出组织）
-      const meId = Number((auth.getUser() || {}).id);
-      const members = (mem.data || []).map((m) =>
+  /** 拉当前弹层组织的成员名单 */
+  async loadMembers(orgId) {
+    const { code, data } = await api.org.members(orgId);
+    if (Number(code) !== 200) return;
+    // 名单里的操作按钮按身份收：普通成员只读，不给提升/降级/移出
+    const isManager = Number(this.data.curOrg.is_manager) === 1;
+    // 登录用户快照里的 id 就是 user_id；移自己没意义（该用退出组织）
+    const meId = Number((auth.getUser() || {}).id);
+    this.setData({
+      members: (data || []).map((m) =>
         Object.assign({}, m, {
           role: Number(m.role),
           roleText: roleText(m.role),
           nameText: displayName(m),
-          // 创建者不可被移出，自己也不能移自己
-          canKick: Number(m.role) !== 2 && Number(m.id) !== meId ? 1 : 0,
+          // 创建者不可被移出，自己也不能移自己，普通成员则谁都不能移
+          canKick:
+            isManager && Number(m.role) !== 2 && Number(m.id) !== meId ? 1 : 0,
         }),
-      );
-      this.setData({ members });
-    }
-  },
-
-  switchManageTab(e) {
-    this.setData({ manageTab: e.currentTarget.dataset.mt });
-  },
-
-  onAudit(e) {
-    const { user, approved, name } = e.currentTarget.dataset;
-    const orgId = this.data.curOrg.id;
-    this.doAudit(orgId, user, approved === "1", name, () => {
-      this.refreshManage(orgId);
-      this.loadMyOrgs();
-      this.loadPendingAll();
-      this.loadRecords();
-      this.loadApplications();
+      ),
     });
   },
 
@@ -404,7 +382,7 @@ Page({
         );
         if (Number(code) === 200) {
           wx.showToast({ title: message || "操作成功", icon: "none" });
-          this.refreshManage(orgId);
+          this.loadMembers(orgId);
           this.loadMyOrgs();
         }
       },
@@ -427,7 +405,7 @@ Page({
         );
         if (Number(code) !== 200) return;
         wx.showToast({ title: message || "已移出", icon: "none" });
-        this.refreshManage(orgId);
+        this.loadMembers(orgId);
         this.loadMyOrgs();
       },
     });
@@ -448,7 +426,7 @@ Page({
     });
   },
 
-  /** 从管理弹层里改自己组织的名称/描述 */
+  /** 从成员名单弹层里改自己组织的名称/描述（只给管理者） */
   openEdit() {
     const org = this.data.curOrg || {};
     if (!Number(org.is_manager)) return;
