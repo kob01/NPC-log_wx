@@ -1,6 +1,6 @@
 .footprint {
     min-height: 100vh;
-    padding-bottom: 40rpx;
+    /* padding-bottom: 10rpx; */
 }
 
 .filter {
@@ -11,6 +11,7 @@
 .chips {
     white-space: nowrap;
     padding: 0 24rpx 12rpx;
+    box-sizing: border-box;
 }
 
 .chip {
@@ -51,101 +52,63 @@
     font-size: 24rpx;
 }
 
-.count {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    /* 与 .list/.sel-card 的 24rpx 左右缘对齐 */
-    padding: 16rpx 24rpx 0;
-    font-size: 24rpx;
-    color: var(--text-3);
-}
-
-.share-btn {
-    background: var(--primary);
-    color: var(--text-inv);
-    font-size: 24rpx;
-    border-radius: 32rpx;
-    padding: 0 24rpx;
-    margin: 0;
-    line-height: 1.9;
+.map-wrap {
+    /* 粘性定位：列表上滑时地图贴在导航栏下沿常驻，点击列表项能即时看到地图重定位 */
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin-top: 16rpx;
+    /* 列表项从地图下方穿过时，靠这条阴影区分层级边界 */
+    box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.12);
 }
 
 .map {
     width: 100%;
     height: 560rpx;
-    margin-top: 16rpx;
+    display: block;
+}
+
+/* 选中点位后的操作按钮：绝对定位浮在地图右下角上层，缩为一行靠右 */
+.map-actions {
+    position: absolute;
+    right: 20rpx;
+    bottom: 20rpx;
+    z-index: 20;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.map-btn {
+    padding: 6rpx 16rpx;
+    border-radius: 20rpx;
+    font-size: 22rpx;
+    line-height: 1.4;
+    text-align: center;
+    border: 1rpx solid var(--primary);
+    color: var(--primary);
+    background: var(--card);
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+}
+
+/* 旧内核不支持 flex gap，改用相邻兄弟 margin-left 拉开间距 */
+.map-btn+.map-btn {
+    margin-left: 12rpx;
+}
+
+.map-btn.primary {
+    background: var(--primary);
+    color: var(--text-inv);
 }
 
 .empty-hint {
     margin: 30rpx 24rpx;
 }
 
-.sel-card {
-    display: flex;
-    align-items: center;
-    background: var(--card);
-    margin: 16rpx 24rpx;
-    padding: 20rpx;
-    border-radius: 18rpx;
-    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
-}
-
-.sel-thumb {
-    width: 100rpx;
-    height: 100rpx;
-    border-radius: 12rpx;
-    margin-right: 18rpx;
-    flex-shrink: 0;
-}
-
-.sel-body {
-    flex: 1;
-    min-width: 0;
-}
-
-.sel-title {
-    font-size: 30rpx;
-    font-weight: 600;
-}
-
-.sel-time {
-    font-size: 22rpx;
-    color: var(--text-3);
-    margin-top: 4rpx;
-}
-
-.sel-addr {
-    font-size: 24rpx;
-    color: var(--text-2);
-    margin-top: 4rpx;
-}
-
-.sel-actions {
-    display: flex;
-    flex-direction: column;
-    margin-left: 12rpx;
-}
-
-.sel-btn {
-    padding: 10rpx 24rpx;
-    margin: 6rpx 0;
-    border-radius: 24rpx;
-    font-size: 24rpx;
-    text-align: center;
-    border: 1rpx solid var(--primary);
-    color: var(--primary);
-}
-
-.sel-btn.primary {
-    background: var(--primary);
-    color: var(--text-inv);
-}
-
 .list {
     background: var(--card);
-    margin: 16rpx 24rpx;
-    border-radius: 18rpx;
+    margin: 16rpx 0;
     padding: 10rpx 24rpx;
 }
 
@@ -166,7 +129,7 @@
     width: 80rpx;
     height: 80rpx;
     border-radius: 10rpx;
-    margin-right: 16rpx;
+    margin-left: 16rpx;
     flex-shrink: 0;
 }
 
@@ -183,9 +146,4 @@
     font-size: 22rpx;
     color: var(--text-3);
     margin-top: 4rpx;
-}
-
-.li-nav {
-    font-size: 34rpx;
-    color: var(--primary);
 }

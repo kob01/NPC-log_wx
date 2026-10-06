@@ -1,0 +1,44 @@
+<view class="account page-root {{themeClass}}">
+  <view class="group">
+    <view class="cell" bindtap="onEditName">
+      <view class="cell-left">
+        <text class="cell-title">用户名</text>
+        <text class="cell-desc">{{user.real_name || '未设置，点击添加'}}</text>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="divider"></view>
+    <view class="cell" bindtap="onEditEmail">
+      <view class="cell-left">
+        <view class="cell-title-row">
+          <text class="cell-title">邮箱</text>
+          <text class="cell-hint">可用来发送邮箱通知</text>
+        </view>
+        <text class="cell-desc">{{user.email || '未设置，点击添加'}}</text>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="divider"></view>
+    <view class="cell" bindtap="goPassword">
+      <view class="cell-left">
+        <text class="cell-title">登录密码</text>
+        <text class="cell-desc">{{noPassword ? '未设置：设完才能用账号登网页端、也才能解绑微信' : '用于网页端与账号密码登录'}}</text>
+      </view>
+      <view class="tag {{noPassword ? 'tag-blue' : 'tag-green'}} wx-action">
+        {{noPassword ? '未设置 · 去设置' : '已设置 · 修改'}}
+      </view>
+    </view>
+  </view>
+
+  <view class="group" wx:if="{{wxAvailable}}">
+    <view class="cell" bindtap="onWxTap">
+      <view class="cell-left">
+        <text class="cell-title">微信登录</text>
+        <text class="cell-desc">{{wxBound ? '已绑定，下次打开自动进入' : '绑定后免输账号密码，定时提醒也靠它送达'}}</text>
+      </view>
+      <view class="tag {{wxBound ? 'tag-green' : 'tag-blue'}} wx-action">
+        {{wxBusy ? '处理中…' : (wxBound ? '已绑定 · 解绑' : '未绑定 · 绑定')}}
+      </view>
+    </view>
+  </view>
+</view>

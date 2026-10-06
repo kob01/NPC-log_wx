@@ -195,6 +195,7 @@ function once(options) {
  * @param {boolean} [options.loading] - 显示全屏 loading
  * @param {string} [options.loadingText]
  * @param {{key:string, ttl:number}} [options.cache] - 仅用于幂等 GET：结果缓存 ttl 毫秒
+ * @param {boolean} [options.force] - 配合 cache 使用：跳过读缓存（下拉刷新/进页重拉），结果仍回写缓存
  * @param {boolean} [options.dedupe] - 在途去重开关（默认对 GET 开启）
  * @returns {Promise<{code:number,message:string,data:any}>}
  */
@@ -211,8 +212,8 @@ async function request(options) {
   const cache = options.cache;
   const cacheKey = cache && cache.key;
 
-  // 1) 命中缓存直接返回（不发请求，也不显示 loading）
-  if (isGet && cacheKey) {
+  // 1) 命中缓存直接返回（不发请求，也不显示 loading）；force 时跳过这一步真发请求
+  if (isGet && cacheKey && !options.force) {
     const hit = readCache(cacheKey);
     if (hit !== undefined)
       return { code: 200, message: "ok", data: hit, fromCache: true };

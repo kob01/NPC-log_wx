@@ -27,15 +27,26 @@ const user = {
     return res;
   },
   /**
-   * 微信一键登录：code 来自 wx.login（一次性、约 5 分钟过期，用过就废）
-   * 后端回 4001=该微信未绑账号，4002=服务端未开启微信登录（详见 utils/wxLogin.js）
+   * 微信一键登录/注册：code 来自 wx.login（一次性、约 5 分钟过期，用过就废）
+   * opts.allowRegister=true 才允许后端在 openid 认不出账号时建新号（用户主动点才给）；
+   * 静默续期一律不带，否则每个只是打开过小程序的人都会在库里留一行。
+   * opts.username/password 只在注册那一步带：账号要用户自己起一个能记住的（PC 端要手敲），
+   * 服务端不代取随机名；没带则后端回 4003 让端上先去收输入。
+   * 后端业务码：4001=未绑账号且不自动建档，4002=未开启微信登录，4003=可以注册但缺输入
+   * （详见 utils/wxLogin.js）
    */
-  wxLogin: async (code) => {
-    const res = await http.post(
-      "/api/user/wx-login",
+  wxLogin: async (code, opts) => {
+    const { allowRegister, username, password } = opts || {};
+    // 用 Object.assign 而非对象展开：展开会被增强编译转成 @swc/runtime helper，
+    // 工具端 runtime 缺失时整页注册失败（同 timeline.js 的写法）
+    const body = Object.assign(
       { code },
-      { silent: true },
+      allowRegister ? { allowRegister: true } : {},
+      username ? { username } : {},
+      // 密码与登录/注册走同一套路：端上 MD5，后端再 bcrypt
+      password ? { password: md5(password) } : {},
     );
+    const res = await http.post("/api/user/wx-login", body, { silent: true });
     if (Number(res.code) === 200) {
       // 与账号密码登录同理：换人了就清掉上一位用户的本地结果缓存
       http.invalidateCache();
@@ -44,8 +55,39 @@ const user = {
   },
   /** 把当前微信绑到已登录账号（需 token，所以必须在登录之后调） */
   bindWx: (code) => http.post("/api/user/bind-wx", { code }, { silent: true }),
-  /** 解绑微信（后端只清 openid，本地 token 仍有效） */
+  /** 解绑微信（后端只清 openid，本地 token 仍有效）；没设过密码的账号会被后端拒 */
   unbindWx: () => http.post("/api/user/unbind-wx", {}, { silent: true }),
+  /**
+   * 设置/修改自己的登录密码（password/oldPassword 都需先 MD5）
+   * 微信注册的账号已在注册那一步设过密码，这里主要用于改密与打通 Web 端；
+   * 存量没密码的账号靠它把「解绑微信等于锁死自己」这个坑填上。
+   */
+  setPassword: (password, oldPassword) =>
+    http.post(
+      "/api/user/set-password",
+      Object.assign(
+        { password: md5(password) },
+        oldPassword ? { oldPassword: md5(oldPassword) } : {},
+      ),
+      { silent: true },
+    ),
+  /**
+   * 读自己的资料（用户名/邮箱/has_password/wx_bound），与登录响应里 user 同形状
+   * 不缓存也不静默：账号资料页的下拉刷新就是为了拿服务端真值，
+   * 拉失败时必须让用户看到一句提示（不然只会看到转完的圈）
+   */
+  profile: () => http.get("/api/user/profile", {}),
+  /**
+   * 修改自己的用户名/邮箱（只传 real_name / email；账号、类型等改不了）
+   * 成功后失效 reminder 缓存：邮箱是邮件提醒的回落地址，不能拿着旧值发
+   */
+  updateProfile: (data) =>
+    http.put("/api/user/profile", data, { silent: true }).then((res) => {
+      if (Number(res.code) === 200) {
+        http.invalidateCache("reminder:");
+      }
+      return res;
+    }),
 };
 
 // ==================== 日志事件 ====================
@@ -131,27 +173,27 @@ const memory = {
         ttl: 300 * SEC,
       },
     }),
-  /** 回顾分享文案（月度/年度，未配置 AI 时后端降级） */
-  shareCopy: (data) =>
-    http.post("/api/memory/share-copy", data, { silent: true }),
 };
 
 // ==================== 组织 ====================
 const org = {
-  mine: () =>
+  /** @param {boolean} [force] 进页/下拉刷新时跳过 60s 缓存真发一次请求 */
+  mine: (force) =>
     http.get(
       "/api/organization/mine",
       {},
       {
         cache: { key: "org:mine", ttl: 60 * SEC },
+        force: !!force,
       },
     ),
-  public: () =>
+  public: (force) =>
     http.get(
       "/api/organization/public",
       {},
       {
         cache: { key: "org:public", ttl: 60 * SEC },
+        force: !!force,
       },
     ),
   requests: (orgId) =>
@@ -159,18 +201,55 @@ const org = {
   requestsCount: () =>
     http.get("/api/organization/requests/count", {}, { silent: true }),
   members: (orgId) => http.get("/api/organization/members", { orgId }),
-  apply: (orgId) =>
-    http.post("/api/organization/apply", { orgId }).then(afterOrgWrite),
+  /** 我提交的申请记录（待审/通过/拒绝都在，被拒行带拒绝理由） */
+  applications: (force) =>
+    http.get(
+      "/api/organization/applications",
+      {},
+      {
+        cache: { key: "org:apps", ttl: 60 * SEC },
+        force: !!force,
+      },
+    ),
+  /** 已结束的审批记录：我申请的 + 我管理的组织里别人的 */
+  records: (force) =>
+    http.get(
+      "/api/organization/records",
+      {},
+      {
+        cache: { key: "org:records", ttl: 60 * SEC },
+        force: !!force,
+      },
+    ),
+  /** @param {string} [reason] 申请理由，可选，会展示给该组织管理者 */
+  apply: (orgId, reason) =>
+    http.post("/api/organization/apply", { orgId, reason }).then(afterOrgWrite),
   leave: (orgId) =>
     http.post("/api/organization/leave", { orgId }).then(afterOrgWrite),
-  audit: (orgId, userId, approved) =>
+  /** @param {string} [reason] 拒绝理由，可选，会回显给申请人 */
+  audit: (orgId, userId, approved, reason) =>
     http
-      .post("/api/organization/audit", { orgId, userId, approved })
+      .post("/api/organization/audit", { orgId, userId, approved, reason })
       .then(afterOrgWrite),
   setManager: (orgId, userId, role) =>
     http
       .post("/api/organization/manager", { orgId, userId, role })
       .then(afterOrgWrite),
+  /** 移出成员（仅该组织的管理者/创建者，不能移自己也不能移创建者） */
+  kick: (orgId, userId) =>
+    http.post("/api/organization/kick", { orgId, userId }).then(afterOrgWrite),
+  /** 创建组织（登录用户均可，每人最多 5 个，超限由后端报错） */
+  create: (data) => http.post("/api/organization", data).then(afterOrgWrite),
+  /** 改名称/描述（仅系统管理员或该组织管理者） */
+  update: (orgId, data) =>
+    http
+      .put(`/api/organization/${orgId}`, {
+        org_name: data.org_name,
+        description: data.description,
+      })
+      .then(afterOrgWrite),
+  /** 解散组织（级联清成员关系与日志可见组织关联，仅管理员或该组织管理者） */
+  remove: (orgId) => http.del(`/api/organization/${orgId}`).then(afterOrgWrite),
 };
 
 /** 组织关系一变，「我加入/可申请」两个列表都要立刻反映 */

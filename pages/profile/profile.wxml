@@ -1,5 +1,5 @@
 <view class="profile page-root {{themeClass}}">
-  <view class="user-card">
+  <view class="user-card" bindtap="goAccount">
     <view class="avatar">{{avatarText}}</view>
     <view class="user-info">
       <view class="user-name">{{user.real_name || user.username || '未登录'}}</view>
@@ -8,6 +8,7 @@
         <view class="tag tag-blue role-tag" wx:if="{{isAdmin}}">管理员</view>
       </view>
     </view>
+    <text class="card-arrow">›</text>
   </view>
 
   <view class="group">
@@ -17,18 +18,6 @@
         <text class="cell-desc">开启后列表/足迹/统计仅统计本人数据</text>
       </view>
       <switch checked="{{onlyMine}}" color="#1677ff" bindchange="onToggleOnlyMine" />
-    </view>
-  </view>
-
-  <view class="group" wx:if="{{wxAvailable}}">
-    <view class="cell" bindtap="onWxTap">
-      <view class="cell-left">
-        <text class="cell-title">微信登录</text>
-        <text class="cell-desc">{{wxBound ? '已绑定，下次打开自动进入' : '绑定后免输账号密码，定时提醒也靠它送达'}}</text>
-      </view>
-      <view class="tag {{wxBound ? 'tag-green' : 'tag-blue'}} wx-action">
-        {{wxBusy ? '处理中…' : (wxBound ? '已绑定 · 解绑' : '未绑定 · 绑定')}}
-      </view>
     </view>
   </view>
 

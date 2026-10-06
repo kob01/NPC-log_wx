@@ -16,9 +16,6 @@ Page({
     tag: "",
     loading: true,
     selected: null,
-    showPoster: false,
-    presetCopy: null,
-    presetImage: "",
   },
 
   onShow() {
@@ -51,10 +48,13 @@ Page({
           loading: false,
         });
       } else {
+        // 年份 chips 与「全部(N)」常驻在过滤条里，失败或空数据时必须清零，否则会上次结果残留
         this.setData({
           points: [],
           markers: [],
           includePoints: [],
+          years: [],
+          total: 0,
           loading: false,
         });
         if (message) wx.showToast({ title: message, icon: "none" });
@@ -66,6 +66,19 @@ Page({
 
   buildMap(points) {
     const valid = points.filter((p) => p.lng != null && p.lat != null);
+    // 原生 callout 不支持 max-width，按屏幕宽 66% 估算可容纳字符数，超出截断加省略号
+    const info =
+      typeof wx.getWindowInfo === "function"
+        ? wx.getWindowInfo()
+        : wx.getSystemInfoSync();
+    const winW = (info && info.windowWidth) || 375;
+    const fontSize = 12;
+    // 去掉左右各 8px padding 后按字号估算中文字符宽度
+    const maxChars = Math.max(6, Math.floor((winW * 0.66 - 16) / fontSize));
+    const clipTitle = (str) => {
+      const s = (str || "").trim() || "日志";
+      return s.length > maxChars ? s.slice(0, maxChars) + "…" : s;
+    };
     const markers = valid.map((p) => ({
       id: Number(p.id),
       latitude: Number(p.lat),
@@ -73,9 +86,9 @@ Page({
       width: 28,
       height: 28,
       callout: {
-        content: p.event || "日志",
+        content: clipTitle(p.event),
         color: "#333333",
-        fontSize: 12,
+        fontSize,
         borderRadius: 8,
         bgColor: "#ffffff",
         padding: 8,
@@ -151,74 +164,5 @@ Page({
     wx.navigateTo({
       url: `/pages/detail/detail?id=${e.currentTarget.dataset.id}`,
     });
-  },
-
-  // 生成足迹分享卡：先截屏地图（含点位分布），高频标签作话题
-  onSharePoster() {
-    const points = this.data.points || [];
-    if (!points.length) {
-      wx.showToast({ title: "暂无足迹", icon: "none" });
-      return;
-    }
-    wx.showLoading({ title: "生成中", mask: true });
-    const open = (mapImage) => {
-      wx.hideLoading();
-      const counter = {};
-      points.forEach((p) =>
-        (p.tags || []).forEach((tg) => {
-          counter[tg] = (counter[tg] || 0) + 1;
-        }),
-      );
-      const hashtags = Object.keys(counter)
-        .sort((a, b) => counter[b] - counter[a])
-        .slice(0, 6)
-        .map((t) => (t.charAt(0) === "#" ? t : "#" + t));
-      const yy = this.data.year ? ` · ${this.data.year}` : "";
-      const presetCopy = {
-        title: "我把世界走成了足迹",
-        body: `走过 ${this.data.total} 个地点${yy}，每一枚坐标都是一段值得回味的旅程 🧭`,
-        hashtags,
-      };
-      this.setData({ presetCopy, presetImage: mapImage, showPoster: true });
-    };
-    this.captureMap()
-      .then(open)
-      .catch(() => open(""));
-  },
-
-  /**
-   * 截取地图当前可见画面（含撒点分布）
-   * 部分真机上 takeScreenShot 回调可能永不触发，这里做三重保护：
-   * 1) 同步异常 try/catch；2) 超时兜底 settle；3) done 标记保证只结算一次，
-   * 调用方 loading 必然关闭（失败仅降级为不带地图的纯文字版式）
-   */
-  captureMap() {
-    const TIMEOUT_MS = 4000;
-    return new Promise((resolve) => {
-      let done = false;
-      const finish = (path) => {
-        if (done) return;
-        done = true;
-        resolve(path);
-      };
-      if (!this.data.markers.length) {
-        finish("");
-        return;
-      }
-      setTimeout(() => finish(""), TIMEOUT_MS);
-      try {
-        wx.createMapContext("footprintMap").takeScreenShot({
-          toFile: true,
-          success: (res) => finish(res.tempFilePath || res.tempImagePath || ""),
-          fail: () => finish(""),
-        });
-      } catch (e) {
-        finish("");
-      }
-    });
-  },
-
-  onHidePoster() {
-    this.setData({ showPoster: false });
   },
 });

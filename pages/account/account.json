@@ -1,0 +1,6 @@
+{
+    "navigationBarTitleText": "账号资料",
+    "enablePullDownRefresh": true,
+    "backgroundTextStyle": "dark",
+    "usingComponents": {}
+}

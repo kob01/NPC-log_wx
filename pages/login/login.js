@@ -17,6 +17,15 @@ Page({
 
   onLoad() {
     this._skippedAuto = false;
+    // 刚点了「退出登录」来到这一页：这次不走静默微信登录，否则同一个微信会被
+    // 立刻送回首页，用户看到的是「退出没生效」（标记只用一次，之后冷启动照常续期）
+    if (auth.consumeManualLogout()) {
+      this.setData({
+        autoLogging: false,
+        wxAvailable: wxLogin.isAvailable(),
+      });
+      return;
+    }
     this.trySilentLogin();
   },
 
@@ -63,15 +72,27 @@ Page({
     this.setData(patch);
   },
 
-  /** 微信一键登录：仅对「已把微信绑到某个账号」的用户有效 */
+  /** 微信一键登录/注册：未建档的微信会先被送到 wx-register 页自己取个账号 */
   async onWxLogin() {
     if (this.data.wxLoading) return;
     try {
       this.setData({ wxLoading: true });
-      const r = await wxLogin.wxLogin();
+      // allowRegister=true：这一路是用户自己点的，才算他愿意用微信身份注册
+      // （onLoad 的静默登录不带这个标记，只续已有账号）
+      const r = await wxLogin.wxLogin({ allowRegister: true });
       if (r.ok) {
-        wx.showToast({ title: "登录成功", icon: "success" });
-        this.goHome(600);
+        wx.showToast({
+          title: r.registered ? "已为你创建账号" : "登录成功",
+          icon: r.registered ? "none" : "success",
+          duration: r.registered ? 2000 : 1500,
+        });
+        this.goHome(r.registered ? 1200 : 600);
+        return;
+      }
+      if (r.needRegister) {
+        // 服务端不代取随机账号名（同一个号以后要在 PC 端手敲），所以把这一页
+        // 交给用户填；注册页提交成功后自己 reLaunch 回时间轴
+        wx.navigateTo({ url: "/pages/wx-register/wx-register" });
         return;
       }
       if (r.notAvailable) {
@@ -81,7 +102,7 @@ Page({
       }
       wx.showToast({
         title: r.needBind
-          ? r.message || "请先用账号密码登录一次，之后可微信一键进入"
+          ? "微信注册未开放，请用账号密码登录一次"
           : r.message || "微信登录失败，请稍后重试",
         icon: "none",
         duration: 2500,
@@ -124,7 +145,7 @@ Page({
         });
         this.goHome(600);
       } else {
-        wx.showToast({ title: message || "用户名或密码错误", icon: "none" });
+        wx.showToast({ title: message || "账号或密码错误", icon: "none" });
       }
     } catch (err) {
       wx.showToast({ title: "登录失败，请稍后重试", icon: "none" });

@@ -11,42 +11,47 @@
     </view>
 
     <block wx:else>
-      <view class="field">
-        <text class="field-label">账号</text>
-        <input
-          class="field-input"
-          placeholder="请输入用户名"
-          value="{{username}}"
-          data-key="username"
-          bindinput="onInput"
-        />
-      </view>
-      <view class="field">
-        <text class="field-label">密码</text>
-        <input
-          class="field-input"
-          password
-          placeholder="请输入密码"
-          value="{{password}}"
-          data-key="password"
-          bindinput="onInput"
-        />
-      </view>
-
-      <button class="btn-primary login-btn" loading="{{loading}}" bindtap="onLogin">
-        登 录
-      </button>
-
       <view class="wx-area" wx:if="{{wxAvailable}}">
-        <view class="wx-divider"><text class="wx-divider-text">或</text></view>
         <button
           class="btn-wx wx-btn"
           loading="{{wxLoading}}"
           bindtap="onWxLogin"
         >
-          微信一键登录
+          微信一键登录 / 注册
         </button>
-        <view class="wx-tip">首次使用请先用账号密码登录一次，会自动绑定当前微信</view>
+        <view class="wx-tip">新用户点这里用微信注册，只需自己取一个账号（以后 PC 端也用它登录）</view>
+      </view>
+
+      <view class="pwd-area">
+        <view class="wx-divider" wx:if="{{wxAvailable}}">
+          <text class="wx-divider-text">或</text>
+        </view>
+        <view class="field">
+          <text class="field-label">账号</text>
+          <input
+            class="field-input"
+            placeholder="请输入用户名"
+            value="{{username}}"
+            data-key="username"
+            bindinput="onInput"
+          />
+        </view>
+        <view class="field">
+          <text class="field-label">密码</text>
+          <input
+            class="field-input"
+            password
+            placeholder="请输入密码"
+            value="{{password}}"
+            data-key="password"
+            bindinput="onInput"
+          />
+        </view>
+
+        <button class="btn-primary login-btn" loading="{{loading}}" bindtap="onLogin">
+          登 录
+        </button>
+        <view class="wx-tip">已有账号的用密码登录，登录后会自动绑定当前微信</view>
       </view>
     </block>
 

@@ -3,6 +3,8 @@
   <view class="tabs">
     <view class="tab {{tab === 'mine' ? 'active' : ''}}" data-tab="mine" bindtap="switchTab">我的组织</view>
     <view class="tab {{tab === 'square' ? 'active' : ''}}" data-tab="square" bindtap="switchTab">组织广场</view>
+    <view class="tab {{tab === 'applications' ? 'active' : ''}}" data-tab="applications" bindtap="switchTab">我的申请</view>
+    <view class="tab {{tab === 'records' ? 'active' : ''}}" data-tab="records" bindtap="switchTab">审批结束</view>
     <view class="tab {{tab === 'pending' ? 'active' : ''}}" wx:if="{{canManage || pendingCount}}" data-tab="pending" bindtap="switchTab">
       待审批<text class="badge" wx:if="{{pendingCount}}">{{pendingCount}}</text>
     </view>
@@ -14,52 +16,107 @@
   <block wx:elif="{{tab === 'mine'}}">
     <view class="o-card" wx:for="{{myOrgs}}" wx:key="id">
       <view class="o-head">
-        <text class="o-name ellipsis">{{item.org_name}}</text>
+        <view class="o-title">
+          <text class="o-name ellipsis">{{item.org_name}}</text>
+          <text class="o-count">{{item.member_count || 0}} 成员</text>
+        </view>
         <view class="tag tag-blue">{{item.roleText}}</view>
       </view>
       <view class="o-desc ellipsis-2" wx:if="{{item.description}}">{{item.description}}</view>
+      <!-- 列表只剩已通过的成员（未通过的去「我的申请」看），这行只留别人对我的待审批数 -->
+      <view class="o-meta" wx:if="{{item.pending_count > 0}}">
+        <text class="red">{{item.pending_count}} 人待审批</text>
+      </view>
       <view class="o-meta">
-        <text class="status {{item.my_status === 1 ? 'ok' : 'wait'}}">{{item.my_status === 1 ? '已通过' : '待审批'}}</text>
-        <text class="dot">·</text>
-        <text>{{item.member_count || 0}} 成员</text>
-        <text class="red" wx:if="{{item.pending_count > 0}}">· {{item.pending_count}} 待审批</text>
+        <text wx:if="{{item.creatorText}}">创建人 {{item.creatorText}}</text>
+        <text class="dot" wx:if="{{item.creatorText && item.createdText}}">·</text>
+        <text wx:if="{{item.createdText}}">{{item.createdText}}</text>
       </view>
       <view class="o-actions">
         <button class="mini-btn primary" wx:if="{{item.my_status === 1 && item.is_manager === 1}}" data-id="{{item.id}}" bindtap="openManage">管理</button>
         <button class="mini-btn danger" wx:if="{{item.my_status === 1}}" data-id="{{item.id}}" bindtap="onLeave">退出</button>
       </view>
     </view>
-    <empty-state wx:if="{{!myOrgs.length}}" text="你还没有加入任何组织" />
+    <empty-state wx:if="{{!myOrgs.length}}" text="你还没有加入任何组织，点左下角 + 创建一个" />
+    <view class="fab" hover-class="fab-hover" bindtap="openCreate">
+      <text class="fab-plus">+</text>
+    </view>
   </block>
 
   <!-- 组织广场 -->
   <block wx:elif="{{tab === 'square'}}">
     <view class="o-card" wx:for="{{square}}" wx:key="id">
       <view class="o-head">
-        <text class="o-name ellipsis">{{item.org_name}}</text>
+        <view class="o-title">
+          <text class="o-name ellipsis">{{item.org_name}}</text>
+          <text class="o-count">{{item.member_count || 0}} 成员</text>
+        </view>
       </view>
       <view class="o-desc ellipsis-2" wx:if="{{item.description}}">{{item.description}}</view>
-      <view class="o-meta"><text>{{item.member_count || 0}} 成员</text></view>
+      <!-- 成员数已上到标题行，这一行只剩创建人与创建时间，两者都空时不留空行 -->
+      <view class="o-meta" wx:if="{{item.creatorText || item.createdText}}">
+        <text wx:if="{{item.creatorText}}">创建人 {{item.creatorText}}</text>
+        <text class="dot" wx:if="{{item.creatorText && item.createdText}}">·</text>
+        <text wx:if="{{item.createdText}}">{{item.createdText}}</text>
+      </view>
       <view class="o-actions">
         <button class="mini-btn danger" wx:if="{{item.relation === 'joined'}}" data-id="{{item.id}}" bindtap="onLeave">退出</button>
         <text class="wait-tag" wx:elif="{{item.relation === 'pending'}}">待审批</text>
-        <button class="mini-btn primary" wx:else data-id="{{item.id}}" bindtap="onApply">申请加入</button>
+        <button class="mini-btn primary" wx:else data-id="{{item.id}}" data-name="{{item.org_name}}" bindtap="onApply">申请加入</button>
       </view>
     </view>
     <empty-state wx:if="{{!square.length}}" text="暂无可加入的组织" />
   </block>
 
-  <!-- 全局待审批 -->
+  <!-- 我的申请：只装进行中的，已出结果的在「审批结束」 -->
+  <block wx:elif="{{tab === 'applications'}}">
+    <view class="o-card" wx:for="{{applications}}" wx:key="orgId">
+      <view class="o-head">
+        <text class="o-name ellipsis">{{item.org_name}}</text>
+        <view class="tag tag-orange">{{item.statusText}}</view>
+      </view>
+      <view class="o-reason" wx:if="{{item.reasonText}}">申请理由：{{item.reasonText}}</view>
+      <view class="o-meta"><text>{{item.applyText}}</text></view>
+    </view>
+    <empty-state wx:if="{{!applications.length}}" text="没有进行中的申请，已出结果的看「审批结束」" />
+  </block>
+
+  <!-- 审批结束：我申请的 + 我管的组织里别人的，已出结果的全在这一列，点开看理由 -->
+  <block wx:elif="{{tab === 'records'}}">
+    <view class="list-hint" wx:if="{{records.length}}">点卡片可展开申请理由与拒绝理由</view>
+    <view class="o-card" wx:for="{{records}}" wx:key="key" data-index="{{index}}" bindtap="openDetail">
+      <view class="o-head">
+        <text class="o-name ellipsis">{{item.org_name}}</text>
+        <view class="tag {{item.ok === 1 ? 'tag-green' : 'tag-red'}}">{{item.resultText}}</view>
+      </view>
+      <view class="o-meta">
+        <text>{{item.directionText}}</text>
+        <text class="dot">·</text>
+        <!-- 自己申请的那行再打一遍自己的名字纯属噪声 -->
+        <text wx:if="{{item.direction === 'org'}}">{{item.nameText}}</text>
+        <text class="dot" wx:if="{{item.direction === 'org'}}">·</text>
+        <text>{{item.auditText}}</text>
+      </view>
+    </view>
+    <empty-state wx:if="{{!records.length}}" text="还没有已结束的审批记录" />
+  </block>
+
+  <!-- 待审批：别人申请我管理的组织 -->
   <block wx:elif="{{tab === 'pending'}}">
     <view class="o-card" wx:for="{{pendingAll}}" wx:key="key">
       <view class="o-head">
-        <text class="o-name">{{item.username}}</text>
-        <text class="o-org ellipsis">申请加入：{{item.org_name}}</text>
+        <text class="o-name">申请加入：{{item.org_name}}</text>
       </view>
-      <view class="o-meta"><text>{{item.apply_time}}</text></view>
+      <view class="o-meta">
+        <text>申请人</text>
+        <text class="applicant">{{item.nameText}}</text>
+      </view>
+      <view class="o-reason" wx:if="{{item.reasonText}}">申请理由：{{item.reasonText}}</view>
+      <!-- 申请时间挤到操作条左侧：与右侧按钮同排，卡片不会被顶高 -->
       <view class="o-actions">
-        <button class="mini-btn primary" data-org="{{item.orgId}}" data-user="{{item.userId}}" data-approved="1" bindtap="onAuditGlobal">通过</button>
-        <button class="mini-btn danger" data-org="{{item.orgId}}" data-user="{{item.userId}}" data-approved="0" bindtap="onAuditGlobal">拒绝</button>
+        <text class="apply-time">{{item.applyText}}</text>
+        <button class="mini-btn primary" data-org="{{item.orgId}}" data-user="{{item.userId}}" data-name="{{item.nameText}}" data-approved="1" bindtap="onAuditGlobal">通过</button>
+        <button class="mini-btn danger" data-org="{{item.orgId}}" data-user="{{item.userId}}" data-name="{{item.nameText}}" data-approved="0" bindtap="onAuditGlobal">拒绝</button>
       </view>
     </view>
     <empty-state wx:if="{{!pendingAll.length}}" text="没有待审批的申请" />
@@ -78,25 +135,114 @@
     </view>
     <scroll-view class="popup-body" scroll-y>
       <block wx:if="{{manageTab === 'requests'}}">
+        <!-- 理由同一行的第二排（.p-row 已开 flex-wrap + .p-reason 整宽），另起循环会把理由与人对不上 -->
         <view class="p-row" wx:for="{{requests}}" wx:key="userId">
-          <text class="p-name">{{item.username}} {{item.real_name || ''}}</text>
+          <text class="p-name">{{item.nameText}}</text>
           <view class="p-btns">
-            <text class="p-btn ok" data-user="{{item.userId}}" data-approved="1" bindtap="onAudit">通过</text>
-            <text class="p-btn no" data-user="{{item.userId}}" data-approved="0" bindtap="onAudit">拒绝</text>
+            <text class="p-btn ok" data-user="{{item.userId}}" data-name="{{item.nameText}}" data-approved="1" bindtap="onAudit">通过</text>
+            <text class="p-btn no" data-user="{{item.userId}}" data-name="{{item.nameText}}" data-approved="0" bindtap="onAudit">拒绝</text>
           </view>
+          <view class="p-reason" wx:if="{{item.reasonText}}">申请理由：{{item.reasonText}}</view>
         </view>
         <empty-state wx:if="{{!requests.length}}" text="无待审批" />
       </block>
       <block wx:else>
         <view class="p-row" wx:for="{{members}}" wx:key="id">
-          <text class="p-name">{{item.username}} {{item.real_name || ''}}<text class="p-role">{{item.roleText}}</text></text>
+          <text class="p-name">{{item.nameText}}<text class="p-role">{{item.roleText}}</text></text>
           <view class="p-btns">
             <text class="p-btn ok" wx:if="{{item.role !== 2 && item.role !== 1}}" data-user="{{item.id}}" data-role="1" bindtap="onSetManager">提升</text>
             <text class="p-btn no" wx:if="{{item.role === 1}}" data-user="{{item.id}}" data-role="0" bindtap="onSetManager">降级</text>
+            <text class="p-btn no" wx:if="{{item.canKick === 1}}" data-user="{{item.id}}" data-name="{{item.nameText}}" bindtap="onKick">移出</text>
           </view>
         </view>
         <empty-state wx:if="{{!members.length}}" text="无成员" />
       </block>
     </scroll-view>
+    <!-- 管理者才能改资料 / 解散；启停用不开放，由系统管理员在 Web 端处理 -->
+    <view class="popup-foot" wx:if="{{curOrg.is_manager === 1}}">
+      <button class="mini-btn primary" bindtap="openEdit">编辑资料</button>
+      <button class="mini-btn danger" bindtap="onDismiss">解散组织</button>
+    </view>
+  </view>
+
+  <!-- 新建 / 编辑组织 -->
+  <view class="mask" wx:if="{{formOpen}}" bindtap="closeForm"></view>
+  <view class="popup form-pop" wx:if="{{formOpen}}">
+    <view class="popup-head">
+      <text class="popup-title">{{formId ? '编辑组织' : '创建组织'}}</text>
+      <text class="popup-close" bindtap="closeForm">✕</text>
+    </view>
+    <view class="form-body">
+      <view class="f-label">组织名称</view>
+      <input
+        class="f-input"
+        placeholder="请输入组织名称"
+        placeholder-class="f-ph"
+        maxlength="100"
+        value="{{formName}}"
+        bindinput="onFormName"
+      />
+      <view class="f-label">组织描述</view>
+      <textarea
+        class="f-textarea"
+        placeholder="说说这个组织是做什么的（选填）"
+        placeholder-class="f-ph"
+        maxlength="255"
+        value="{{formDesc}}"
+        bindinput="onFormDesc"
+        auto-height
+      ></textarea>
+      <view class="f-tip" wx:if="{{!formId}}">创建后你即为该组织的管理者，每人最多创建 5 个</view>
+    </view>
+    <view class="popup-foot">
+      <button class="mini-btn primary" disabled="{{submitting}}" bindtap="submitForm">确定</button>
+      <button class="mini-btn ghost" bindtap="closeForm">取消</button>
+    </view>
+  </view>
+
+  <!-- 审批记录详情：列表只放结论，理由收在这里 -->
+  <view class="mask" wx:if="{{detailOpen}}" bindtap="closeDetail"></view>
+  <view class="popup form-pop" wx:if="{{detailOpen}}">
+    <view class="popup-head">
+      <text class="popup-title ellipsis">{{detail.org_name}}</text>
+      <text class="popup-close" bindtap="closeDetail">✕</text>
+    </view>
+    <view class="form-body">
+      <view class="d-row">
+        <text class="d-label">方向</text>
+        <text class="d-val">{{detail.directionText}}</text>
+      </view>
+      <view class="d-row">
+        <text class="d-label">申请人</text>
+        <text class="d-val">{{detail.nameText}}</text>
+      </view>
+      <view class="d-row">
+        <text class="d-label">结果</text>
+        <text class="d-val">{{detail.resultText}}</text>
+      </view>
+      <view class="d-row">
+        <text class="d-label">申请时间</text>
+        <text class="d-val">{{detail.applyText}}</text>
+      </view>
+      <view class="d-row" wx:if="{{detail.reasonText}}">
+        <text class="d-label">申请理由</text>
+        <text class="d-box">{{detail.reasonText}}</text>
+      </view>
+      <view class="d-row">
+        <text class="d-label">处理时间</text>
+        <text class="d-val">{{detail.auditText}}</text>
+      </view>
+      <view class="d-row">
+        <text class="d-label">处理人</text>
+        <text class="d-val">{{detail.auditorText || '未记录'}}</text>
+      </view>
+      <view class="d-row" wx:if="{{detail.rejectText}}">
+        <text class="d-label">拒绝理由</text>
+        <text class="d-box no">{{detail.rejectText}}</text>
+      </view>
+    </view>
+    <view class="popup-foot" wx:if="{{detail.canReapply === 1}}">
+      <button class="mini-btn primary" data-id="{{detail.orgId}}" data-name="{{detail.org_name}}" bindtap="onApply">重新申请</button>
+    </view>
   </view>
 </view>

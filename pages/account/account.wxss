@@ -1,0 +1,58 @@
+.account {
+    min-height: 100vh;
+    padding: 24rpx 0 40rpx;
+}
+
+.group {
+    background: var(--card);
+    border-radius: 20rpx;
+    margin: 0 24rpx 24rpx;
+    padding: 0 28rpx;
+}
+
+.cell {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 30rpx 0;
+}
+
+.cell-left {
+    display: flex;
+    flex-direction: column;
+}
+
+.cell-title {
+    font-size: 30rpx;
+    color: var(--text-1);
+}
+
+/* 标题行：邮箱后面要跟一句用途说明，只能横向并排（不用 gap，旧内核不生效） */
+.cell-title-row {
+    display: flex;
+    align-items: baseline;
+}
+
+.cell-hint {
+    margin-left: 12rpx;
+    font-size: 22rpx;
+    color: var(--text-3);
+}
+
+.cell-desc {
+    margin-top: 6rpx;
+    font-size: 22rpx;
+    color: var(--text-3);
+}
+
+.arrow {
+    font-size: 40rpx;
+    color: var(--text-4);
+}
+
+/* 登录密码/微信登录行的操作胶囊：.tag 默认带下边距（给多标签换行用），放进 cell 里要抹平 */
+.wx-action {
+    margin: 0;
+    padding: 8rpx 20rpx;
+    font-size: 24rpx;
+}

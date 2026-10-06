@@ -23,19 +23,40 @@ Page({
     searchTotal: 0,
     searched: false,
     limit: 8,
-    showPoster: false,
-    posterEntry: null,
-    posterCopy: null,
   },
 
   // 输入防抖定时器（不进 data，避免无谓的 setData）
   _searchTimer: null,
+  // 上一次加载时用的「只看自己」范围（null = 本页还没加载过）
+  _scopeMine: null,
 
   onShow() {
     if (!auth.checkLogin()) return;
+    const mine = auth.getOnlyMine();
+    // 切过「只看自己日志」开关：另一种范围下问出来的结果留着会串数据，先清掉
+    if (this._scopeMine !== null && this._scopeMine !== mine) {
+      this.clearResults();
+    }
+    this._scopeMine = mine;
     // tags 已在 api.js 里带 120s 缓存，这里每次 onShow 调用要么命中缓存、要么在途复用，
-    // 不会因频繁进出页面反复打聚合接口
+    // 不会因频繁进出页面反复打聚合接口（缓存 key 带了范围，切开关必然重取）
     this.loadTags();
+  },
+
+  /** 只清范围相关的衍生结果（输入框里的词一并清，避免关键词配不上结果） */
+  clearResults() {
+    this.setData({
+      question: "",
+      askResult: null,
+      askError: "",
+      askNotConfigured: false,
+      summary: null,
+      summaryNotConfigured: false,
+      keyword: "",
+      searchList: [],
+      searchTotal: 0,
+      searched: false,
+    });
   },
 
   async loadTags() {
@@ -156,54 +177,5 @@ Page({
 
   goDetailById(e) {
     wx.navigateTo({ url: `/pages/detail/detail?id=${e.detail.id}` });
-  },
-
-  // 生成月度回顾分享卡（优先 AI 改写，失败降级为摘要原文）
-  async onSharePoster() {
-    const s = this.data.summary;
-    if (!s || !s.summary) {
-      wx.showToast({ title: "请先生成月度摘要", icon: "none" });
-      return;
-    }
-    wx.showLoading({ title: "生成中", mask: true });
-    let copy = null;
-    try {
-      const res = await api.memory.shareCopy({
-        month: s.period,
-        platform: "xiaohongshu",
-      });
-      if (Number(res.code) === 200 && res.data) {
-        copy = {
-          title: res.data.title,
-          body: res.data.body,
-          hashtags: res.data.hashtags,
-        };
-      }
-    } catch (err) {
-      /* 降级 */
-    }
-    wx.hideLoading();
-    if (!copy) {
-      copy = {
-        title: `${s.period} 月度回顾`,
-        body: String(s.summary).slice(0, 200),
-        hashtags: (s.keywords || []).map((k) =>
-          k.charAt(0) === "#" ? k : "#" + k,
-        ),
-      };
-    }
-    this.setData({
-      posterEntry: {
-        event: `${s.period} 月度回顾`,
-        time: s.period,
-        type: "回顾",
-      },
-      posterCopy: copy,
-      showPoster: true,
-    });
-  },
-
-  onHidePoster() {
-    this.setData({ showPoster: false });
   },
 });

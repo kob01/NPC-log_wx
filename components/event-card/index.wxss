@@ -58,7 +58,7 @@
   margin-top: 14rpx;
 }
 
-/* 底栏：事件类型固定左下，地址固定右下靠右 */
+/* 底栏：事件类型固定左下，作者 + 地址固定右下靠右 */
 .ec-foot {
   margin-top: 12rpx;
   display: flex;
@@ -72,11 +72,30 @@
   flex-shrink: 0;
 }
 
-/* 右下槽：地址靠右展示，过长则省略号截断（margin-left:auto 保证无类型时仍贴右） */
+/* 右下槽：归属作者 + 地址整组贴右（margin-left:auto 保证无左槽内容时也不跑位） */
+.ec-foot-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  min-width: 0;
+}
+
+/* 归属作者：主题蓝标出「不是本人写的」，与灰字地址分主次；名字不参与伸缩，过长自己省略 */
+.ec-author {
+  flex-shrink: 0;
+  max-width: 200rpx;
+  margin-right: 12rpx;
+  font-size: 22rpx;
+  color: var(--primary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 右下地址：过长则省略号截断 */
 .ec-loc {
   font-size: 22rpx;
   color: var(--text-3);
-  margin-left: auto;
   min-width: 0;
 }
 
@@ -97,5 +116,3 @@
   font-size: 22rpx;
   color: var(--primary);
 }
-
-@import 'index-wxa-auto-dark.wxss'

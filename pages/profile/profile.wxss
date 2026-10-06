@@ -43,6 +43,14 @@
   margin-left: 16rpx;
 }
 
+/* 用户卡片右侧的进入箭头：整卡可点，点进「账号资料」页改用户名/邮箱/密码/微信登录 */
+.card-arrow {
+  margin-left: auto;
+  font-size: 48rpx;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.85);
+}
+
 .group {
   background: var(--card);
   border-radius: 20rpx;

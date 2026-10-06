@@ -178,7 +178,8 @@ Page({
     this.setData({ showPoster: false });
   },
 
-  // 分享给好友（Phase 3 可携 shareToken 做访客只读链接）
+  // 微信原生转发（右上角菜单「发送给朋友 / 分享到朋友圈」）：
+  // 与已下线的分享海报/卡片无关，详情页作为内容载体保留可转发能力
   onShareAppMessage() {
     const detail = this.data.detail || {};
     return {

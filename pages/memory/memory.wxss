@@ -16,7 +16,7 @@
 
 .ask-input {
   width: 100%;
-  min-height: 140rpx;
+  height: 120rpx;
   padding: 20rpx;
   background: var(--bg);
   border-radius: 14rpx;
@@ -83,6 +83,8 @@
 
 .tag-cloud {
   margin-top: 8rpx;
+  max-height: 350rpx;
+  overflow-y: auto;
 }
 
 .link-btn {
@@ -102,11 +104,6 @@
   margin-top: 12rpx;
   font-size: 22rpx;
   color: var(--text-4);
-}
-
-.share-line {
-  margin-top: 16rpx;
-  text-align: right;
 }
 
 .search-box {

@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "我的组织",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
   "usingComponents": {
     "empty-state": "/components/empty-state/index",
     "loading": "/components/loading/index"

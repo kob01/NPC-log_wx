@@ -3,7 +3,6 @@
   "usingComponents": {
     "event-card": "/components/event-card/index",
     "empty-state": "/components/empty-state/index",
-    "loading": "/components/loading/index",
-    "share-poster": "/components/share-poster/index"
+    "loading": "/components/loading/index"
   }
 }

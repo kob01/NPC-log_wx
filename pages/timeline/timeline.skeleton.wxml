@@ -1,0 +1,149 @@
+<!--
+此文件为开发者工具生成，生成时间: 2026/10/6 00:27:40
+使用方法：
+在 D:\code\NPC\NPC-log_wx\pages\timeline\timeline.wxml 引入模板
+
+```
+<import src="timeline.skeleton.wxml"/>
+<template is="skeleton" wx:if="{{loading}}" />
+```
+
+在 D:\code\NPC\NPC-log_wx\pages\timeline\timeline.wxss 中引入样式
+```
+@import "./timeline.skeleton.wxss";
+```
+
+更多详细信息可以参考文档：https://developers.weixin.qq.com/miniprogram/dev/devtools/skeleton.html
+-->
+<template name="skeleton">
+  <view class="sk-container">
+    <view class="timeline page-root">
+      <view class="search-bar">
+        <view class="top-bar">
+          <view class="search-collapsed">
+            <text class="search-icon sk-transparent sk-text-18-7500-179 sk-text">🔍</text>
+          </view>
+          <view class="add-btn sk-transparent sk-text-18-7500-949 sk-text">＋</view>
+        </view>
+      </view>
+      <view class="tl-body">
+        <view class="tl-line"></view>
+        <view class="group">
+          <view class="tl-month">
+            <view class="tl-month-pill sk-transparent sk-text-18-7500-344 sk-text">2026年10月</view>
+          </view>
+          <view class="tl-row tl-row-first">
+            <view class="tl-dot"></view>
+            <view is="components/event-card/index">
+              <view class="ec-card card-index--ec-card">
+                <view class="ec-head card-index--ec-head">
+                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-375 sk-text">解决时间好长哦。</view>
+                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-110 sk-text">10-05 23:35</text>
+                </view>
+                <view class="ec-media card-index--ec-media">
+                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-349 sk-text">用户反映通话听不清楚，询问对方是否能听清，未提供更多信息。</view>
+                </view>
+                <view class="ec-tags card-index--ec-tags">
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-508 sk-text">通话</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-328 sk-text">听不清</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-179 sk-text">沟通</view>
+                </view>
+                <view class="ec-foot card-index--ec-foot">
+                  <view class="ec-foot-left card-index--ec-foot-left">
+                    <view class="tag card-index--tag tag-blue card-index--tag-blue ec-type card-index--ec-type sk-transparent sk-text-20-5882-769 sk-text">工作</view>
+                  </view>
+                  <view class="ec-foot-right card-index--ec-foot-right">
+                    <text class="ec-author card-index--ec-author sk-transparent sk-text-18-7500-952 sk-text">Queen</text>
+                    <view class="ec-loc card-index--ec-loc ellipsis card-index--ellipsis">
+                      <text class="ec-loc-icon card-index--ec-loc-icon sk-transparent sk-opacity">@</text>
+                      <text class="sk-transparent sk-text-18-7500-750 sk-text">望京</text>
+                    </view>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view class="tl-row">
+            <view class="tl-dot"></view>
+            <view is="components/event-card/index">
+              <view class="ec-card card-index--ec-card">
+                <view class="ec-head card-index--ec-head">
+                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-930 sk-text">语音咋挂了</view>
+                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-236 sk-text">10-05 23:33</text>
+                </view>
+                <view class="ec-media card-index--ec-media">
+                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-213 sk-text">用户反映语音通话挂断，未提供更多细节。</view>
+                  <image lazy-load="true" class="ec-thumb card-index--ec-thumb sk-image" data-index="0" mode="aspectFill"></image>
+                </view>
+                <view class="ec-tags card-index--ec-tags">
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-736 sk-text">语音</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-262 sk-text">通话</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-250 sk-text">挂断</view>
+                </view>
+                <view class="ec-foot card-index--ec-foot">
+                  <view class="ec-foot-left card-index--ec-foot-left"></view>
+                  <view class="ec-foot-right card-index--ec-foot-right">
+                    <text class="ec-author card-index--ec-author sk-transparent sk-text-18-7500-432 sk-text">Queen</text>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view class="tl-row">
+            <view class="tl-dot"></view>
+            <view is="components/event-card/index">
+              <view class="ec-card card-index--ec-card">
+                <view class="ec-head card-index--ec-head">
+                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-324 sk-text">被关门声吵醒1</view>
+                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-768 sk-text">10-05 08:45</text>
+                </view>
+                <view class="ec-media card-index--ec-media">
+                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-183 sk-text">一早被门口去卫生间洗漱的人关门声吵醒，对其素质感到无语和愤怒。</view>
+                </view>
+                <view class="ec-tags card-index--ec-tags">
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-346 sk-text">关门声</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-19 sk-text">吵醒</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-512 sk-text">素质</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-364 sk-text">室友</view>
+                </view>
+                <view class="ec-foot card-index--ec-foot">
+                  <view class="ec-foot-left card-index--ec-foot-left">
+                    <view class="tag card-index--tag tag-blue card-index--tag-blue ec-type card-index--ec-type sk-transparent sk-text-20-5882-168 sk-text">生活</view>
+                  </view>
+                  <view class="ec-foot-right card-index--ec-foot-right">
+                    <view class="ec-loc card-index--ec-loc ellipsis card-index--ellipsis">
+                      <text class="ec-loc-icon card-index--ec-loc-icon sk-transparent sk-opacity">@</text>
+                      <text class="sk-transparent sk-text-18-7500-47 sk-text">慧谷时空</text>
+                    </view>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view class="tl-row">
+            <view class="tl-dot"></view>
+            <view is="components/event-card/index">
+              <view class="ec-card card-index--ec-card">
+                <view class="ec-head card-index--ec-head">
+                  <view class="ec-title card-index--ec-title ellipsis card-index--ellipsis sk-transparent sk-text-18-7500-604 sk-text">顺义千亩花海30公里骑行</view>
+                  <text class="ec-time card-index--ec-time sk-transparent sk-text-18-7500-281 sk-text">10-04 16:50</text>
+                </view>
+                <view class="ec-media card-index--ec-media">
+                  <view class="ec-body card-index--ec-body ellipsis-2 card-index--ellipsis-2 sk-transparent sk-text-18-7500-450 sk-text">在顺义千亩花海进行30公里骑行，看到大风车，风景不错，还拍到不少飞机，体验蛮好。</view>
+                  <image lazy-load="true" class="ec-thumb card-index--ec-thumb sk-image" data-index="0" mode="aspectFill"></image>
+                </view>
+                <view class="ec-tags card-index--ec-tags">
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-1 sk-text">骑行</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-345 sk-text">顺义花海公园</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-590 sk-text">风车</view>
+                  <view class="tag card-index--tag tag-geekblue card-index--tag-geekblue sk-transparent sk-text-20-5882-845 sk-text">飞机</view>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="fab sk-transparent sk-text-19-0909-380 sk-text" style="background-position-x: 50%;">🎙</view>
+    </view>
+  </view>
+</template>

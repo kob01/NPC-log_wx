@@ -119,27 +119,11 @@ Component({
       },
     },
     // 日志详情对象（含 id / event / summary / content / tags / images / position / author 等）
+    // 页面 data 初值为 null 时会被原样传进来（Object 属性默认值不防御显式 null），
+    // 故读取处一律 `|| {}` 兜底，不能直接取 .id
     entry: {
       type: Object,
       value: {},
-      observer() {
-        if (this.data.visible) this.render();
-      },
-    },
-    // 卡片类型：single（单篇）/ summary（回顾）/ footprint（足迹）
-    type: { type: String, value: "single" },
-    // 预置文案（无 entry.id 时直接用它绘制，供总结/足迹卡片复用）
-    presetCopy: {
-      type: Object,
-      value: null,
-      observer() {
-        if (this.data.visible && !this.data.entry.id) this.render();
-      },
-    },
-    // 预置封面图（本地临时路径，如地图截屏）；优先于 entry 内图片
-    presetImage: {
-      type: String,
-      value: "",
       observer() {
         if (this.data.visible) this.render();
       },
@@ -173,25 +157,15 @@ Component({
 
     /**
      * 取文案 + 绘制（防抖）
-     * 页面一次 setData 会同时触发 visible/presetCopy/presetImage 多个 observer，
+     * 页面一次 setData 会同时触发 visible/entry 多个 observer，
      * 不去抖会让 draw() 并发执行、canvas.width 重置互相清屏，导出得到黑图
      */
     render() {
       if (this._renderTimer) clearTimeout(this._renderTimer);
       this._renderTimer = setTimeout(() => {
         this._renderTimer = null;
-        this.doRender();
+        this.fetchCopy().then(() => this.draw());
       }, 50);
-    },
-
-    doRender() {
-      // 无 event id（回顾/足迹）→ 直接用预置文案绘制
-      if (!this.data.entry.id && this.data.presetCopy) {
-        this.setData({ copy: this.data.presetCopy, tip: "" });
-        this.draw();
-        return;
-      }
-      this.fetchCopy().then(() => this.draw());
     },
 
     /** 调后端 AI 改写；失败/未配置降级为原文 */
@@ -240,35 +214,51 @@ Component({
     },
 
     /**
-     * 加载封面图（网络图需 downloadFile 域名白名单）
-     * 部分真机对本地临时路径（如地图截屏）onload/onerror 都不回调，
-     * 加 2.5s 超时兜底 + 单次结算，避免整张海报被挂起画不出文字
+     * 按候选顺序（原图 → 缩略图）加载封面，任一成功即用
+     * 原图清晰但体积大（HTTP 直出、无 CDN），超时/失败时退缩略图，
+     * 而不是直接丢图退化成品牌头图
+     */
+    loadCover(canvas, srcList) {
+      const srcs = srcList || [];
+      const tryOne = (i) => {
+        if (i >= srcs.length) return Promise.resolve(null);
+        return this.loadImage(canvas, srcs[i]).then((img) => {
+          if (img) return img;
+          console.warn("[share-poster] 封面加载失败，换下一个尺寸:", srcs[i]);
+          return tryOne(i + 1);
+        });
+      };
+      return tryOne(0);
+    },
+
+    /**
+     * 加载单个封面地址（网络图需 downloadFile 域名白名单）
+     * 超时兜底 + 单次结算：部分真机 onload/onerror 可能都不回调，
+     * 不能让整张海报被挂起画不出文字；6s 是给几 MB 原图留的下载窗口
      */
     loadImage(canvas, src) {
-      const IMG_TIMEOUT_MS = 2500;
+      const COVER_TIMEOUT_MS = 6000;
       return new Promise((resolve) => {
         if (!src) {
           resolve(null);
           return;
         }
         let settled = false;
+        const img = canvas.createImage();
         const finish = (v) => {
           if (settled) return;
           settled = true;
           clearTimeout(timer);
+          img.onload = null;
+          img.onerror = null;
           resolve(v);
         };
-        const timer = setTimeout(() => finish(null), IMG_TIMEOUT_MS);
-        wx.getImageInfo({
-          src,
-          success: (info) => {
-            const img = canvas.createImage();
-            img.onload = () => finish(img);
-            img.onerror = () => finish(null);
-            img.src = info.path;
-          },
-          fail: () => finish(null),
-        });
+        const timer = setTimeout(() => finish(null), COVER_TIMEOUT_MS);
+        img.onload = () => finish(img.width ? img : null);
+        img.onerror = () => finish(null);
+        // 网络图直接交给 canvas 加载：过一层 getImageInfo 会把几 MB 的原图再下一遍，
+        // 慢网下正好卡在超时窗口里，表现为「封面莫名变成品牌头图」
+        img.src = src;
       });
     },
 
@@ -279,7 +269,7 @@ Component({
       this._drawSeq = seq;
       const entry = this.data.entry || {};
       const copy = this.data.copy || this.fallbackCopy();
-      const coverSrc = this.data.presetImage || this.resolveCover(entry);
+      const coverList = this.resolveCoverList(entry);
 
       return new Promise((resolve) => {
         wx.createSelectorQuery()
@@ -362,10 +352,10 @@ Component({
               resolve();
             };
 
-            if (coverSrc) {
-              this.loadImage(canvas, coverSrc).then((img) => {
-                paint(img && img.width ? img : null);
-              });
+            if (coverList.length) {
+              this.loadCover(canvas, coverList).then((img) =>
+                paint(img || null),
+              );
             } else {
               paint(null);
             }
@@ -497,10 +487,9 @@ Component({
       }
     },
 
-    /** 无封面时的品牌头图：柔和渐变 + 装饰圆 + 居中标题（按类型定制） */
+    /** 无封面时的品牌头图：柔和渐变 + 装饰圆 + 居中标题 */
     drawHeaderBand(ctx, bandH) {
       const H = bandH || 260;
-      const type = this.data.type || "single";
       const grd = ctx.createLinearGradient(0, 0, LW, H);
       grd.addColorStop(0, "#4a6cf7");
       grd.addColorStop(0.55, "#6d7dff");
@@ -522,30 +511,30 @@ Component({
       ctx.fill();
 
       // 居中标题（英文小字 + 中文大字）
-      const map = {
-        summary: { zh: "月度回顾", en: "MONTHLY REVIEW" },
-        footprint: { zh: "我的足迹", en: "FOOTPRINT MAP" },
-        single: { zh: "生活存档", en: "LIFE ARCHIVE" },
-      };
-      const t = map[type] || map.single;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "rgba(255,255,255,0.82)";
       ctx.font = "bold 15px sans-serif";
-      ctx.fillText(t.en, LW / 2, H / 2 - 26);
+      ctx.fillText("LIFE ARCHIVE", LW / 2, H / 2 - 26);
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 42px sans-serif";
-      ctx.fillText(t.zh, LW / 2, H / 2 + 16);
+      ctx.fillText("生活存档", LW / 2, H / 2 + 16);
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
     },
 
-    resolveCover(entry) {
+    /** 封面候选地址：原图优先（清晰），缩略图兜底（快）；同路径去重免做无用重试 */
+    resolveCoverList(entry) {
       const imgs = Array.isArray(entry.images) ? entry.images : [];
-      const first = imgs.length
-        ? imgs[0].url || imgs[0].thumbUrl
-        : entry.firstThumb;
-      return first ? resolveFileUrl(first) : "";
+      const first = imgs[0] || {};
+      const out = [];
+      [first.url, first.thumbUrl, imgs.length ? "" : entry.firstThumb].forEach(
+        (u) => {
+          const full = resolveFileUrl(u);
+          if (full && out.indexOf(full) === -1) out.push(full);
+        },
+      );
+      return out;
     },
 
     /** 导出当前画布为临时图片路径（各分享动作公用） */

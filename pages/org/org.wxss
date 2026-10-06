@@ -1,6 +1,7 @@
 .org {
   min-height: 100vh;
-  padding-bottom: 40rpx;
+  /* 给左下角的悬浮 + 按钮留出位置，不然最后一张卡片会被盖住 */
+  padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
 }
 
 .tabs {
@@ -66,10 +67,30 @@
   justify-content: space-between;
 }
 
+/* 名称与成员数同排：名称占满剩余宽度并负责省略，成员数靠右不参与压缩 */
+.o-title {
+  display: flex;
+  align-items: baseline;
+  flex: 1;
+  min-width: 0;
+}
+
 .o-name {
   font-size: 32rpx;
   font-weight: 600;
-  max-width: 60%;
+  min-width: 0;
+}
+
+.o-count {
+  flex-shrink: 0;
+  margin-left: 14rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+
+.o-head .tag {
+  flex-shrink: 0;
+  margin-bottom: 0;
 }
 
 .o-org {
@@ -90,12 +111,15 @@
   color: var(--text-3);
 }
 
-.status.ok {
-  color: var(--success);
-}
-
 .status.wait {
   color: var(--warning);
+}
+
+/* 待审批卡片里申请人是一眼要看的信息，比同排的时间重一档 */
+.applicant {
+  margin-left: 8rpx;
+  color: var(--text-1);
+  font-weight: 600;
 }
 
 .dot {
@@ -108,18 +132,34 @@
 
 .o-actions {
   display: flex;
+  gap: 16rpx;
   justify-content: flex-end;
   margin-top: 16rpx;
 }
 
 .mini-btn {
+  width: 200rpx;
   display: inline-block;
   font-size: 24rpx;
   padding: 0 28rpx;
   height: 60rpx;
   line-height: 60rpx;
   margin-left: 16rpx;
-  border-radius: 30rpx;
+  border-radius: 16rpx;
+}
+
+.o-actions .mini-btn {
+  width: 160rpx;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* 申请时间占住行首：margin-right: auto 把它顶到左下角，按钮仍靠右 */
+.apply-time {
+  align-self: center;
+  margin-right: auto;
+  font-size: 24rpx;
+  color: var(--text-3);
 }
 
 .mini-btn.primary {
@@ -209,7 +249,7 @@
 
 .popup-body {
   flex: 1;
-  /* scroll-view 在 flex 列里需要明确可收缩，否则高度塌陷不滚动或溢出面板 */
+  box-sizing: border-box;
   min-height: 0;
   padding: 0 28rpx;
 }
@@ -218,8 +258,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* 申请理由整宽换行到第二排，与人名/按钮同属一条记录 */
+  flex-wrap: wrap;
   padding: 24rpx 0;
   border-bottom: 1rpx solid var(--divider);
+}
+
+.p-reason {
+  width: 100%;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+  word-break: break-all;
 }
 
 .p-name {
@@ -259,4 +309,162 @@
   background: var(--card);
   color: var(--danger);
   border: 1rpx solid var(--danger);
+}
+
+/* ==================== 创建 / 编辑组织 ==================== */
+
+/* 创建组织：固定在屏幕左下角的悬浮按钮 */
+.fab {
+  position: fixed;
+  left: 40rpx;
+  bottom: calc(48rpx + env(safe-area-inset-bottom));
+  z-index: 20;
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--text-inv);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* --shadow 存的是完整 box-shadow 值，FAB 需要更重一点的投影所以直接写 */
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.25);
+}
+
+.fab-hover {
+  opacity: 0.85;
+}
+
+/* “+” 字形偏上，行高收紧后才能视觉居中 */
+.fab-plus {
+  font-size: 60rpx;
+  font-weight: 300;
+  line-height: 64rpx;
+}
+
+/* 弹层底部操作条：管理面板的「编辑资料 / 解散组织」与表单的「确定 / 取消」共用 */
+.popup-foot {
+  display: flex;
+  gap: 28rpx;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 28rpx;
+  border-top: 1rpx solid var(--divider);
+}
+
+.mini-btn.ghost {
+  background: var(--card);
+  color: var(--text-2);
+  border: 1rpx solid var(--divider);
+}
+
+.mini-btn[disabled] {
+  opacity: 0.6;
+}
+
+/* 表单面板不需要 70vh 的空壳高度，按内容开 */
+.form-pop {
+  height: auto;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+}
+
+.form-body {
+  padding: 0 28rpx 8rpx;
+}
+
+.f-label {
+  font-size: 26rpx;
+  color: var(--text-2);
+  margin: 20rpx 0 10rpx;
+}
+
+.f-input,
+.f-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  background: var(--bg);
+  border: 1rpx solid var(--divider);
+  border-radius: 12rpx;
+}
+
+/* input 自带固定原生高度（1.4rem），border-box 下再加上下 padding 会把行高挤裁（占位符上下一半看不见），
+   只能像 password 页那样用 height 撑开，上下交给居中对齐 */
+.f-input {
+  height: 76rpx;
+}
+
+.f-textarea {
+  min-height: 120rpx;
+  padding: 16rpx 20rpx;
+}
+
+.f-ph {
+  color: var(--text-3);
+}
+
+.f-tip {
+  margin-top: 16rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+/* ==================== 申请与审批记录 ==================== */
+
+/* 理由单独一行（卡片里用），.no 是拒绝理由，要用危险色提醒 */
+.o-reason {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: var(--text-2);
+  word-break: break-all;
+}
+
+.o-reason.no {
+  color: var(--danger);
+}
+
+/* 列表顶部的一行操作提示：审批结束要点卡片才能看到理由，不提示没人知道能点 */
+.list-hint {
+  margin: 20rpx 24rpx 0;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+/* 记录详情的「标签 + 内容」行 */
+.d-row {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 20rpx;
+}
+
+.d-label {
+  width: 130rpx;
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+
+.d-val {
+  flex: 1;
+  min-width: 0;
+  font-size: 26rpx;
+  color: var(--text-1);
+  word-break: break-all;
+}
+
+/* 理由单独包一块底色，与上面的普通字段区分开 */
+.d-box {
+  flex: 1;
+  min-width: 0;
+  padding: 12rpx 16rpx;
+  font-size: 26rpx;
+  color: var(--text-2);
+  background: var(--bg);
+  border-radius: 12rpx;
+  word-break: break-all;
+}
+
+.d-box.no {
+  color: var(--danger);
 }

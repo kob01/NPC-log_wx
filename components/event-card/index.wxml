@@ -24,15 +24,18 @@
     <view class="tag tag-purple" wx:for="{{displayPersons}}" wx:key="*this">{{item}}</view>
   </view>
 
-  <!-- 底栏：事件类型固定左下，地址固定右下靠右；各自有则展示、无则隐藏，左右位置恒定 -->
-  <view class="ec-foot" wx:if="{{entry.position || entry.address || entry.type || (showScore && scorePercent != null)}}">
+  <!-- 底栏：事件类型固定左下，归属作者 + 地址固定右下靠右；各自有则展示、无则隐藏，左右位置恒定 -->
+  <view class="ec-foot" wx:if="{{entry.position || entry.address || entry.author || entry.type || (showScore && scorePercent != null)}}">
     <view class="ec-foot-left">
       <view class="tag tag-blue ec-type" wx:if="{{entry.type}}">{{entry.type}}</view>
       <text class="ec-score" wx:if="{{showScore && scorePercent != null}}">相关度 {{scorePercent}}%</text>
     </view>
-    <view class="ec-loc ellipsis" wx:if="{{entry.position || entry.address}}">
-      <text class="ec-loc-icon">◎</text>
-      <text>{{entry.position || entry.address}}</text>
+    <view class="ec-foot-right">
+      <text class="ec-author" wx:if="{{entry.author}}">{{entry.author}}</text>
+      <view class="ec-loc ellipsis" wx:if="{{entry.position || entry.address}}">
+        <text class="ec-loc-icon">@</text>
+        <text>{{entry.position || entry.address}}</text>
+      </view>
     </view>
   </view>
 </view>

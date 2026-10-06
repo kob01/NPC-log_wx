@@ -1,18 +1,20 @@
 /**
- * 微信登录链路：wx.login 拿 code → 后端换登录态 / 判断是否需要绑定
+ * 微信登录链路：wx.login 拿 code → 后端换登录态（新用户顺便注册）
  *
  * 为什么不塞进 auth.js：auth.js 被 request.js 引用，而这里要引用 api.js
  * （api.js → request.js → auth.js），放进 auth.js 就成了循环依赖，
  * require 会拿到一个只构造了一半的空对象。
  *
  * 后端业务码约定（见 NPC-log_node/src/controller/user.js）：
- * 4001 该微信未绑定账号 → 引导一次账号密码登录，成功后自动绑定
+ * 4001 该微信未绑账号、且服务端不自动建档（没带 allowRegister 或 WX_AUTO_REGISTER=false）
  * 4002 服务端未开启微信登录 → 本次生命周期内隐藏微信入口（不反复试、不弹错）
+ * 4003 该微信可以注册，但还缺用户自填的账号与密码 → 登录页跳 pages/wx-register 收输入
  */
 const api = require("./api");
 const auth = require("./auth");
 
 const NEED_BIND = 4001;
+const NEED_REGISTER = 4003;
 const NOT_AVAILABLE = 4002;
 
 /**
@@ -47,17 +49,21 @@ function isAvailable() {
 }
 
 /**
- * 用微信 code 换登录态
- * @returns {Promise<{ok:boolean, needBind?:boolean, notAvailable?:boolean, message?:string}>}
+ * 用微信 code 换登录态（或换一个新账号）
+ * @param {object} [opts] - {allowRegister, username, password}
+ *   allowRegister 只给用户主动点那个按钮传 true；静默续期不传，
+ *   否则只是打开过小程序就会攒出一堆空账号。
+ *   username/password 只在 wx-register 页提交时带（password 传明文，MD5 在 api 层做）。
+ * @returns {Promise<{ok:boolean, registered?:boolean, needBind?:boolean, needRegister?:boolean, notAvailable?:boolean, message?:string}>}
  */
-async function wxLogin() {
+async function wxLogin(opts) {
   const code = await getCode();
-  const res = await api.user.wxLogin(code);
+  const res = await api.user.wxLogin(code, opts);
   const bizCode = Number(res.code);
 
   if (bizCode === 200 && res.data && res.data.token) {
     auth.saveLogin(res.data);
-    return { ok: true };
+    return { ok: true, registered: !!res.data.isNewUser };
   }
   if (bizCode === NOT_AVAILABLE) {
     markDisabled();
@@ -65,6 +71,9 @@ async function wxLogin() {
   }
   if (bizCode === NEED_BIND) {
     return { ok: false, needBind: true, message: res.message };
+  }
+  if (bizCode === NEED_REGISTER) {
+    return { ok: false, needRegister: true, message: res.message };
   }
   return { ok: false, message: res.message || "微信登录失败" };
 }
@@ -77,6 +86,7 @@ const SILENT_MAX_MS = 6000;
 
 /**
  * 静默登录：本地没有 token 时先试一次微信，已绑定用户就此跳过整个登录页
+ * 不带 allowRegister——静默登录只续已有账号，新用户必须自己点一下那个按钮才算他愿意注册。
  * 失败一律不弹 toast——紧接着登录页就会把账号密码表单摆在面前，
  * 这里再弹一句「微信登录失败」只会让人以为账号也登不进去。
  * @returns {Promise<{ok:boolean, already?:boolean, needBind?:boolean, notAvailable?:boolean, timeout?:boolean, message?:string}>}
@@ -129,6 +139,7 @@ async function bindCurrentWx() {
 
 module.exports = {
   NEED_BIND,
+  NEED_REGISTER,
   NOT_AVAILABLE,
   getCode,
   isAvailable,

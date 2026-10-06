@@ -61,9 +61,10 @@ Page({
     sheetStyleOpen: "",
   },
 
-  // 游标：当前已加载的最小 event_id（存实例上，不进 data）
+  // 游标：已加载部分里时间最旧那条的 event_id（存实例上，不进 data）
   _cursor: null,
   _version: 0, // 列表版本号，用于丢弃过期的异步结果
+  _scopeMine: null, // 列表是在哪个「只看自己」范围下取的，范围变了要重拉
   _loadFailed: false, // 上次加载是否被限流/网络错误打断（不打断 hasMore 语义）
   _searching: false, // 搜索单飞，避免连续点击变成多个并发 AI 请求
   _searchTimer: null,
@@ -94,11 +95,16 @@ Page({
 
   onShow() {
     if (!auth.checkLogin()) return;
-    // 新增/保存/删除后回到列表：强制重新加载，否则看到的仍是旧快照
+    // 首次进入时 _loaded 还是 false，交给下面的分支判定，这里只认「已经取过一次数据」
+    const scopeChanged = this._loaded && this._scopeMine !== auth.getOnlyMine();
+    // 新增/保存/删除后回到列表，或「只看自己日志」范围被切过：
+    // 两种情况下手上的数据都是另一种口径，必须重拉，否则看到的仍是旧快照
     const app = getApp();
-    if (app.globalData && app.globalData.timelineDirty) {
-      app.globalData.timelineDirty = false;
+    if (scopeChanged || (app.globalData && app.globalData.timelineDirty)) {
+      if (app.globalData) app.globalData.timelineDirty = false;
       this._loaded = true;
+      // 范围变了，搜出来的结果同样不属于当前范围：连关键词一起清掉
+      if (scopeChanged) this.setData({ keyword: "" });
       this.reset();
       return;
     }
@@ -458,6 +464,9 @@ Page({
       lat: item.lat != null ? item.lat : null,
       firstThumb: item.firstThumb || "",
       firstUrl: item.firstUrl || "",
+      // 归属作者：列表混进同组织的他人日志时，卡片底栏地址前会标出是谁写的；
+      // 自己的日志（is_mine）留空串，卡片据此不显示这个名字
+      author: item.is_mine ? "" : item.author || "",
     };
   },
 
@@ -526,8 +535,11 @@ Page({
         const items = (data.items || []).map(this.fromListItem);
         const merged = this.mergeUnique(this.data.entries, items);
         if (items.length) {
-          const minId = Math.min(...items.map((e) => Number(e.id)));
-          if (Number.isFinite(minId)) this._cursor = minId;
+          // 游标取「本页最后一条」而不是本页最小 id：后端按 event_time 倒序返回，
+          // 最后一条就是本页时间最旧的锚点。取 min(id) 会让「id 大但时间是补记的旧日期」
+          // 那条日志被 beforeId 直接跳过，翻页永远看不到它。
+          const lastId = Number(items[items.length - 1].id);
+          if (Number.isFinite(lastId)) this._cursor = lastId;
         }
         this.setData({
           entries: merged,
@@ -557,6 +569,8 @@ Page({
     this._version += 1;
     this._cursor = null;
     this._loadFailed = false;
+    // 记住本次加载的范围，供 onShow 判断切过开关没有
+    this._scopeMine = auth.getOnlyMine();
     this.setData({
       entries: [],
       groups: [],

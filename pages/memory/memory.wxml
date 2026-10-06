@@ -69,9 +69,6 @@
         </view>
       </view>
       <view class="summary-meta">{{summary.period}}{{summary.cached ? ' · 已缓存' : ''}}</view>
-      <view class="share-line">
-        <text class="link-btn" bindtap="onSharePoster">✨ 生成分享卡</text>
-      </view>
     </view>
   </view>
 
@@ -107,5 +104,3 @@
     <empty-state wx:elif="{{searched}}" text="没有找到相关记忆" />
   </view>
 </view>
-
-<share-poster visible="{{showPoster}}" type="summary" entry="{{posterEntry}}" presetCopy="{{posterCopy}}" bind:close="onHidePoster" />

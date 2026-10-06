@@ -1,0 +1,54 @@
+<view class="wx-register page-root {{themeClass}}">
+  <view class="intro">
+    <text class="intro-title">给你的存档起个账号</text>
+    <text class="intro-desc">
+      这个账号既用于 PC 端登录，也用于以后在小程序里改用账号密码登录。
+    </text>
+    <text class="intro-warn">账号创建后不能修改，请挑一个你记得住的</text>
+  </view>
+
+  <view class="card">
+    <view class="field">
+      <text class="field-label">账号</text>
+      <input
+        class="field-input"
+        placeholder="3-20 位字母、数字、下划线或减号"
+        value="{{username}}"
+        data-key="username"
+        bindinput="onInput"
+      />
+    </view>
+    <view class="field">
+      <text class="field-label">密码</text>
+      <input
+        class="field-input"
+        password
+        placeholder="6-30 位，需同时含字母和数字"
+        value="{{password}}"
+        data-key="password"
+        bindinput="onInput"
+      />
+    </view>
+    <view class="field">
+      <text class="field-label">确认密码</text>
+      <input
+        class="field-input"
+        password
+        placeholder="再输入一次密码"
+        value="{{password2}}"
+        data-key="password2"
+        bindinput="onInput"
+      />
+    </view>
+
+    <button
+      class="btn-primary submit-btn"
+      loading="{{loading}}"
+      disabled="{{loading}}"
+      bindtap="onSubmit"
+    >
+      完成注册
+    </button>
+    <view class="tip">当前微信会自动绑到这个账号上，下次打开不用重新登录</view>
+  </view>
+</view>
