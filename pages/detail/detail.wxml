@@ -23,28 +23,41 @@
       <text class="head-time">{{detail.time}}</text>
     </view>
 
-    <view class="meta" wx:if="{{detail.witness}}">见证者：{{detail.witness}}</view>
-    <view class="meta" wx:if="{{detail.author}}">作者：{{detail.author}}</view>
-    <view class="meta">可见范围：{{visibilityText}}</view>
-  </view>
-
-  <!-- 录音回放 -->
-  <view class="card" wx:if="{{audioSrc}}">
-    <view class="section-title">🎙 录音</view>
-    <view class="audio-row">
-      <view class="audio-btn" bindtap="toggleAudio">{{audioPlaying ? '⏸ 暂停' : '▶ 播放'}}</view>
-      <text class="audio-time" wx:if="{{audioPlaying}}">已播 {{audioCurrent}}″</text>
-      <text class="audio-time" wx:elif="{{detail.audioDuration}}">{{detail.audioDuration}}″</text>
+    <!-- 元信息左右成对：作者↔地点、可见范围↔更新于，两列上下对齐（地点点击直开地图/导航） -->
+    <view class="meta-row">
+      <view class="meta meta-main" wx:if="{{detail.author}}">作者：{{detail.author}}</view>
+      <view class="meta meta-side meta-loc" wx:if="{{locText}}" bindtap="onOpenLocation">📍 {{locText}}{{hasCoord ? ' ›' : ''}}</view>
     </view>
-  </view>
-
-  <!-- AI 摘要 -->
-  <view class="card" wx:if="{{detail.summary || detail.tags.length || detail.persons.length}}">
-    <view class="section-title">✨ AI 摘要</view>
-    <view class="ai-summary" wx:if="{{detail.summary}}">{{detail.summary}}</view>
+    <view class="meta-row">
+      <view class="meta meta-main">可见范围：{{visibilityText}}</view>
+      <view class="meta meta-side" wx:if="{{updatedText}}">更新于 {{updatedText}}</view>
+    </view>
+    <view class="meta" wx:if="{{detail.witness}}">见证者：{{detail.witness}}</view>
     <view class="ai-tags" wx:if="{{detail.tags.length || detail.persons.length}}">
       <view class="tag tag-geekblue" wx:for="{{detail.tags}}" wx:key="*this">{{item}}</view>
+    </view>
+    <view class="card-foot">
       <view class="tag tag-purple" wx:for="{{detail.persons}}" wx:key="*this">{{item}}</view>
+      <!-- 录音回放 -->
+      <view wx:if="{{audioSrc}}" class="audio-row">
+        <text class="audio-time" wx:if="{{audioPlaying}}">已播 {{audioCurrent}}″</text>
+        <text class="audio-time" wx:elif="{{detail.audioDuration}}">{{detail.audioDuration}}″</text>
+        <view class="audio-btn" bindtap="toggleAudio">
+          <image
+            class="audio-glyph"
+            wx:if="{{audioPlaying}}"
+            src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48cmVjdCB4PSI2IiB5PSI1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxNCIgcng9IjEuMiIgZmlsbD0iI2ZmZmZmZiIvPjxyZWN0IHg9IjE0IiB5PSI1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxNCIgcng9IjEuMiIgZmlsbD0iI2ZmZmZmZiIvPjwvc3ZnPg=="
+            mode="aspectFit"
+          />
+          <image
+            class="audio-glyph"
+            wx:else
+            src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48cGF0aCBkPSJNOCA1djE0bDExLTd6IiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+"
+            mode="aspectFit"
+          />
+          <text>{{audioPlaying ? '暂停' : '播放'}}</text>
+        </view>
+      </view>
     </view>
   </view>
 
@@ -62,14 +75,6 @@
   <view class="card" wx:if="{{detail.rating}}">
     <view class="section-title">评价</view>
     <view class="body-text">{{detail.rating}}</view>
-  </view>
-
-  <!-- 地点 -->
-  <view class="card loc-card" wx:if="{{detail.position || detail.address}}" bindtap="onOpenLocation">
-    <view class="section-title">📍 地点</view>
-    <view class="loc-name">{{detail.position || detail.address}}</view>
-    <view class="loc-addr" wx:if="{{detail.lng && detail.address}}">{{detail.address}}</view>
-    <view class="loc-go" wx:if="{{detail.lng && detail.lat}}">点击查看地图 / 导航 ›</view>
   </view>
 
   <!-- 作品链接 -->

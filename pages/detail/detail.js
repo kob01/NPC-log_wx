@@ -9,6 +9,11 @@ Page({
     detail: null,
     imageUrls: [],
     visibilityText: "仅自己可见",
+    // 地点（与可见范围同一行右侧）：locText 为空时不渲染，hasCoord 决定要不要带「›」导航提示
+    locText: "",
+    hasCoord: false,
+    // 「更新于」（后端 event_update_time）：空串时整行不渲染
+    updatedText: "",
     canEdit: false,
     showPoster: false,
     loading: true,
@@ -70,6 +75,12 @@ Page({
         detail,
         imageUrls,
         visibilityText,
+        // 后端每次编辑（含只换图片/链接/可见组织）都会把这一列推到当前时间；
+        // 存量从未编辑过的行它等于建档时间（列上没有自动变更子句，见 migrations.sql 段 4）
+        updatedText: detail.updatedAt || "",
+        // 地点取不到 position 时退回逆地理地址，与原来的地点卡取法一致
+        locText: detail.position || detail.address || "",
+        hasCoord: detail.lng != null && detail.lat != null,
         canEdit: !!detail.is_mine || auth.isAdmin(),
         audioSrc,
         audioPlaying: false,

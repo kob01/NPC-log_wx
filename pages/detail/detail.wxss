@@ -24,6 +24,8 @@
 .head-main {
   display: inline-flex;
   flex: 1;
+  /* 顶对齐：避免默认 align-items:stretch 把标签纵向拉到与多行标题等高而变形 */
+  align-items: flex-start;
   gap: 16rpx;
   flex-wrap: wrap;
   min-width: 0;
@@ -38,7 +40,6 @@
 
 /* 行内标签：覆盖全局 .tag 的 margin（原本为网格换行留右下边距），改为与标题左侧间距 */
 .head-tag {
-  /* margin: 0 0 0 12rpx; */
   vertical-align: middle;
 }
 
@@ -56,34 +57,82 @@
   color: var(--text-3);
 }
 
+/* 元信息左右成对：一行两项，地点对作者、更新于对可见范围，两列上下对齐不错位 */
+.meta-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.meta-main {
+  /* flex 子项默认 min-width:auto 撑不开省略号，必须显式归零 */
+  min-width: 0;
+  margin-right: 16rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 行尾那一项：margin-left:auto 顶到最右（旧版内核不支持 gap）；自身不缩但限宽 52%，
+   上限要装得下整串「更新于 2026-10-04 22:12」（约 270rpx）并留余量；
+   左侧同样可省略，长地址/长组织名只截断不抖行 */
+.meta-side {
+  flex-shrink: 0;
+  max-width: 52%;
+  margin-left: auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 地点能点开地图，用主色；「更新于」只是次要信息，沿用 .meta 的次要灰 */
+.meta-loc {
+  color: var(--primary);
+}
+
 .ai-summary {
   font-size: 28rpx;
   color: var(--text-body);
   line-height: 1.7;
 }
 
+.card-foot {
+  display: flex;
+}
+
 /* 录音回放 */
 .audio-row {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  margin-left: auto;
+  margin-right: 0;
 }
 
 .audio-btn {
-  padding: 10rpx 32rpx;
+  display: flex;
+  align-items: center;
+  padding: 8rpx 24rpx 10rpx 24rpx;
   border-radius: var(--radius-pill);
   background: var(--primary);
   color: var(--text-inv);
-  font-size: 28rpx;
+  font-size: 24rpx;
+}
+
+.audio-glyph {
+  width: 24rpx;
+  height: 24rpx;
+  margin-right: 10rpx;
+  flex-shrink: 0;
 }
 
 .audio-time {
-  margin-left: 20rpx;
+  margin-right: 20rpx;
   font-size: 26rpx;
   color: var(--text-3);
 }
 
 .ai-tags {
   margin-top: 16rpx;
+  margin-left: 0;
 }
 
 .body-text {
@@ -92,23 +141,6 @@
   line-height: 1.8;
   white-space: pre-wrap;
   word-break: break-all;
-}
-
-.loc-name {
-  font-size: 30rpx;
-  color: var(--text-1);
-}
-
-.loc-addr {
-  margin-top: 6rpx;
-  font-size: 24rpx;
-  color: var(--text-3);
-}
-
-.loc-go {
-  margin-top: 12rpx;
-  font-size: 26rpx;
-  color: var(--primary);
 }
 
 .link-item {
@@ -136,7 +168,7 @@
   margin-left: 20rpx;
 }
 
-/* 定时提醒入口（整张卡就是按钮，与地点卡同样语义） */
+/* 定时提醒入口（整张卡就是按钮） */
 .rm-entry {
   display: flex;
   align-items: center;
