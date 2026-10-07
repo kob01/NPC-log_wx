@@ -76,19 +76,6 @@
   background: var(--fill);
 }
 
-/* 张数角标：黑半透底 + 白字，深浅色主题下都读得清，不抢卡片的既有配色 */
-.ec-thumb-badge {
-  position: absolute;
-  right: 8rpx;
-  bottom: 8rpx;
-  padding: 0 10rpx;
-  font-size: 18rpx;
-  line-height: 1.7;
-  color: var(--text-inv);
-  background: rgba(0, 0, 0, 0.55);
-  border-radius: var(--radius-pill);
-}
-
 .ec-tags {
   margin-top: 14rpx;
 }

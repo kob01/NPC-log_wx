@@ -24,7 +24,6 @@
         mode="aspectFill"
         lazy-load
       />
-      <view class="ec-thumb-badge" wx:if="{{imageCount > 1}}">{{imageCount}} 图</view>
     </view>
   </view>
 
