@@ -27,6 +27,8 @@ const platformValues = ["douyin", "xiaohongshu", "other"];
 // 与后端 .env 的 MAX_UPLOAD_MB 默认值对齐：超上限在本地就挡下，省一趟注定失败的上传
 const MAX_UPLOAD_MB = 10;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
+// 页内重录的时长上限（秒）：与首页按住录音一致，到点自动收（走结束上传路径）
+const REC_MAX_SEC = 60;
 // multer 按「上传文件名的扩展名」校验，会话文件常常没有后缀，得先补一个合法后缀再传；
 // 能不能传交 utils/imageFormat 按文件头魔数判定 —— HEIC 虽在扩展名白名单里，但 sharp
 // 预编译包缺 HEVC 解码器，会变成一张小程序渲染不出来的裂图，属于无效上传，一并挡下
@@ -121,9 +123,16 @@ Page({
     audioDuration: null,
     // 本次编辑主动移除了原有录音（需传 null 告知后端清空）
     audioCleared: false,
+    // 页内「重录」：点一下开录、再点结束（与图片的加/删对称，支持删除与替换）
+    recording: false,
+    recSeconds: 0,
   },
 
   _audio: null,
+  // 页内重录用到的录音器（单例挂实例上，onUnload 兜底停）
+  _recorder: null,
+  _recTimer: null,
+  _recStartAt: 0,
   // 录音上传+转写进行中（此期间拦住保存，避免默默丢录音）
   _transcribing: false,
   // 选完图到真正起上传之间的那段把关进行中（读文件头是异步的，期间拦住再起一批）
@@ -177,6 +186,16 @@ Page({
     if (this._audio) {
       this._audio.destroy();
       this._audio = null;
+    }
+    // 重录中途退出：先收计时器再停录音器，不然 onStop 回调会打到已卸载的页上
+    this.clearRecTimer();
+    if (this._recorder) {
+      try {
+        this._recorder.stop();
+      } catch (e) {
+        /* 没在录就忽略 */
+      }
+      this._recorder = null;
     }
     // 兜底：选完图还没传完就退出的话，副本会一直躺在本地目录里
     (this._tmpFiles || []).forEach(removeTmpFile);
@@ -305,6 +324,152 @@ Page({
     this.transcribeAndParse(p);
   },
 
+  // ==================== 页内重录（点按开/停）+ 移除（与图片的加/删对称） ====================
+  /** 懒建录音器：onStop 里带临时文件走「转写+解析」，与首页录音进编辑页同一套后端链路 */
+  initRecorder() {
+    if (this._recorder) return;
+    const rec = wx.getRecorderManager();
+    rec.onStop((res) => this.handleReRecordStop(res));
+    rec.onError(() => {
+      this.clearRecTimer();
+      this._recStartAt = 0;
+      this.setData({ recording: false });
+      wx.showToast({ title: "录音失败，请重试", icon: "none" });
+    });
+    this._recorder = rec;
+  },
+
+  /** 麦克风授权：与首页一致——被拒过就走设置页，再失败给一句提示 */
+  async ensureRecordAuth() {
+    try {
+      const setting = await new Promise((resolve, reject) => {
+        wx.getSetting({ success: resolve, fail: reject });
+      });
+      if (setting.authSetting["scope.record"] === false) {
+        await new Promise((resolve, reject) => {
+          wx.openSetting({ success: resolve, fail: reject });
+        });
+      }
+      await new Promise((resolve, reject) => {
+        wx.authorize({ scope: "scope.record", success: resolve, fail: reject });
+      });
+      return true;
+    } catch (err) {
+      return false;
+    }
+  },
+
+  /** 「重录」= 点一下开录、再点结束；结束即上传转写并替换当前录音 */
+  async toggleReRecord() {
+    if (this.data.recording) {
+      this.stopReRecord();
+      return;
+    }
+    // 上一段还在上传+转写：再起一轮会并发抢转写通道，先拦住
+    if (this._transcribing) {
+      wx.showToast({ title: "上一条录音处理中，请稍候", icon: "none" });
+      return;
+    }
+    if (typeof wx.getRecorderManager !== "function") {
+      wx.showToast({ title: "当前微信版本不支持录音", icon: "none" });
+      return;
+    }
+    this.initRecorder();
+    const ok = await this.ensureRecordAuth();
+    if (!ok) {
+      wx.showToast({ title: "需要麦克风权限才能录音", icon: "none" });
+      return;
+    }
+    this._recStartAt = Date.now();
+    this.setData({ recording: true, recSeconds: 0 });
+    this.clearRecTimer();
+    this._recTimer = setInterval(() => {
+      const s = this.data.recSeconds + 1;
+      this.setData({ recSeconds: s });
+      if (s >= REC_MAX_SEC) this.stopReRecord(); // 上限自动收（走结束路径）
+    }, 1000);
+    // mp3 体积小、SenseVoice 直接支持（与首页录音参数一致）
+    this._recorder.start({
+      duration: REC_MAX_SEC * 1000,
+      format: "mp3",
+      sampleRate: 16000,
+      numberOfChannels: 1,
+    });
+  },
+
+  /** 再点「停止」：停录音器触发 onStop，结果在 handleReRecordStop 里接住 */
+  stopReRecord() {
+    this.clearRecTimer();
+    if (this.data.recording && this._recorder) {
+      this._recorder.stop();
+    } else {
+      this.setData({ recording: false });
+    }
+  },
+
+  /** 停录回调：本地先上卡片，再走转写+解析（成功即把 audioUrl 替换成新这段） */
+  handleReRecordStop(res) {
+    this.clearRecTimer();
+    this.setData({ recording: false });
+    const tempFilePath = (res && res.tempFilePath) || "";
+    // res.duration 是毫秒；个别机型给 0，回落墙钟差
+    let sec = res && res.duration ? Math.round(res.duration / 1000) : 0;
+    if (!sec && this._recStartAt) {
+      sec = Math.max(1, Math.round((Date.now() - this._recStartAt) / 1000));
+    }
+    this._recStartAt = 0;
+    if (!tempFilePath || sec < 1) {
+      wx.showToast({ title: "说话时间太短", icon: "none" });
+      return;
+    }
+    this.setData({
+      voice: { tempFilePath, duration: sec, text: "", saved: false },
+      audioCleared: false,
+      voiceCollapsed: false,
+      voiceRetryable: false,
+      playing: false,
+    });
+    this.initAudio(tempFilePath);
+    this.transcribeAndParse(tempFilePath);
+  },
+
+  clearRecTimer() {
+    if (this._recTimer) {
+      clearInterval(this._recTimer);
+      this._recTimer = null;
+    }
+  },
+
+  /** 移除当前录音：新日志只是丢掉没提交的录音；编辑旧日志置 audioCleared，保存时传 null 让后端清空并回收旧文件 */
+  removeVoice() {
+    const hadSaved = !!this.data.audioUrl;
+    if (this._audio) {
+      this._audio.destroy();
+      this._audio = null;
+    }
+    this.clearRecTimer();
+    if (this.data.recording && this._recorder) {
+      try {
+        this._recorder.stop();
+      } catch (e) {
+        /* 没在录就忽略 */
+      }
+    }
+    this.setData({
+      voice: null,
+      audioUrl: "",
+      audioDuration: null,
+      // 原本挂着（已存或已上传待存的）录音才需主动告知后端清空
+      audioCleared: hadSaved,
+      voiceStatus: "",
+      voiceReason: "",
+      voiceRetryable: false,
+      playing: false,
+      recording: false,
+      recSeconds: 0,
+    });
+  },
+
   /** 只填空白字段，不覆盖用户已输入内容 */
   applyVoiceFields(fields) {
     const d = this.data;
@@ -343,33 +508,8 @@ Page({
     if (Object.keys(upd).length) this.setData(upd);
   },
 
-  /** 点悬浮卡片 → 回到顶部 */
-  voiceTapToTop() {
-    this.setData({ voiceCollapsed: false });
-    wx.pageScrollTo({ scrollTop: 0, duration: 300 });
-  },
-
   toggleVoiceCollapsed() {
     this.setData({ voiceCollapsed: !this.data.voiceCollapsed });
-  },
-
-  /** ✕ 关闭卡片：不保留本次录音；若原本挂着已存录音，则标记为主动移除 */
-  closeVoicePanel() {
-    if (this._audio) {
-      this._audio.destroy();
-      this._audio = null;
-    }
-    this.setData({
-      voice: null,
-      voiceCollapsed: false,
-      voiceStatus: "",
-      voiceReason: "",
-      voiceRetryable: false,
-      playing: false,
-      audioUrl: "",
-      audioDuration: null,
-      audioCleared: Boolean(this.data.audioUrl),
-    });
   },
 
   async loadOrgOptions() {
@@ -883,14 +1023,14 @@ Page({
         const app = getApp();
         app.globalData = app.globalData || {};
         app.globalData.timelineDirty = true;
-        // 乐观插入：新建用后端回传的 id，编辑用本页 id。突发时列表接口可能正在排队或被拒，
-        // 先把用户刚写的那条放进列表，再后台拉第一页校正，避免“发了但看不见”
-        const savedId = this.data.id || (data && data.id);
-        if (savedId) {
+        // 乐观插入只对「新建」开放：新建时列表里还没有这条，突发下接口排队/被拒会「发了看不见」，
+        // 先把刚写的置顶，再后台拉第一页校正。编辑则相反——这条本就在列表里、时间还可能很早，
+        // 置顶会让被改的那条突兀地跳到最上面；交给 timelineDirty 的 reset 按时间序重拉即可落回原位
+        if (!this.data.id && data && data.id) {
           const imgs = payload.images || [];
           const first = imgs[0];
           app.globalData._pendingTimelineInsert = {
-            id: savedId,
+            id: data.id,
             time: payload.time,
             event: payload.event,
             type: payload.type,

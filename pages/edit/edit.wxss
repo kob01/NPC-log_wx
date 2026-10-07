@@ -312,22 +312,13 @@
     box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
 }
 
-/* ==================== 录音悬浮卡片 ==================== */
+/* ==================== 录音卡（内联于进度/记录下方） ==================== */
 .voice-panel {
-    position: fixed;
-    left: 24rpx;
-    right: 24rpx;
-    /* 原来固定 150rpx 会压在提交栏上（提交栏高约 156rpx + 安全区） */
-    bottom: calc(180rpx + env(safe-area-inset-bottom));
-    z-index: 30;
-    background: #1f1f1f;
+    /* 与其它 .form-item 同款：浅色卡片底 + 主题圆角，随深/浅色模式自动换肤 */
+    background: var(--card);
     border-radius: var(--radius);
-    padding: 20rpx 24rpx;
-    box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.25);
-}
-
-.voice-panel.collapsed {
-    padding: 12rpx 24rpx;
+    padding: 24rpx;
+    margin-bottom: 20rpx;
 }
 
 .voice-head {
@@ -338,24 +329,30 @@
 .voice-play {
     width: 56rpx;
     height: 56rpx;
-    line-height: 56rpx;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 50%;
     background: var(--primary);
-    color: var(--text-inv);
-    font-size: 26rpx;
     margin-right: 16rpx;
+    flex-shrink: 0;
+}
+
+/* 播放/暂停图标：base64 SVG，白色写死在图里（<image> 不继承 CSS 色），与详情页音频按钮同源 */
+.voice-glyph {
+    width: 28rpx;
+    height: 28rpx;
 }
 
 .voice-dur {
-    color: #bbb;
+    color: var(--text-3);
     font-size: 26rpx;
     margin-right: 16rpx;
 }
 
 .voice-status {
     flex: 1;
-    color: #4d9fff;
+    color: var(--primary);
     font-size: 24rpx;
     overflow: hidden;
     white-space: nowrap;
@@ -366,9 +363,9 @@
 .voice-retry {
     margin: 0 12rpx;
     padding: 2rpx 18rpx;
-    border: 1rpx solid #4d9fff;
+    border: 1rpx solid var(--primary);
     border-radius: var(--radius-pill);
-    color: #4d9fff;
+    color: var(--primary);
     font-size: 22rpx;
     line-height: 1.7;
 }
@@ -376,29 +373,65 @@
 /* 失败成因整行展示、不省略：让用户看出是“服务额度不足”而不是自己没录好 */
 .voice-reason {
     margin-top: 12rpx;
-    color: #f5a623;
+    color: var(--warning);
     font-size: 24rpx;
     line-height: 1.5;
     word-break: break-all;
 }
 
 .voice-fold {
-    color: #888;
-    font-size: 30rpx;
-    padding: 0 20rpx;
+    /* 复用「›」字形旋转得到上下箭头，颜色/字号与其它表单项的 .arrow 一致 */
+    color: var(--text-4);
+    font-size: 34rpx;
+    display: inline-block;
+    padding: 0 8rpx;
 }
 
-.voice-close {
-    color: #888;
-    font-size: 28rpx;
-    padding: 0 4rpx;
+/* 收起态→下尖（提示可展开），展开态→上尖（提示可收起） */
+.fold-down {
+    transform: rotate(90deg);
+}
+
+.fold-up {
+    transform: rotate(-90deg);
 }
 
 .voice-text {
     margin-top: 16rpx;
-    color: #ddd;
+    color: var(--text-1);
     font-size: 26rpx;
     line-height: 1.6;
     max-height: 160rpx;
     overflow: hidden;
+}
+
+/* 录音操作行（重录/停止 + 移除）：单独一行放卡片底部，避开头部那一排拥挤；用 margin 不用 flex gap */
+.voice-actions {
+    display: flex;
+    align-items: center;
+    margin-top: 16rpx;
+}
+
+/* 与 .voice-retry 同构胶囊按钮 */
+.voice-act {
+    margin-right: 16rpx;
+    padding: 4rpx 22rpx;
+    border: 1rpx solid var(--primary);
+    border-radius: var(--radius-pill);
+    color: var(--primary);
+    font-size: 24rpx;
+    line-height: 1.7;
+}
+
+/* 录制中：按钮转橙色实心，明确告诉用户“再点一下结束” */
+.voice-act-on {
+    background: var(--warning);
+    border-color: var(--warning);
+    color: #fff;
+}
+
+/* 移除：描边红色，与主按钮区分开（destructive） */
+.voice-act-del {
+    border-color: var(--danger);
+    color: var(--danger);
 }

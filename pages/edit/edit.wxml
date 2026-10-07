@@ -32,6 +32,29 @@
     <textarea class="area" auto-height placeholder="详细经过与当时的感受…" maxlength="4000" value="{{content}}" data-key="content" bindinput="onInput" />
   </view>
 
+  <!-- 录音卡（内联于进度/记录下方，刚录的与日志已存的都走这里）：▶ 播放，有转写文本/失败成因时可折叠展开 -->
+  <view class="voice-panel" wx:if="{{voice}}">
+    <view class="voice-head">
+      <view class="voice-play" catchtap="togglePlay">
+        <image class="voice-glyph" wx:if="{{playing}}" mode="aspectFit" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48cmVjdCB4PSI2IiB5PSI1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxNCIgcng9IjEuMiIgZmlsbD0iI2ZmZmZmZiIvPjxyZWN0IHg9IjE0IiB5PSI1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxNCIgcng9IjEuMiIgZmlsbD0iI2ZmZmZmZiIvPjwvc3ZnPg==" />
+        <image class="voice-glyph" wx:else mode="aspectFit" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48cGF0aCBkPSJNOCA1djE0bDExLTd6IiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+" />
+      </view>
+      <text class="voice-dur">{{recording ? recSeconds : voice.duration}}″</text>
+      <text class="voice-status">{{voiceStatus}}</text>
+      <text class="voice-retry" wx:if="{{voiceRetryable}}" catchtap="retryTranscribe">重试</text>
+      <!-- 无转写正文也无失败成因时，折叠/展开没有可展示的内容，直接隐藏这个开关 -->
+      <text class="voice-fold {{voiceCollapsed ? 'fold-down' : 'fold-up'}}" wx:if="{{voice.text || voiceReason}}" catchtap="toggleVoiceCollapsed">›</text>
+    </view>
+    <view class="voice-text" wx:if="{{!voiceCollapsed && voice.text}}">{{voice.text}}</view>
+    <!-- 失败成因单独一行完整展示：头部 .voice-status 是单行省略，装不下“额度不足需充值”这种长句 -->
+    <view class="voice-reason" wx:if="{{!voiceCollapsed && voiceReason}}">{{voiceReason}}</view>
+    <!-- 操作行：与图片的加/删对称 —— 重录（点按开/停，结束即替换）、移除（保存时告知后端清空旧文件） -->
+    <view class="voice-actions">
+      <text class="voice-act {{recording ? 'voice-act-on' : ''}}" catchtap="toggleReRecord">{{recording ? '停止录音' : '重录'}}</text>
+      <text class="voice-act voice-act-del" catchtap="removeVoice">移除录音</text>
+    </view>
+  </view>
+
   <!-- 评价 -->
   <view class="form-item">
     <view class="label">评价</view>
@@ -146,21 +169,6 @@
     <button class="btn-primary submit-btn" loading="{{submitting}}" bindtap="onSubmit">
       {{id ? '保存修改' : '发布日志'}}
     </button>
-  </view>
-
-  <!-- 录音悬浮卡片（刚录的与日志已存的都走这里）：点卡片回顶部，▶ 播放，∧/∨ 折叠，✕ 不保留录音 -->
-  <view class="voice-panel {{voiceCollapsed ? 'collapsed' : ''}}" wx:if="{{voice}}" bindtap="voiceTapToTop">
-    <view class="voice-head">
-      <text class="voice-play" catchtap="togglePlay">{{playing ? '⏸' : '▶'}}</text>
-      <text class="voice-dur">{{voice.duration}}″</text>
-      <text class="voice-status">{{voiceStatus}}</text>
-      <text class="voice-retry" wx:if="{{voiceRetryable}}" catchtap="retryTranscribe">重试</text>
-      <text class="voice-fold" catchtap="toggleVoiceCollapsed">{{voiceCollapsed ? '∨' : '∧'}}</text>
-      <text class="voice-close" catchtap="closeVoicePanel">✕</text>
-    </view>
-    <view class="voice-text" wx:if="{{!voiceCollapsed && voice.text}}">{{voice.text}}</view>
-    <!-- 失败成因单独一行完整展示：头部 .voice-status 是单行省略，装不下“额度不足需充值”这种长句 -->
-    <view class="voice-reason" wx:if="{{!voiceCollapsed && voiceReason}}">{{voiceReason}}</view>
   </view>
 
   <!-- 图片拖拽浮层：跟手的放大缩略图（position: fixed 相对视口，故放在根节点下避开任何可能的 transform 祖先） -->
