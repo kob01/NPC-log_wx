@@ -60,14 +60,33 @@
   color: var(--text-2);
 }
 
-/* 单图预览：固定尺寸，margin-left:auto 保证“只有图、无正文”时也贴右 */
-.ec-thumb {
+/* 缩略图容器：多图角标的定位基准；margin-left:auto 保证“只有图、无正文”时也贴右 */
+.ec-thumb-wrap {
+  position: relative;
   flex-shrink: 0;
   margin-left: auto;
+}
+
+/* 单图预览：固定尺寸，整条图集只展首图，其余靠点开滑动浏览 */
+.ec-thumb {
+  display: block;
   width: 120rpx;
   height: 120rpx;
   border-radius: var(--radius);
   background: var(--fill);
+}
+
+/* 张数角标：黑半透底 + 白字，深浅色主题下都读得清，不抢卡片的既有配色 */
+.ec-thumb-badge {
+  position: absolute;
+  right: 8rpx;
+  bottom: 8rpx;
+  padding: 0 10rpx;
+  font-size: 18rpx;
+  line-height: 1.7;
+  color: var(--text-inv);
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: var(--radius-pill);
 }
 
 .ec-tags {

@@ -174,6 +174,37 @@
     font-size: 60rpx;
 }
 
+/* 拖拽排序：被拖格子半透明“留位”，真正的图交给下方跟手浮层 */
+.img-cell-dragging {
+    opacity: 0.3;
+}
+
+/* 图片多于一张时的拖拽提示，弱化处理不抢标题 */
+.img-tip {
+    margin-top: 4rpx;
+    font-size: 22rpx;
+    color: var(--text-4);
+}
+
+/* 跟手的拖拽浮层：以 left/top 落在手指处，transform 居中并略放大制造“抬起”感；
+   pointer-events: none 避免它拦截进行中的手势 */
+.img-drag-ghost {
+    position: fixed;
+    z-index: 999;
+    width: 160rpx;
+    height: 160rpx;
+    transform: translate(-50%, -50%) scale(1.08);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+}
+
+.img-drag-ghost-img {
+    width: 160rpx;
+    height: 160rpx;
+}
+
 .uploading {
     font-size: 24rpx;
     color: var(--primary);

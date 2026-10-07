@@ -75,13 +75,28 @@
         <text class="arrow">›</text>
       </view>
     </view>
-    <view class="img-grid">
-      <view class="img-cell" wx:for="{{images}}" wx:key="url">
+    <!-- 拖拽排序：长按某张图→浮层跟手→越过其它格子实时换位。touchmove/touchend 绑在网格容器上，
+         换位时被拖节点仍在容器内、事件照常冒泡，而容器本身不参与 wx:for 不会被重排 -->
+    <view
+      class="img-grid"
+      bindtouchmove="onGridTouchMove"
+      bindtouchend="onGridTouchEnd"
+      bindtouchcancel="onGridTouchEnd"
+    >
+      <view
+        class="img-cell {{dragging && dragIndex === index ? 'img-cell-dragging' : ''}}"
+        wx:for="{{images}}"
+        wx:key="url"
+        data-index="{{index}}"
+        bindtouchstart="onImgTouchStart"
+        bindlongpress="onImgLongPress"
+      >
         <image class="img" src="{{item.displayUrl}}" mode="aspectFill" data-index="{{index}}" bindtap="previewImage" />
         <view class="img-del" data-index="{{index}}" catchtap="removeImage">✕</view>
       </view>
       <view class="img-add" wx:if="{{images.length < 9}}" bindtap="chooseImage">＋</view>
     </view>
+    <view class="img-tip" wx:if="{{images.length > 1 && !uploading}}">长按图片可拖动改变顺序</view>
     <view class="uploading" wx:if="{{uploading}}">图片上传中…</view>
   </view>
 
@@ -146,5 +161,10 @@
     <view class="voice-text" wx:if="{{!voiceCollapsed && voice.text}}">{{voice.text}}</view>
     <!-- 失败成因单独一行完整展示：头部 .voice-status 是单行省略，装不下“额度不足需充值”这种长句 -->
     <view class="voice-reason" wx:if="{{!voiceCollapsed && voiceReason}}">{{voiceReason}}</view>
+  </view>
+
+  <!-- 图片拖拽浮层：跟手的放大缩略图（position: fixed 相对视口，故放在根节点下避开任何可能的 transform 祖先） -->
+  <view class="img-drag-ghost" wx:if="{{dragging}}" style="left: {{dragPos.x}}px; top: {{dragPos.y}}px;">
+    <image class="img-drag-ghost-img" src="{{dragUrl}}" mode="aspectFill" />
   </view>
 </view>

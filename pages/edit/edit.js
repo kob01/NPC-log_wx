@@ -91,6 +91,14 @@ Page({
     witness: "",
     images: [],
     uploading: false,
+    // 图片拖拽排序：长按某张图进入拖拽态，浮层跟手，越过其它格子时实时换位
+    dragging: false,
+    // 被拖图当前所在下标（随移动更新，-1 表示未拖拽）；下标即 sort，保存时按序落库
+    dragIndex: -1,
+    // 拖拽浮层的视口坐标（position: fixed，用 clientX/clientY 跟手）
+    dragPos: { x: 0, y: 0 },
+    // 浮层里定格显示的那张图，避免实时换位时浮层内容乱跳
+    dragUrl: "",
     // 是否展示「从微信聊天选图」入口（基础库不支持时隐藏）
     canPickChat: CAN_PICK_CHAT,
     visibilityOptions,
@@ -122,11 +130,18 @@ Page({
   _checking: false,
   // 聊天选图补后缀产生的临时副本，上传完即删，onUnload 兜底再清一次
   _tmpFiles: [],
+  // 拖拽开始时缓存的各图片格子矩形（页面坐标）：网格定宽 flex，槽位几何固定，
+  // 换位只改内容不改位置，故缓存一次即可；用页面坐标以便拖拽中页面滚动仍判定准确
+  _imgRects: [],
+  // touchstart 记下的按下点（client 坐标），longpress 触发时取用给浮层定初始位
+  _startPoint: null,
 
   async onLoad(options) {
     // 数组放在 Page 选项上有跨实例共用风险，这里按页面实例各自建一份（先于登录判定，
     // 未登录时 onUnload 兜底清理才有正确的空数组可用）
     this._tmpFiles = [];
+    this._imgRects = [];
+    this._startPoint = null;
     if (!auth.checkLogin()) return;
     const [date, timeStr] = nowDateTime().split(" ");
     this.setData({ date, timeStr });
@@ -666,12 +681,94 @@ Page({
   },
 
   previewImage(e) {
+    if (this.data.dragging) return; // 拖拽落指时可能误带一次 tap，忽略
     const index = e.currentTarget.dataset.index;
     // 九宫格里用的是缩略图（省流量），点开大图必须换成原图地址，否则 300px 放大到全屏会糊
     const urls = this.data.images.map((i) =>
       resolveFileUrl(i.url || i.thumbUrl),
     );
     wx.previewImage({ current: urls[index], urls });
+  },
+
+  // ==================== 图片拖拽排序 ====================
+  /** 记下按下点：longpress 触发时用它给浮层定初始位（touchmove 之前先要有个落点） */
+  onImgTouchStart(e) {
+    const t = e.touches && e.touches[0];
+    if (t) this._startPoint = { x: t.clientX, y: t.clientY };
+  },
+
+  /** 长按某张图进入拖拽态：查一次各格子位置（页面坐标）缓存，浮层定格这张图 */
+  onImgLongPress(e) {
+    if (this.data.uploading || this.data.dragging) return;
+    const index = e.currentTarget.dataset.index;
+    const img = this.data.images[index];
+    if (!img) return;
+    const q = wx.createSelectorQuery();
+    q.selectAll(".img-cell").boundingClientRect();
+    q.selectViewport().scrollOffset();
+    q.exec((res) => {
+      const rects = res && res[0];
+      if (!rects || !rects.length) return;
+      const scrollTop = (res[1] && res[1].scrollTop) || 0;
+      // 存成页面坐标：拖拽中页面若滚动，client 坐标会变而页面坐标不变，命中判定才稳
+      this._imgRects = rects.map((r) => ({
+        left: r.left,
+        right: r.right,
+        top: r.top + scrollTop,
+        bottom: r.bottom + scrollTop,
+      }));
+      const p = this._startPoint || { x: 0, y: 0 };
+      this.setData({
+        dragging: true,
+        dragIndex: index,
+        dragUrl: img.displayUrl,
+        dragPos: { x: p.x, y: p.y },
+      });
+      try {
+        wx.vibrateShort({ type: "medium" });
+      } catch (err) {
+        /* 部分机型/开发者工具不支持震动，忽略 */
+      }
+    });
+  },
+
+  /** 拖拽中移动：浮层跟手；越过别的格子就把被拖图实时挪到该格（下标即 sort） */
+  onGridTouchMove(e) {
+    if (!this.data.dragging) return;
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    const patch = { dragPos: { x: t.clientX, y: t.clientY } };
+    const target = this.hitImageSlot(t.pageX, t.pageY);
+    if (target >= 0 && target !== this.data.dragIndex) {
+      const images = this.data.images.slice();
+      const moved = images.splice(this.data.dragIndex, 1)[0];
+      images.splice(target, 0, moved);
+      patch.images = images;
+      patch.dragIndex = target;
+    }
+    this.setData(patch);
+  },
+
+  /** 命中判定：手指（页面坐标）落在哪个格子；落在网格纵向范围外则就近夹到首/尾 */
+  hitImageSlot(px, py) {
+    const rects = this._imgRects || [];
+    if (!rects.length) return -1;
+    for (let i = 0; i < rects.length; i++) {
+      const r = rects[i];
+      if (px >= r.left && px <= r.right && py >= r.top && py <= r.bottom)
+        return i;
+    }
+    const first = rects[0];
+    const last = rects[rects.length - 1];
+    if (py < first.top) return 0;
+    if (py > last.bottom) return rects.length - 1;
+    return -1;
+  },
+
+  /** 松手结束拖拽：新顺序已落在 images 里，保存时按数组下标写 sort */
+  onGridTouchEnd() {
+    if (!this.data.dragging) return;
+    this.setData({ dragging: false, dragIndex: -1, dragUrl: "" });
   },
 
   toggleOrg(e) {
@@ -790,7 +887,8 @@ Page({
         // 先把用户刚写的那条放进列表，再后台拉第一页校正，避免“发了但看不见”
         const savedId = this.data.id || (data && data.id);
         if (savedId) {
-          const first = payload.images && payload.images[0];
+          const imgs = payload.images || [];
+          const first = imgs[0];
           app.globalData._pendingTimelineInsert = {
             id: savedId,
             time: payload.time,
@@ -806,6 +904,10 @@ Page({
             lat: payload.lat != null ? payload.lat : null,
             firstThumb: (first && (first.thumbUrl || first.url)) || "",
             firstUrl: (first && first.url) || "",
+            // 整条图集一起带上：否则刚存的多图日志在列表上只能看首图，
+            // 要等后端第一页回来才能滑动浏览
+            thumbs: imgs.map((im) => im.thumbUrl || im.url).filter(Boolean),
+            imageUrls: imgs.map((im) => im.url).filter(Boolean),
           };
         }
         wx.showToast({

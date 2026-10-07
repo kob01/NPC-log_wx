@@ -505,6 +505,10 @@ Page({
       lat: item.lat != null ? item.lat : null,
       firstThumb: item.firstThumb || "",
       firstUrl: item.firstUrl || "",
+      // 整条图集（缩略图供卡片、原图供点开滑动浏览）：列表接口一次带回，
+      // 不这样卡片就只能看首图，要滑得逐条回查详情接口
+      thumbs: item.thumbs || [],
+      imageUrls: item.imageUrls || [],
       // 归属作者：列表混进同组织的他人日志时，卡片底栏地址前会标出是谁写的；
       // 自己的日志（is_mine）留空串，卡片据此不显示这个名字
       author: item.is_mine ? "" : item.author || "",
@@ -531,6 +535,8 @@ Page({
       lat: item.lat,
       firstThumb: item.firstThumb || "",
       firstUrl: item.firstUrl || "",
+      thumbs: item.thumbs || [],
+      imageUrls: item.imageUrls || [],
       score: item.score,
     };
   },

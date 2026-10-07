@@ -9,18 +9,23 @@
     <text class="ec-time">{{displayTime}}</text>
   </view>
 
-  <!-- 正文 + 单图预览：文字铺满左侧，图片靠右；无图时文字占满整行 -->
+  <!-- 正文 + 缩略图：文字铺满左侧，图片靠右；无图时文字占满整行。
+       多图不在卡片上铺开（会把正文挤没），只在角上标张数，点开才是全屏左右滑动浏览 -->
   <view class="ec-media">
     <view class="ec-body ellipsis-2" wx:if="{{bodyText}}">{{bodyText}}</view>
-    <image
-      class="ec-thumb"
+    <view
+      class="ec-thumb-wrap"
       wx:if="{{displayThumbs.length}}"
-      src="{{displayThumbs[0]}}"
-      mode="aspectFill"
-      lazy-load
-      data-index="{{0}}"
       catchtap="onPreview"
-    />
+    >
+      <image
+        class="ec-thumb"
+        src="{{displayThumbs[0]}}"
+        mode="aspectFill"
+        lazy-load
+      />
+      <view class="ec-thumb-badge" wx:if="{{imageCount > 1}}">{{imageCount}} 图</view>
+    </view>
   </view>
 
   <view class="ec-tags" wx:if="{{displayTags.length || displayPersons.length}}">
