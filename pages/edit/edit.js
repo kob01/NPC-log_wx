@@ -1,5 +1,6 @@
 const api = require("../../utils/api");
 const auth = require("../../utils/auth");
+const audioHub = require("../../utils/audioHub");
 const { resolveFileUrl, nowDateTime } = require("../../utils/format");
 const { SUPPORTED_EXT_RE, inspectImage } = require("../../utils/imageFormat");
 
@@ -19,7 +20,7 @@ const typeOptions = [
   "工作",
   "其他",
 ];
-const ratingOptions = ["非常好", "好", "一般", "差", "非常差"];
+const ratingOptions = ["夯", "好", "NPC", "拉", "拉完了"];
 const visibilityOptions = ["仅自己可见", "组织可见"];
 const platformLabels = ["抖音", "小红书", "其他"];
 const platformValues = ["douyin", "xiaohongshu", "other"];
@@ -117,24 +118,47 @@ Page({
     voiceReason: "",
     // 失败后给一个原地重试入口（录音临时文件还在，不必重录）
     voiceRetryable: false,
+    // 识别结果已到手但还没写进表单（用户选了「只留录音」）：卡片上留一个「覆盖表单」给他反悔
+    voiceApplyable: false,
+    // 识别结果已经写进表单了（控制不重复问、也不重复显示覆盖入口）
+    voiceApplied: false,
     playing: false,
     // 随日志留存的录音（相对路径 + 时长秒），详情页据此回放
     audioUrl: "",
     audioDuration: null,
     // 本次编辑主动移除了原有录音（需传 null 告知后端清空）
     audioCleared: false,
-    // 页内「重录」：点一下开录、再点结束（与图片的加/删对称，支持删除与替换）
+    // 页内录音：点一下开录、再点结束（与图片的加/删对称）——卡片上已有录音时叫「重录」，没有时是「录一段」
     recording: false,
     recSeconds: 0,
   },
 
   _audio: null,
-  // 页内重录用到的录音器（单例挂实例上，onUnload 兜底停）
+  // 页内重录用到的录音器。wx.getRecorderManager() 是「全局唯一单例」：首页与本页挂的是
+  // 同一个对象，onStop/onError 是累加注册（多个回调都会响）、但可用 offStop/offError
+  // 按引用逐个删。所以退出页面时必须摘干净，且回调里要靠 _recActive 认领「这段录音归谁」
   _recorder: null,
   _recTimer: null,
   _recStartAt: 0,
+  // 本页正在录、且等着认领 onStop 结果的标记：移除/卸载时先置假，那段音频即作废
+  _recActive: false,
+  // 授权弹窗到真正 start 之间的异步窗口，拦住连点「重录」把录音器起两遍
+  _recStarting: false,
+  // 本页已经拿到过麦克风授权：下一轮起录就跳过 getSetting/authorize 那两趟往返
+  // （录音器报错时会作废，权限被关也能下一轮重新走授权）
+  _recAuthOk: false,
+  // 开录前的 voiceStatus 快照：太短/报错退回路时恢复它，免得卡片卡在「录音中…」下不去
+  _preRecStatus: "",
+  // 挂到全局录音器上的回调引用（offStop/offError 按引用摘除才取得掉）
+  _recStopHandler: null,
+  _recErrorHandler: null,
   // 录音上传+转写进行中（此期间拦住保存，避免默默丢录音）
   _transcribing: false,
+  // 每轮转写的序号：接口回来对不上号就说明这轮已被重录/移除/退出作废，结果不再写回页面
+  _transcribeSeq: 0,
+  // 最近一次成功的识别结果（{fields,text,degraded}）：弹窗里选了「只留录音」后，
+  // 点「覆盖表单」还要拿它重写一遍，不必重跑转写接口
+  _voiceParsed: null,
   // 选完图到真正起上传之间的那段把关进行中（读文件头是异步的，期间拦住再起一批）
   _checking: false,
   // 聊天选图补后缀产生的临时副本，上传完即删，onUnload 兜底再清一次
@@ -187,16 +211,11 @@ Page({
       this._audio.destroy();
       this._audio = null;
     }
-    // 重录中途退出：先收计时器再停录音器，不然 onStop 回调会打到已卸载的页上
+    // 重录中途退出：先作废再拆监听，最后才 stop。顺序反了的话 stop 必然触发的
+    // onStop 会把「用户已经不要的那段」传上后端并开始转写，还会往已卸载的页 setData
     this.clearRecTimer();
-    if (this._recorder) {
-      try {
-        this._recorder.stop();
-      } catch (e) {
-        /* 没在录就忽略 */
-      }
-      this._recorder = null;
-    }
+    this._transcribeSeq += 1; // 让在飞的转写结果落地时认不出归属，不再写回页面
+    this.discardRecorder();
     // 兜底：选完图还没传完就退出的话，副本会一直躺在本地目录里
     (this._tmpFiles || []).forEach(removeTmpFile);
     this._tmpFiles = [];
@@ -208,10 +227,21 @@ Page({
    */
   initAudio(src) {
     if (!src) return;
-    const audio = wx.createInnerAudioContext();
+    // 先拆掉上一个：重录后新旧两个 InnerAudioContext 并存，旧的那个还在发声，
+    // 它的 onEnded 会把新录音的 playing 状态改掉（按钮显示与声音对不上）
+    if (this._audio) {
+      try {
+        this._audio.destroy();
+      } catch (err) {
+        /* 忽略 */
+      }
+      this._audio = null;
+    }
+    const audio = audioHub.create();
     // 只有相对路径需要拼 BASE_URL；本地临时文件原样传给原生播放器
     audio.src = src.startsWith("/") ? resolveFileUrl(src) : src;
     audio.onEnded(() => this.setData({ playing: false }));
+    audio.onStop(() => this.setData({ playing: false }));
     audio.onError(() => {
       this.setData({ playing: false });
       wx.showToast({ title: "录音文件已失效", icon: "none" });
@@ -244,6 +274,10 @@ Page({
       });
       return;
     }
+    // 本轮领个号：接口回来后只对得上号才落地，否则「移除录音后旧请求才返回」
+    // 会把刚删掉的那段又塞回卡片与 payload
+    const seq = this._transcribeSeq + 1;
+    this._transcribeSeq = seq;
     this._transcribing = true;
     this.setData({
       voiceStatus: "识别中…",
@@ -252,6 +286,7 @@ Page({
     });
     try {
       const { code, data, message } = await api.event.transcribe(target);
+      if (seq !== this._transcribeSeq) return; // 已被重录/移除/退出作废
       if (Number(code) === 200 && data && data.audioUrl) {
         // 录音已落盘，记下路径与时长，保存日志时一并写入
         this.setData({
@@ -272,29 +307,22 @@ Page({
           });
           return;
         }
+        // 文字先摆上卡片（附复制入口），要不要盖掉已填的表单项等用户点头再说 ——
+        // 录音可以随手重录，手打的正文被识别结果一口盖掉就真没了
         this.setData({
           "voice.text": text,
-          content: this.data.content || text,
           voiceRetryable: false,
+          voiceCollapsed: false,
+          voiceApplyable: false,
+          voiceApplied: false,
         });
-        if (data.fields) {
-          this.applyVoiceFields(data.fields);
-          this.setData({
-            voiceStatus: data.degraded
-              ? "AI 未启用，已保留原文"
-              : "AI 已解析并填表",
-            voiceReason: data.degraded
-              ? "文字已识别，但 AI 解析未启用（已把原文放进正文）"
-              : "",
-          });
-        } else {
-          this.setData({
-            voiceStatus: "解析失败，可手动填写",
-            voiceReason:
-              "文字已识别但 AI 未能拆字段，可对照原文手动填，或点重试",
-            voiceRetryable: true,
-          });
-        }
+        this._voiceParsed = {
+          fields: data.fields || null,
+          text,
+          degraded: Boolean(data.degraded),
+        };
+        // 没碰到已有内容就直接填，碰到了就问一句（录音无论如何都已先留在卡片上）
+        this.settleVoiceFields();
       } else {
         this.setData({
           voiceStatus: "识别失败，可重试",
@@ -303,13 +331,15 @@ Page({
         });
       }
     } catch (err) {
+      if (seq !== this._transcribeSeq) return;
       this.setData({
         voiceStatus: "上传失败，可重试",
         voiceReason: "录音没传上去（网络或服务异常），可点重试",
         voiceRetryable: true,
       });
     } finally {
-      this._transcribing = false;
+      // 只有还是自己这一轮才解锁：被作废的那轮不该把新一轮的忙标志抹掉
+      if (seq === this._transcribeSeq) this._transcribing = false;
     }
   },
 
@@ -324,19 +354,64 @@ Page({
     this.transcribeAndParse(p);
   },
 
-  // ==================== 页内重录（点按开/停）+ 移除（与图片的加/删对称） ====================
+  // ==================== 页内录音（点按开/停）+ 移除（与图片的加/删对称） ====================
   /** 懒建录音器：onStop 里带临时文件走「转写+解析」，与首页录音进编辑页同一套后端链路 */
   initRecorder() {
     if (this._recorder) return;
     const rec = wx.getRecorderManager();
-    rec.onStop((res) => this.handleReRecordStop(res));
-    rec.onError(() => {
-      this.clearRecTimer();
-      this._recStartAt = 0;
-      this.setData({ recording: false });
-      wx.showToast({ title: "录音失败，请重试", icon: "none" });
-    });
+    // 回调按引用挂上并存在实例上，discardRecorder 才取得掉；否则本页退出后
+    // 这个闭包仍挂在录音单例上，首页每次停录都会多打一发本页的处理
+    this._recStopHandler = (res) => this.handleReRecordStop(res);
+    this._recErrorHandler = () => this.handleReRecordError();
+    rec.onStop(this._recStopHandler);
+    rec.onError(this._recErrorHandler);
     this._recorder = rec;
+  },
+
+  /**
+   * 丢弃本页的录音会话：抹掉归属标记 → 摘本页监听 → 最后才 stop 释放麦克风。
+   * 移除录音与退出页面都走这里：stop 一定会触发 onStop，标记不先抹掉的话，
+   * 回调会把用户明确不要的那段重新塞回卡片并上传转写。
+   */
+  discardRecorder() {
+    this._recActive = false;
+    this._recStartAt = 0;
+    const rec = this._recorder;
+    if (!rec) return;
+    try {
+      if (this._recStopHandler && typeof rec.offStop === "function") {
+        rec.offStop(this._recStopHandler);
+      }
+      if (this._recErrorHandler && typeof rec.offError === "function") {
+        rec.offError(this._recErrorHandler);
+      }
+    } catch (err) {
+      /* 低版本基础库没有 offXxx：靠 _recActive 标记也能让回调空转 */
+    }
+    this._recorder = null;
+    this._recStopHandler = null;
+    this._recErrorHandler = null;
+    try {
+      rec.stop();
+    } catch (err) {
+      /* 没在录就忽略 */
+    }
+  },
+
+  /** 录音器报错：只处理本页自己那段，首页那一轮的错误不该搅乱本页卡片 */
+  handleReRecordError() {
+    if (!this._recActive && !this._recStarting && !this.data.recording) return;
+    this._recActive = false;
+    // 报错多半是麦克风被占或权限在设置里被关了：作废缓存，下一轮重新走授权
+    this._recAuthOk = false;
+    this.clearRecTimer();
+    this._recStartAt = 0;
+    this.setData({
+      recording: false,
+      recSeconds: 0,
+      voiceStatus: this._preRecStatus || "",
+    });
+    wx.showToast({ title: "录音失败，请重试", icon: "none" });
   },
 
   /** 麦克风授权：与首页一致——被拒过就走设置页，再失败给一句提示 */
@@ -359,12 +434,14 @@ Page({
     }
   },
 
-  /** 「重录」= 点一下开录、再点结束；结束即上传转写并替换当前录音 */
+  /** 「重录」= 点一下开录、再点结束；结束即上传转写并替换当前录音（卡片上没录音时就是「录一段」） */
   async toggleReRecord() {
     if (this.data.recording) {
       this.stopReRecord();
       return;
     }
+    // 授权弹窗还没回来、或 start 还没发出去：此时再点一次会把录音器起两遍（第二次直接进 onError）
+    if (this._recStarting) return;
     // 上一段还在上传+转写：再起一轮会并发抢转写通道，先拦住
     if (this._transcribing) {
       wx.showToast({ title: "上一条录音处理中，请稍候", icon: "none" });
@@ -375,13 +452,38 @@ Page({
       return;
     }
     this.initRecorder();
-    const ok = await this.ensureRecordAuth();
+    // 授权结果记在页面上：getSetting + authorize 是两趟 JSBridge 往返，而它们又正好卡在
+    // 「原生从放音切到录音」前面，多等一趟就多一分顿感；同一页录第二遍就不必再问了
+    let ok = this._recAuthOk;
+    if (!ok) {
+      this._recStarting = true;
+      try {
+        ok = await this.ensureRecordAuth();
+      } finally {
+        this._recStarting = false;
+      }
+      if (ok) this._recAuthOk = true;
+    }
     if (!ok) {
       wx.showToast({ title: "需要麦克风权限才能录音", icon: "none" });
       return;
     }
+    // 授权弹窗那一会里页面可能已经退了（discardRecorder 拆了监听），此时不能再 start
+    if (!this._recorder) return;
+    // 确定要起录了才静音：上面拦住回头的分支（含授权被拒）不该把用户正在听的东西弄停。
+    // 正在放的旧录音不掐就会串进这段新录音里，连转写文字都会混进上一段的内容
+    audioHub.stopAll();
+    this._recActive = true; // 之后由 handleReRecordStop 认领并清零
     this._recStartAt = Date.now();
-    this.setData({ recording: true, recSeconds: 0 });
+    // 记下开录前的状态文案：半秒太短/报错退回路时要能原样恢复，不然卡片顶着一句「录音中…」下不去
+    this._preRecStatus = this.data.voiceStatus;
+    this.setData({
+      recording: true,
+      recSeconds: 0,
+      voiceStatus: "录音中…",
+      voiceReason: "",
+      voiceRetryable: false,
+    });
     this.clearRecTimer();
     this._recTimer = setInterval(() => {
       const s = this.data.recSeconds + 1;
@@ -400,33 +502,51 @@ Page({
   /** 再点「停止」：停录音器触发 onStop，结果在 handleReRecordStop 里接住 */
   stopReRecord() {
     this.clearRecTimer();
-    if (this.data.recording && this._recorder) {
+    // 归属标记留给回调去清零，这里不能提前抹掉（抹了就是把刚录的那段当丢弃）：
+    // 60s 到点原生层会自己 stop 并把标记消掉，计时器这一轮再打 stop 就是二次 stop，只会进 onError
+    if (this._recActive && this._recorder) {
       this._recorder.stop();
-    } else {
-      this.setData({ recording: false });
+      return;
     }
+    this.setData({ recording: false, recSeconds: 0 });
   },
 
   /** 停录回调：本地先上卡片，再走转写+解析（成功即把 audioUrl 替换成新这段） */
   handleReRecordStop(res) {
     this.clearRecTimer();
-    this.setData({ recording: false });
+    // 全局单例的 onStop 会打到所有挂过回调的页面：不是本页这段（已被移除/卸载，
+    // 或是首页那一轮录的）就直接丢，不能往别的页的录音结果上抢话
+    if (!this._recActive) return;
+    this._recActive = false; // 结果已被认领，后面再来的 stop/onError 都不归本页管
+    this.setData({ recording: false, recSeconds: 0 });
     const tempFilePath = (res && res.tempFilePath) || "";
-    // res.duration 是毫秒；个别机型给 0，回落墙钟差
-    let sec = res && res.duration ? Math.round(res.duration / 1000) : 0;
-    if (!sec && this._recStartAt) {
-      sec = Math.max(1, Math.round((Date.now() - this._recStartAt) / 1000));
-    }
+    // 时长先算成毫秒再判太短：Math.round(500 / 1000) 正好进位成 1，半秒的杂音就靠这个
+    // 进位躲过检查、把原录音替换掉了。另只有「res.duration 压根没给」才回落墙钟差（个别机型）
+    const reported = res && typeof res.duration === "number";
+    let ms = reported ? res.duration : 0;
+    if (!reported && this._recStartAt) ms = Date.now() - this._recStartAt;
     this._recStartAt = 0;
-    if (!tempFilePath || sec < 1) {
+    const sec = Math.round(ms / 1000);
+    if (!tempFilePath || ms < 1000) {
+      // 太短不算替换：卡片上仍是原来那段，audioUrl 跟着清就会把已有录音弄丢
+      this.setData({ voiceStatus: this._preRecStatus || "" });
       wx.showToast({ title: "说话时间太短", icon: "none" });
       return;
     }
+    const hadSaved = !!this.data.audioUrl;
+    // 新一段的识别结果还没来，上一段“待覆盖”的结果先作废（不然点错能盖到错的文字上去）
+    this._voiceParsed = null;
     this.setData({
       voice: { tempFilePath, duration: sec, text: "", saved: false },
-      audioCleared: false,
+      // 新这段还没落盘前，旧的 audioUrl 不能再算数：否则卡片播的是新的、保存写的是旧的
+      audioUrl: "",
+      audioDuration: null,
+      // 原来那段是已存日志的录音 → 告知后端清空（旧文件随之排队回收）
+      audioCleared: hadSaved,
       voiceCollapsed: false,
       voiceRetryable: false,
+      voiceApplyable: false,
+      voiceApplied: false,
       playing: false,
     });
     this.initAudio(tempFilePath);
@@ -448,13 +568,13 @@ Page({
       this._audio = null;
     }
     this.clearRecTimer();
-    if (this.data.recording && this._recorder) {
-      try {
-        this._recorder.stop();
-      } catch (e) {
-        /* 没在录就忽略 */
-      }
-    }
+    // 作废在飞的转写：不然接口回来后会把刚删的录音又重新挂上 audioUrl
+    this._transcribeSeq += 1;
+    this._transcribing = false;
+    this._voiceParsed = null; // 待覆盖的识别结果跟着录音一起走
+    // 正在重录时点移除：先 discardRecorder（抹归属标记 + 拆监听）再 stop，
+    // 否则 stop 触发的 onStop 会把这段用户明确不要的音频塞回卡片并上传
+    this.discardRecorder();
     this.setData({
       voice: null,
       audioUrl: "",
@@ -464,48 +584,171 @@ Page({
       voiceStatus: "",
       voiceReason: "",
       voiceRetryable: false,
+      voiceApplyable: false,
+      voiceApplied: false,
       playing: false,
       recording: false,
       recSeconds: 0,
     });
   },
 
-  /** 只填空白字段，不覆盖用户已输入内容 */
-  applyVoiceFields(fields) {
+  /**
+   * 把识别结果摊成一张「要往哪些格子写什么」的清单，并标出哪些格子当前已经有值。
+   * 已经有值的那些就是会被覆盖的项 —— 得先问过用户，不能静默盖。
+   * 时间是个特例：进页就预填了当前时间，不能按「非空」判有没有值，
+   * 只有仍是进页那份快照（用户没手改）才算空白可直填
+   */
+  planVoiceFields(fields, text) {
     const d = this.data;
-    const upd = {};
-    // 时间单独策略：date/timeStr 进页就预填了当前时间，无法按「空白」判定，
-    // 只在两者仍等于进页默认值（用户没手改）且格式合法时才用 AI 结果
-    if (fields.time) {
-      const m = String(fields.time).match(
-        /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/,
-      );
-      if (m && d.date === this._initDate && d.timeStr === this._initTimeStr) {
-        upd.date = m[1];
-        upd.timeStr = m[2];
+    const items = [];
+    const push = (label, patch, occupied) =>
+      items.push({ label, patch, occupied });
+    const f = fields || {};
+    if (f.time) {
+      const m = String(f.time).match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+      if (m) {
+        const untouched =
+          d.date === this._initDate && d.timeStr === this._initTimeStr;
+        push("时间", { date: m[1], timeStr: m[2] }, !untouched);
       }
     }
-    if (fields.event && !d.event) upd.event = fields.event;
-    if (fields.type && d.typeIndex < 0) {
-      const i = typeOptions.indexOf(fields.type);
-      if (i >= 0) {
-        upd.typeIndex = i;
-        upd.type = typeOptions[i];
-      }
+    if (f.event) push("事件", { event: f.event }, !!d.event);
+    if (f.type) {
+      const i = typeOptions.indexOf(f.type);
+      if (i >= 0)
+        push("分类", { type: typeOptions[i], typeIndex: i }, d.typeIndex >= 0);
     }
-    if (fields.rating && d.ratingIndex < 0) {
-      const ri = ratingOptions.indexOf(fields.rating);
-      if (ri >= 0) {
-        upd.ratingIndex = ri;
-        upd.rating = ratingOptions[ri];
-      }
+    if (f.rating) {
+      const ri = ratingOptions.indexOf(f.rating);
+      if (ri >= 0)
+        push(
+          "评价",
+          { rating: ratingOptions[ri], ratingIndex: ri },
+          d.ratingIndex >= 0,
+        );
     }
-    if (fields.experience && !d.experience) upd.experience = fields.experience;
-    if (fields.witness && !d.witness) upd.witness = fields.witness;
-    if (fields.position && !d.location.position) {
-      upd["location.position"] = fields.position;
+    if (f.experience)
+      push("经验教训", { experience: f.experience }, !!d.experience);
+    if (f.witness) push("见证者", { witness: f.witness }, !!d.witness);
+    if (f.position)
+      push("地点", { "location.position": f.position }, !!d.location.position);
+    // 识别原文本体也是一个可落表的项（正文），AI 没拆出字段时就只剩这一项
+    if (text) push("正文", { content: text }, !!d.content);
+    return {
+      items,
+      blanks: items.filter((it) => !it.occupied),
+      overrides: items.filter((it) => it.occupied),
+    };
+  },
+
+  /** 按清单落表：fill 只写空白格（不问了直接填），override 全部重写（用户已点过确认） */
+  writeVoiceFields(plan, mode) {
+    const picked = mode === "override" ? plan.items : plan.blanks;
+    const patch = {};
+    const wrote = [];
+    picked.forEach((it) => {
+      Object.keys(it.patch).forEach((k) => {
+        patch[k] = it.patch[k];
+      });
+      wrote.push(it.label);
+    });
+    if (Object.keys(patch).length) this.setData(patch);
+    return wrote;
+  },
+
+  /**
+   * 识别完成后怎么落表：不碰已有内容就直填；要盖东西先问一句
+   * 确认→直接重写表单；取消→只保留录音，但卡片上留一个「覆盖表单」入口给反悔
+   */
+  settleVoiceFields() {
+    const parsed = this._voiceParsed;
+    if (!parsed) return;
+    const plan = this.planVoiceFields(parsed.fields, parsed.text);
+    if (!plan.overrides.length) {
+      const wrote = this.writeVoiceFields(plan, "fill");
+      this.setData({
+        voiceApplied: wrote.length > 0,
+        voiceApplyable: false,
+        voiceStatus: parsed.fields
+          ? parsed.degraded
+            ? "AI 未启用，已保留原文"
+            : "AI 已解析并填表"
+          : "未拆出字段，已把原文填进正文",
+        voiceReason: parsed.fields
+          ? parsed.degraded
+            ? "文字已识别，但 AI 解析未启用（已把原文放进正文）"
+            : ""
+          : "AI 未能拆字段，可对照识别文字手动填，或点重试",
+        voiceRetryable: !parsed.fields,
+      });
+      return;
     }
-    if (Object.keys(upd).length) this.setData(upd);
+    const labels = plan.overrides.map((it) => it.label).join("、");
+    this.setData({
+      voiceStatus: "识别完成，待确认是否覆盖",
+      voiceReason: `录音已保留；「${labels}」已有内容，要覆盖请点下面的「覆盖表单」`,
+      voiceApplyable: true,
+      voiceApplied: false,
+      // 没拆出字段时重试还有意义（下一轮可能就拆出来了），拆出来了就不用重试
+      voiceRetryable: !parsed.fields,
+    });
+    wx.showModal({
+      title: "用识别结果覆盖表单？",
+      content: `当前「${labels}」已有内容，覆盖会按识别结果重写这些项；只留录音则表单不动。`,
+      confirmText: "覆盖表单",
+      cancelText: "只留录音",
+      success: (res) => {
+        if (res && res.confirm) this.applyVoiceResult();
+        else this.keepVoiceOnly();
+      },
+      // 弹窗本身出错（开发者工具偶发）不能把链路卡死：默认不动表单，留下可反悔的入口
+      fail: () => this.keepVoiceOnly(),
+    });
+  },
+
+  /** 把识别结果直接重写进表单项（弹窗确认、或事后点卡片上的「覆盖表单」都走这里） */
+  applyVoiceResult() {
+    const parsed = this._voiceParsed;
+    if (!parsed) {
+      wx.showToast({ title: "识别结果已失效", icon: "none" });
+      return;
+    }
+    const wrote = this.writeVoiceFields(
+      this.planVoiceFields(parsed.fields, parsed.text),
+      "override",
+    );
+    this.setData({
+      voiceApplyable: false,
+      voiceApplied: true,
+      voiceStatus: wrote.length
+        ? `已覆盖：${wrote.join("、")}`
+        : "已应用识别结果",
+      voiceReason: "",
+    });
+  },
+
+  /** 只保留录音：表单一个字不改，但留着覆盖入口让用户能反悔 */
+  keepVoiceOnly() {
+    this.setData({
+      voiceApplyable: true,
+      voiceApplied: false,
+      voiceStatus: "只保留录音，未改动表单",
+      voiceReason: "需要时可点下面的「覆盖表单」把识别结果写进去",
+    });
+  },
+
+  /** 复制识别出的文字：录的内容经常要捭到别处，先给一个能带走文本的出口 */
+  copyVoiceText() {
+    const text = this.data.voice && this.data.voice.text;
+    if (!text) {
+      wx.showToast({ title: "还没有识别文字", icon: "none" });
+      return;
+    }
+    wx.setClipboardData({
+      data: text,
+      success: () => wx.showToast({ title: "文字已复制", icon: "none" }),
+      fail: () => wx.showToast({ title: "复制失败", icon: "none" }),
+    });
   },
 
   toggleVoiceCollapsed() {
@@ -993,6 +1236,11 @@ Page({
   async onSubmit() {
     if (this.data.uploading) {
       wx.showToast({ title: "图片上传中，请稍候", icon: "none" });
+      return;
+    }
+    // 还开着麦克风就点保存：这段既没落盘也没转写，会默默发出去一条没有新录音的日志
+    if (this.data.recording) {
+      wx.showToast({ title: "请先点「停止录音」", icon: "none" });
       return;
     }
     // 刚录完就点保存：录音还没落盘，直接发布会默默丢掉这条录音

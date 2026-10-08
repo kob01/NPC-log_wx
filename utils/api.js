@@ -106,6 +106,17 @@ const event = {
   update: (data) => http.put("/api/event", data).then(afterEventWrite),
   /** 删除 */
   remove: (id) => http.del(`/api/event?id=${id}`).then(afterEventWrite),
+  /**
+   * 置顶 / 取消置顶（每人各记自己的，上限 3 条由后端判）
+   * 超限那句文案由后端给（改上限不用发小程序新版本），失败不静默：直接 toast 给用户看
+   * 只失效列表相关缓存：置顶只改 note_event_pins，正文一个字没动，
+   * 标签/人物/报告/足迹那些分析类结果不该跟着重算
+   */
+  pin: (id, pinned) =>
+    http.post("/api/event/pin", { id, pinned }).then((res) => {
+      if (Number(res && res.code) === 200) http.invalidateCache("eventList:");
+      return res;
+    }),
   /** 生成社媒分享文案，返回 {title,body,hashtags,degraded} */
   shareCopy: (data) =>
     http.post("/api/event/share-copy", data, { silent: true }),

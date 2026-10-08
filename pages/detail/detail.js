@@ -1,5 +1,6 @@
 const api = require("../../utils/api");
 const auth = require("../../utils/auth");
+const audioHub = require("../../utils/audioHub");
 const { resolveFileUrl } = require("../../utils/format");
 
 Page({
@@ -101,7 +102,8 @@ Page({
   },
 
   initAudio(src) {
-    const audio = wx.createInnerAudioContext();
+    // 走台账建：别的页面起录时 audioHub.stopAll() 才能把本页正在播的这段一起停掉
+    const audio = audioHub.create();
     audio.src = src;
     audio.onPlay(() => this.setData({ audioPlaying: true }));
     audio.onPause(() => this.setData({ audioPlaying: false }));
@@ -142,7 +144,7 @@ Page({
   onOpenLocation() {
     const { detail } = this.data;
     if (!detail || detail.lng == null || detail.lat == null) {
-      wx.showToast({ title: "该日志未记录坐标", icon: "none" });
+      wx.showToast({ title: "该位置未同步精确坐标", icon: "none" });
       return;
     }
     wx.openLocation({

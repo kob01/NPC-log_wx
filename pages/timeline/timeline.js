@@ -1,5 +1,6 @@
 const api = require("../../utils/api");
 const auth = require("../../utils/auth");
+const audioHub = require("../../utils/audioHub");
 const { dayKey } = require("../../utils/format");
 
 const PAGE_SIZE = 10;
@@ -8,14 +9,14 @@ const PAGE_SIZE = 10;
 const RECORD_MAX = 60;
 // 波形条数：纯 CSS 动画驱动，静态参数只在 onLoad 生成一次
 const WAVE_BAR_COUNT = 18;
-// 左侧取消区宽 176rpx + 24rpx 容差（与 .sheet-cancel 宽度对齐）
-const CANCEL_ZONE_RPX = 200;
+// 取消横带：从面板顶边往下 150rpx 内都算取消区（✕ 就画在这条带里，判定与视觉同源）
+const CANCEL_BAND_RPX = 150;
 // 面板回缩过渡时长（ms），需与 .record-sheet 的 transition 时长一致
 const SHEET_ANIM_MS = 320;
 // 挂载与展开之间隔一帧：同一批 setData 里就带上 .open 的话，圆→方的过渡会被直接跳过
 const SHEET_FRAME_MS = 40;
 // 面板底句提示：提到常量里，不在 WXML 里拼长串中文
-const HINT_SEND = `松开发送 · 左滑 ✕ 取消 · 最长 ${RECORD_MAX} 秒`;
+const HINT_SEND = `松开发送 · 最长 ${RECORD_MAX} 秒`;
 const HINT_CANCEL = "松开手指，取消本次录音";
 
 // 列表查看范围：三态循环 all（全部）→ mine（只看自己）→ others（只看组织内他人）
@@ -29,12 +30,14 @@ const PERSON_ICON_ON =
 const USERS_ICON =
   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNjc3ZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTcgMjF2LTJhNCA0IDAgMCAwLTQtNEg1YTQgNCAwIDAgMC00IDR2MiIvPjxjaXJjbGUgY3g9IjkiIGN5PSI3IiByPSI0Ii8+PHBhdGggZD0iTTIzIDIxdi0yYTQgNCAwIDAgMC0zLTMuODciLz48cGF0aCBkPSJNMTYgMy4xM2E0IDQgMCAwIDEgMCA3Ljc1Ii8+PC9zdmc+";
 
-/** 取触点横坐标：touchend 时 touches 已空，需回落 changedTouches；都拿不到返回 -1 */
-function touchX(e) {
+/** 取触点坐标：touchend 时 touches 已空，需回落 changedTouches；都拿不到返回 {-1,-1} */
+function touchPoint(e) {
   const touches = e && e.touches && e.touches.length ? e.touches : null;
   const list = touches || (e && e.changedTouches) || [];
   const t = list[0];
-  return t && typeof t.clientX === "number" ? t.clientX : -1;
+  return t && typeof t.clientX === "number"
+    ? { x: t.clientX, y: t.clientY }
+    : { x: -1, y: -1 };
 }
 
 /** 录音时长展示：0:07 比 7″ 好读 */
@@ -49,6 +52,9 @@ Page({
   data: {
     entries: [],
     groups: [],
+    // 本人置顶的那几条（上限 3 条，谁长按谁生效）：已从 entries 那条时间序流里剔掉，
+    // 单独摆在列表最上方的置顶区，不参与按月分组（否则会出现两个同名月份标题）
+    pinnedEntries: [],
     loading: false,
     hasMore: true,
     keyword: "",
@@ -67,7 +73,7 @@ Page({
     // 录音面板：sheetVisible 管节点挂载，recording 管「圆 → 底部方形」的展开态
     sheetVisible: false,
     recording: false,
-    // 手指是否滑进了最左侧的 ✕ 取消区
+    // 手指是否上滑进了顶部的 ✕ 取消横带
     canceling: false,
     cancelHint: HINT_SEND,
     recordSeconds: 0,
@@ -91,7 +97,10 @@ Page({
   _recordTimer: null,
   _down: false, // 手指是否按住录音键（防授权返回时已松手仍启动录音）
   _started: false, // recorder.start 是否真的跑起来了（松手时决定要不要调 stop）
-  _cancelRequested: false, // 左滑取消标记：onStop 据此丢弃音频、不上传不跳转
+  _cancelRequested: false, // 上滑取消标记：onStop 据此丢弃音频、不上传不跳转
+  // 本页这段录音等着被 onStop 认领的标记：RecorderManager 是全局单例，编辑页「重录」
+  // 停录时回调也会打到本页，不辨归属就会凭空弹一句「说话时间太短」甚至再跳一个编辑页
+  _recExpect: false,
   _sheetTimer: null, // 面板回缩播完再卸载节点
   _pressAt: 0, // 本次按下时刻，用来识别「只是点了一下」
   _winW: 375, // 视口宽（px），面板几何与取消区阈值共用
@@ -160,21 +169,25 @@ Page({
   /** 列表滑动时收起搜索框（已输入关键词时不打断浏览搜索结果） */
   onPageScroll() {
     if (this.data.searchExpanded && !this.data.keyword) {
-      this.setData({ searchExpanded: false, searchMode: false });
+      this.collapseSearchBox();
     }
   },
 
   onPullDownRefresh() {
-    this.reset().then(() => wx.stopPullDownRefresh());
+    // 下拉刷新 = 退出当前搜索、回到全量列表：连搜索框一起收起，
+    // 免得 reset 清了词却留一个空框抢焦点（focus 绑在 searchExpanded 上）
+    this.setData({ searchExpanded: false });
+    return this.reset().then(() => wx.stopPullDownRefresh());
   },
 
   onUnload() {
     this.clearRecordTimer();
     if (this._sheetTimer) clearTimeout(this._sheetTimer);
     if (this._hintTimer) clearTimeout(this._hintTimer);
+    if (this._searchTimer) clearTimeout(this._searchTimer);
   },
 
-  // ==================== 录音（长按 🎙 展开面板，松手带音频跳编辑页转写） ====================
+  // ==================== 录音（长按话筒按钮展开面板，松手带音频跳编辑页转写） ====================
   initRecorder() {
     const recorder = wx.getRecorderManager();
     this._recorder = recorder;
@@ -184,6 +197,9 @@ Page({
     recorder.onStop((res) => this.handleRecordStop(res));
 
     recorder.onError(() => {
+      // 不是本页这一轮（编辑页重录报的错）就别接手，免得把本页面板与录音态搅乱
+      if (!this._recExpect && !this._started) return;
+      this._recExpect = false;
       this._started = false;
       this._cancelRequested = false;
       this.clearRecordTimer();
@@ -211,6 +227,11 @@ Page({
     return (v * this._winW) / 750;
   },
 
+  /** 面板展开高（px）：约 1/3 屏，但不低于内容所需高度（波形 + 时长 + 提示） */
+  sheetHeightPx() {
+    return Math.round(Math.max(this._winH * 0.34, this.rpx(430)));
+  },
+
   /**
    * 面板两态几何（一律算成 px）：直接在 WXSS 里用 rpx ↔ vh 做过渡，
    * 跨单位值不一定能插值，「圆逐渐扩大成方形」会退化成瞬移
@@ -219,8 +240,7 @@ Page({
     const w = this._winW;
     const h = this._winH;
     const fab = this.rpx(100); // 与 .fab 同尺寸
-    // 展开高：约 1/3 屏，但不低于内容所需高度（波形 + 时长 + 提示）
-    const sheetH = Math.round(Math.max(h * 0.34, this.rpx(430)));
+    const sheetH = this.sheetHeightPx();
     // 展开态顶部圆角与全局矩形圆角 token --radius（app.wxss）保持一致，改那里也要改这里
     const radius = Math.round(this.rpx(6));
     return {
@@ -256,6 +276,9 @@ Page({
 
   /** 停录回调：取消则留在本页（不上传不转写），否则立即带录音文件跳编辑页 */
   handleRecordStop(res) {
+    // 只认本页发起的那段；编辑页重录的 onStop 打到这里是抢答，直接丢
+    if (!this._recExpect) return;
+    this._recExpect = false;
     this._started = false;
     this.clearRecordTimer();
     const seconds = this.data.recordSeconds;
@@ -264,7 +287,7 @@ Page({
     this._cancelRequested = false;
     this.closeSheet();
     if (canceled) {
-      // 左滑取消：临时文件不上传也不调转写接口，交给微信自行回收
+      // 上滑取消：临时文件不上传也不调转写接口，交给微信自行回收
       wx.showToast({ title: "已取消录音", icon: "none" });
       return;
     }
@@ -294,10 +317,13 @@ Page({
     }
   },
 
-  // ==================== 底部录音按钮：按住展开面板，松手发送，左滑 ✕ 取消 ====================
+  // ==================== 底部录音按钮：按住展开面板，松手发送，上滑 ✕ 取消 ====================
   onMicStart() {
     // 面板还在（上一轮回缩动画未播完）时忽略重复按下
     if (this.data.sheetVisible) return;
+    // 按下就静音：列表页自己不放音，但从详情页返回后那条播放器可能还在跑，
+    // 不停就会把旧录音录进这段里
+    audioHub.stopAll();
     this._down = true;
     this._cancelRequested = false;
     this._pressAt = Date.now();
@@ -305,7 +331,7 @@ Page({
   },
 
   /**
-   * 手指左右滑动：只按横坐标判定是否滑进了最左侧取消区。
+   * 手指上下滑动：只按纵坐标判定是否滑进了顶部取消横带。
    * 手势自 touchstart 起就锁定 .fab 节点，面板盖在上面也抢不走事件，
    * 所以不需要（也不能）靠面板自己的 touch 事件跟进。
    */
@@ -376,6 +402,7 @@ Page({
 
   startRecorder() {
     this._started = true;
+    this._recExpect = true; // onStop 里靠它认领结果（取消/发送都走同一个回调）
     this.setData({ recording: true });
     this.clearRecordTimer();
     this._recordTimer = setInterval(() => {
@@ -405,7 +432,7 @@ Page({
     this._recorder.stop(); // 触发 onStop → handleRecordStop
   },
 
-  /** 左滑到 ✕ 后松手：仍要 stop 让原生层释放麦克风，只是结果直接丢弃 */
+  /** 上滑到 ✕ 后松手：仍要 stop 让原生层释放麦克风，只是结果直接丢弃 */
   cancelRecord() {
     this.clearRecordTimer();
     if (!this._started || !this._recorder) {
@@ -437,16 +464,21 @@ Page({
     }, SHEET_ANIM_MS);
   },
 
-  /** 取消区命中判定：整条左侧竖带都算，只看横坐标（手指左滑时高度基本不变） */
+  /** 取消区命中判定：整条顶部横带都算，只看纵坐标（手指上滑时横坐标基本不变） */
   hitCancelZone(e) {
     if (!this.data.sheetVisible) return false;
-    const x = touchX(e);
-    return x >= 0 && x <= this.cancelHitPx();
+    const { y } = touchPoint(e);
+    return y >= 0 && y <= this.cancelHitPx();
   },
 
-  /** 取消区右边界（px）：每次现算，视口变了也不会拿到过期阈值 */
+  /**
+   * 取消触发线（px，视口坐标系自上而下）：面板顶边往下 CANCEL_BAND_RPX。
+   * 与 .sheet-cancel 那条横带同一条几何，手指进到哪儿看到 ✕，判定就切在哪儿；
+   * 每次现算，视口变了也不会拿到过期阈值。
+   */
   cancelHitPx() {
-    return Math.round(this.rpx(CANCEL_ZONE_RPX));
+    const band = Math.round(this.rpx(CANCEL_BAND_RPX));
+    return this._winH - this.sheetHeightPx() + band;
   },
 
   /** 滑进取消区给一下轻震动，微信语音消息同样的反馈感 */
@@ -515,6 +547,8 @@ Page({
       // 卡片左边缘蓝竖条只认 is_mine：不让卡片靠 author 是否为空反推，
       // 否则遇到没昵称又确实是本人的日志就会被错标成他人
       isMine: !!item.is_mine,
+      // 是不是我已置顶的条目（后端只对我自己生效）：长按菜单据此出「置顶」还是「取消置顶」
+      pinned: !!item.pinned,
     };
   },
 
@@ -572,7 +606,9 @@ Page({
     const version = this._version;
     try {
       this.setData({ loading: true });
-      const params = { page: 1, pageSize: PAGE_SIZE };
+      // withPins=1：让后端把自己置顶那几条单独放在 pinned 里带回来（同时已从 items 剔掉，
+      // 不会翻页翻到重复卡片）；只有日志页带这个参数，Web 表格与导出不受影响
+      const params = { page: 1, pageSize: PAGE_SIZE, withPins: 1 };
       if (this._cursor != null) {
         params.beforeId = this._cursor;
         // 游标翻页时本列表只用 items.length 判有没有下一页，
@@ -594,13 +630,21 @@ Page({
           const lastId = Number(items[items.length - 1].id);
           if (Number.isFinite(lastId)) this._cursor = lastId;
         }
+        // 置顶那几条每页都会原样带回（就三条，不占流量），直接整组覆盖：
+        // 接不到 pinned 字段（旧版后端）时保留本地已有那组，不要把置顶区抹空
+        const pinnedItems = Array.isArray(data.pinned)
+          ? data.pinned.map(this.fromListItem)
+          : this.data.pinnedEntries;
         this.setData({
           entries: merged,
           groups: this.buildGroups(merged),
+          pinnedEntries: pinnedItems,
           hasMore: items.length >= PAGE_SIZE,
         });
       } else {
-        this.setData({ hasMore: false });
+        // 业务错误（HTTP 200 + code!==200）不等于「没有更多」：留着 hasMore、记一次失败，
+        // 让用户还能靠下拉/翻页重试（与 catch 里的网络异常同一口径，别一次报错就封死到底）
+        this._loadFailed = true;
       }
     } catch (err) {
       // 关键修正：服务繁忙/网络异常不等于「没有更多」。
@@ -622,11 +666,20 @@ Page({
     this._version += 1;
     this._cursor = null;
     this._loadFailed = false;
+    // 取消未触发的搜索防抖：既然要回到全量列表，就别让上一条待发的关键词又冒出来搜一遍
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = null;
+    }
     this.setData({
       entries: [],
       groups: [],
+      pinnedEntries: [],
       hasMore: true,
       searchMode: false,
+      // 回到纯列表就清掉搜索框里的残留词：否则会出现「框里还写着关键词、
+      // 列表却已经是全量」的错位（下拉刷新 / 切范围 / 编辑后重进都会触发）
+      keyword: "",
       loading: true,
     });
     // 先插本地刚保存的记录（乐观更新）：后端此时可能正在排队，
@@ -653,6 +706,151 @@ Page({
     this.setData({ entries: merged, groups: this.buildGroups(merged) });
   },
 
+  // ==================== 长按卡片：置顶 / 取消置顶 / 编辑 / 删除 ====================
+
+  /** 按 id 找那条卡片：置顶区里的几条不在 entries（后端已从时间序流里剔掉），必须两个数组都查 */
+  findEntry(id) {
+    const key = String(id);
+    return (
+      (this.data.pinnedEntries || []).find((e) => String(e.id) === key) ||
+      this.data.entries.find((e) => String(e.id) === key) ||
+      null
+    );
+  },
+
+  /** 长按卡片：震动 + 弹操作菜单（置顶相关按当前状态只给一项） */
+  onCardLongPress(e) {
+    const entry = this.findEntry(e && e.detail ? e.detail.id : "");
+    if (!entry) return;
+    this.vibrate();
+    const items = [];
+    const actions = [];
+    // 搜索结果里没有置顶信息（/api/memory/search 不返回 pinned）：既不知道这条当下
+    // 是钉着还是没钉，给不出「取消置顶」那一项，钉上了又在当页看不见，干脆不开这个口
+    if (!this.data.searchMode) {
+      items.push(entry.pinned ? "取消置顶" : "置顶");
+      actions.push(entry.pinned ? "unpin" : "pin");
+    }
+    // 编辑与删除只有本人写得动（后端按 event_user 拦），他人卡片只留置顶那一项
+    if (entry.isMine) {
+      items.push("编辑");
+      actions.push("edit");
+      items.push("删除");
+      actions.push("delete");
+    }
+    if (!items.length) return;
+    wx.showActionSheet({
+      itemList: items,
+      success: (res) => {
+        const action = actions[res.tapIndex];
+        if (action === "pin") this.togglePin(entry, true);
+        else if (action === "unpin") this.togglePin(entry, false);
+        else if (action === "edit")
+          wx.navigateTo({ url: `/pages/edit/edit?id=${entry.id}` });
+        else if (action === "delete") this.confirmDelete(entry);
+      },
+      fail: () => {
+        /* 菜单被手指收回，什么都不做 */
+      },
+    });
+  },
+
+  /**
+   * 请求置顶/取消置顶：成功后卡片就地移动，不整页重拉（重拉会闪一下并回到顶部）。
+   * 失败不自己弹提示：request.js 已把后端的 message 直接 toast 出来（含「最多置顶 3 条」）
+   */
+  async togglePin(entry, want) {
+    let code;
+    try {
+      const res = await api.event.pin(entry.id, want);
+      code = res && res.code;
+    } catch (err) {
+      return; // 网络/限流异常已在 request.js 里提示过
+    }
+    if (Number(code) !== 200) return;
+    this.applyPinLocal(entry, want);
+    // 顶部轻提示而不弹 toast：卡片已经自己动到位了，一句文字就够，不遮住列表
+    this.showHint(want ? "已置顶" : "已取消置顶");
+  },
+
+  /**
+   * 本地移动卡片：钉上就进置顶区最前（与后端 ORDER BY p.create_time DESC 同口径，
+   * 刚钉的那条算最新），取消就按时间倒序放回时间序流里它原本那段
+   */
+  applyPinLocal(entry, want) {
+    const key = String(entry.id);
+    const pinned = (this.data.pinnedEntries || []).filter(
+      (e) => String(e.id) !== key,
+    );
+    const rest = this.data.entries.filter((e) => String(e.id) !== key);
+    if (want) {
+      // 用 Object.assign 而非对象展开：展开会被增强编译转成 @swc/runtime helper（同 buildGroups）
+      const nextPinned = [Object.assign({}, entry, { pinned: true })].concat(
+        pinned,
+      );
+      this.setData({
+        pinnedEntries: nextPinned,
+        entries: rest,
+        groups: this.buildGroups(rest),
+      });
+      return;
+    }
+    const next = this.insertByTime(
+      rest,
+      Object.assign({}, entry, { pinned: false }),
+    );
+    this.setData({
+      pinnedEntries: pinned,
+      entries: next,
+      groups: this.buildGroups(next),
+    });
+  },
+
+  /** 按时间倒序插入一个条目（'YYYY-MM-DD HH:mm' 是定长格式，字符串比大小就是时序） */
+  insertByTime(list, item) {
+    const next = list.slice();
+    const t = String(item.time || "");
+    let idx = next.length;
+    for (let i = 0; i < next.length; i += 1) {
+      if (String(next[i].time || "") < t) {
+        idx = i;
+        break;
+      }
+    }
+    next.splice(idx, 0, item);
+    return next;
+  },
+
+  /** 长按菜单里的删除：与详情页同一句确认口吻，删完只把这条从列表里摘掉（不跳页） */
+  confirmDelete(entry) {
+    wx.showModal({
+      title: "删除日志",
+      content: "删除后不可恢复，确定删除吗？",
+      confirmColor: "#f5222d",
+      success: async (res) => {
+        if (!res.confirm) return;
+        try {
+          const { code } = await api.event.remove(entry.id);
+          if (Number(code) !== 200) return; // request.js 已提示
+        } catch (err) {
+          return;
+        }
+        // 置顶区里也可能就是这一条（后端删日志时会连带清掉指向它的置顶行）
+        const key = String(entry.id);
+        const pinned = (this.data.pinnedEntries || []).filter(
+          (e) => String(e.id) !== key,
+        );
+        const rest = this.data.entries.filter((e) => String(e.id) !== key);
+        this.setData({
+          entries: rest,
+          groups: this.buildGroups(rest),
+          pinnedEntries: pinned,
+        });
+        this.showHint("已删除");
+      },
+    });
+  },
+
   onKeywordInput(e) {
     this.setData({ keyword: e.detail.value });
     // 输入后 400ms 自动搜（清空则回到列表），避免每条关键字都靠用户点一下搜索重复发请求
@@ -674,7 +872,15 @@ Page({
       return;
     }
     if (this._searching) return;
+    // 主动检索（bindconfirm）时取消还没到点的防抖，避免同一个词二次请求
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = null;
+    }
     this._searching = true;
+    // 抬版本号：既让在途的列表翻页结果作废（否则会把列表并进搜索结果），
+    // 也让「检索期间又发生了 reset（下拉/切范围/编辑后重进）」时，本发迟到的结果被丢弃
+    const version = (this._version += 1);
     try {
       this.setData({ loading: true, searchMode: true });
       const { code, data } = await api.memory.search(
@@ -682,6 +888,7 @@ Page({
         20,
         auth.getFilterScope(),
       );
+      if (version !== this._version) return; // 已被新的 reset/搜索覆盖，丢弃过期结果
       const list =
         Number(code) === 200 && data
           ? (data.list || []).map(this.fromMemoryItem)
@@ -693,15 +900,17 @@ Page({
         semanticSkipped: !!(data && data.semanticSkipped),
       });
     } catch (err) {
+      if (version !== this._version) return;
       this.setData({ entries: [], groups: [] });
     } finally {
       this._searching = false;
-      this.setData({ loading: false });
+      if (version === this._version) this.setData({ loading: false });
     }
   },
 
   onClear() {
-    this.setData({ keyword: "", searchMode: false });
+    // 清空即回到全量列表：keyword/searchMode 由 reset 统一负责清；
+    // 这里不动 searchExpanded，让 ✕ 清完后搜索框仍开着、可接着输入
     this.reset();
   },
 
@@ -712,7 +921,19 @@ Page({
 
   collapseSearch() {
     if (this.data.keyword) return;
-    this.setData({ searchExpanded: false, searchMode: false });
+    this.collapseSearchBox();
+  },
+
+  /**
+   * 收起搜索框（仅在框已空时调用）。关键：若此刻仍停在搜索结果态
+   * （关键词刚删空、400ms 防抖还没来得及 onClear 的窗口里就先滑动/失焦），
+   * 必须走 reset 完整回落全量列表——不能只把 searchMode 翻成 false，
+   * 否则旧搜索结果会以「普通列表」的样子残留，翻页还会往这批结果里追加。
+   */
+  collapseSearchBox() {
+    this.setData({ searchExpanded: false });
+    if (this.data.searchMode) this.reset();
+    else this.setData({ searchMode: false });
   },
 
   goDetail(e) {

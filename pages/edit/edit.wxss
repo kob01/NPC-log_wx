@@ -405,16 +405,27 @@
     overflow: hidden;
 }
 
-/* 录音操作行（重录/停止 + 移除）：单独一行放卡片底部，避开头部那一排拥挤；用 margin 不用 flex gap */
+/* 识别文字的工具行（复制）：单独一行放正文下方，不调进 max-height 被截断的那块区域；
+   按钮靠右（卡片里除播放键外一律走右边，与左侧的播放/时长/状态拉开点击区）；用 margin 不用 flex gap */
+.voice-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 12rpx;
+}
+
+/* 录音操作行（覆盖表单 / 录音停止 / 移除）：单独一行放卡片底部，避开头部那一排拥挤；
+   除播放键外都靠右，与上面工具行对齐；用 margin 不用 flex gap */
 .voice-actions {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     margin-top: 16rpx;
 }
 
-/* 与 .voice-retry 同构胶囊按钮 */
+/* 与 .voice-retry 同构胶囊按钮：行内靠右排，间距以 margin-left 给，最后一个才贴得上右边缘 */
 .voice-act {
-    margin-right: 16rpx;
+    margin-left: 16rpx;
     padding: 4rpx 22rpx;
     border: 1rpx solid var(--primary);
     border-radius: var(--radius-pill);
@@ -434,4 +445,19 @@
 .voice-act-del {
     border-color: var(--danger);
     color: var(--danger);
+}
+
+/* 手上没录音时的入口：与录音卡同款卡片 + 同款「录音」标题，点一下就在页内开录（录完卡片自己会出现） */
+.voice-add {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24rpx;
+    margin-bottom: 20rpx;
+}
+
+/* 入口行靠右，与录音卡里那一排按钮的方位一致（标题仍与其它表单项一样左对齐） */
+.voice-add-act {
+    color: var(--primary);
+    font-size: 26rpx;
+    text-align: right;
 }

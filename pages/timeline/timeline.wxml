@@ -49,9 +49,27 @@
     </view>
   </view>
 
-  <block wx:if="{{groups.length}}">
+  <block wx:if="{{groups.length || pinnedEntries.length}}">
     <view class="tl-body {{sheetVisible ? 'tl-body-shrunk' : ''}}">
       <view class="tl-line"></view>
+      <!-- 置顶区：只有我自己钉的那几条（上限 3，后端已把它们从下面那条时间序流里剔掉）。
+           单独走一节而不混进月份分组：钉一条三年前的旧日志也该占住首屏，
+           混进分组会让同一个月份标题出现两次。搜索模式下隐藏：
+           检索结果自带相关度排序，置顶区插在上面只会让人误以为它是命中结果 -->
+      <view
+        class="tl-pinned"
+        wx:if="{{pinnedEntries.length && !searchMode}}"
+      >
+        <view class="tl-pinned-head">置顶</view>
+        <view class="tl-row" wx:for="{{pinnedEntries}}" wx:key="id">
+          <view class="tl-dot tl-dot-pinned"></view>
+          <event-card
+            entry="{{item}}"
+            bind:select="goDetail"
+            bind:longpress="onCardLongPress"
+          />
+        </view>
+      </view>
       <view class="group" wx:for="{{groups}}" wx:key="month" wx:for-item="group">
         <view class="tl-month">
           <view class="tl-month-pill">{{group.label}}</view>
@@ -66,6 +84,7 @@
             entry="{{item}}"
             show-score="{{searchMode}}"
             bind:select="goDetail"
+            bind:longpress="onCardLongPress"
           />
         </view>
       </view>
@@ -82,7 +101,7 @@
     — 没有更多了 —
   </view>
 
-  <!-- 底部录音按钮：按住 → 圆形扩大成底部面板；松手发送，左滑到最左侧 ✕ 取消
+  <!-- 底部录音按钮：按住 → 圆形扩大成底部面板；松手发送，上滑到顶部 ✕ 横带取消
        touchmove 必须留在按钮上（手势自 touchstart 起就锁定该节点），且用 catch 挡住页面滚动 -->
   <view
     class="fab {{sheetVisible ? 'fab-hidden' : ''}}"
@@ -91,7 +110,13 @@
     catchtouchmove="onMicMove"
     bindtouchend="onMicEnd"
     bindtouchcancel="onMicEnd"
-  >🎙</view>
+  >
+    <image
+      class="fab-glyph"
+      mode="aspectFit"
+      src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiIHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik01MTIgNjI0YzkzLjkgMCAxNzAtNzUuMiAxNzAtMTY4VjIzMmMwLTkyLjgtNzYuMS0xNjgtMTcwLTE2OHMtMTcwIDc1LjItMTcwIDE2OHYyMjRjMCA5Mi44IDc2LjEgMTY4IDE3MCAxNjh6bTMzMC0xNzBjMC00LjQtMy42LTgtOC04aC02MGMtNC40IDAtOCAzLjYtOCA4YzAgMTQwLjMtMTEzLjcgMjU0LTI1NCAyNTRTMjU4IDU5NC4zIDI1OCA0NTRjMC00LjQtMy42LTgtOC04aC02MGMtNC40IDAtOCAzLjYtOCA4YzAgMTY4LjcgMTI2LjYgMzA3LjkgMjkwIDMyNy42Vjg4NEgzMjYuN2MtMTMuNyAwLTI0LjcgMTQuMy0yNC43IDMydjM2YzAgNC40IDIuOCA4IDYuMiA4aDQwNy42YzMuNCAwIDYuMi0zLjYgNi4yLTh2LTM2YzAtMTcuNy0xMS0zMi0yNC43LTMySDU0OFY3ODIuMWMxNjUuMy0xOCAyOTQtMTU4IDI5NC0zMjguMXoiLz48L3N2Zz4="
+    />
+  </view>
 
   <!-- 录音时只压暗列表，界面不再被全屏遮罩接管 -->
   <view class="record-veil" wx:if="{{sheetVisible}}" catchtouchmove="noop"></view>
@@ -103,10 +128,9 @@
     style="{{recording ? sheetStyleOpen : sheetStyleClosed}}"
     catchtouchmove="noop"
   >
-    <!-- 左滑命中区：整条左侧竖带都算取消，故判定只看横坐标 -->
+    <!-- 上滑命中区：整条顶部横带都算取消，故判定只看纵坐标 -->
     <view class="sheet-cancel">
-      <view class="cancel-label">{{canceling ? '松开取消' : '左滑取消'}}</view>
-      <view class="cancel-icon">✕</view>
+      <view class="cancel-label">{{canceling ? '松开取消' : '上滑取消'}}</view>
     </view>
 
     <view class="sheet-main">

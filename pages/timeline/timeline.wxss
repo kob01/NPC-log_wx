@@ -1,7 +1,6 @@
 .timeline {
     /* position: relative; */
     min-height: 100vh;
-    /* 预留顶部悬浮栏高度，避免首条被遮挡 */
     padding: 0;
 }
 
@@ -220,6 +219,24 @@
     z-index: 1;
 }
 
+/* ==================== 置顶区（我自己钉的那几条，单独一节放在最上方） ==================== */
+.tl-pinned {
+    position: relative;
+}
+
+/* 节标题：比月份胶囊小一号、取橙色而不是主题蓝 —— 两者同形同色就会分不清
+   「这是一月的开始」还是「这是置顶」；橙色在卡片上又不与已有的三个 tag 色相碍 */
+.tl-pinned-head {
+    padding: 12rpx 24rpx 12rpx 72rpx;
+    font-size: 22rpx;
+    color: var(--warning);
+}
+
+/* 置顶行的圆点只换色不加图：整条时间轴的几何（中心 39rpx）跟着卡片一起复用 */
+.tl-dot-pinned {
+    border-color: var(--warning);
+}
+
 .no-more {
     text-align: center;
     color: var(--text-4);
@@ -229,21 +246,43 @@
 
 .fab {
     position: fixed;
-    right: 40rpx;
-    bottom: 60rpx;
-    width: 100rpx;
-    height: 100rpx;
-    line-height: 96rpx;
-    text-align: center;
+    right: 70rpx;
+    bottom: 40rpx;
+    width: 90rpx;
+    height: 90rpx;
+    /* 图标是 <image> 节点，靠 flex 居中（原先的 line-height + text-align 只服务 emoji 文字） */
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 50%;
     background: var(--primary);
-    color: var(--text-inv);
-    font-size: 60rpx;
     box-shadow: 0 6rpx 20rpx rgba(22, 119, 255, 0.4);
     z-index: 20;
     /* 面板展开时按钮只淡出：不能 display:none / visibility:hidden，
-       否则本手势后续的 touchmove 拿不到节点，左滑取消就失效 */
+       否则本手势后续的 touchmove 拿不到节点，上滑取消就失效 */
     transition: opacity 0.2s ease;
+}
+
+/* 经典话筒（iconfont/AntD 导出，1024 viewBox）：base64 SVG，白色写死在 path 上
+   （iconfont 原本靠 fill: currentColor 取色，<image> 不继承 CSS 色，不改就会渲染成黑色）
+   注：这枚图形竖向偏窄，画面只占 viewBox 的高 87% / 宽 64%，两侧内边距比上一枚方形图标大很多 */
+.fab-glyph {
+    width: 60rpx;
+    height: 60rpx;
+    /* 轻微呼吸：静态 emoji 换成图形后仍嫌不够抢眼，动一下才像「按住就能说」 */
+    animation: fab-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes fab-breathe {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
 }
 
 .fab-hidden {
@@ -300,21 +339,22 @@
     box-shadow: 0 -8rpx 30rpx rgba(0, 0, 0, 0.12);
 }
 
-/* 左滑进入取消区：整片面板转红底，取消态一眼可辨 */
+/* 上滑进入取消区：整片面板转红底，取消态一眼可辨 */
 .record-sheet.open.canceling {
     background: var(--danger-weak);
 }
 
-/* 左侧取消竖带：整块高度都是命中区，✕ 靠底部摆放 */
+/* 顶部取消横带：从面板顶边到触发线都算命中区，✕ 与文字横排居中（旧内核不支持 flex gap，用 margin 拉开） */
 .sheet-cancel {
+    /* 脱开 .record-sheet 的 flex 行布局：不再挤占主体宽度，只挂在面板顶部 */
+    position: absolute;
+    top: 12rpx;
+    right: 0;
+    left: 0;
     display: flex;
-    flex: none;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    justify-content: flex-end;
-    width: 176rpx;
-    /* ✕ 圆心落到离底约 110rpx：正好压在按住按钮那根手指的高度上，左滑时叉跟着手走 */
-    padding-bottom: 62rpx;
+    justify-content: center;
     opacity: 0;
     /* 回缩时不拖延（基础规则无延迟），展开时才等面板先撑开 */
     transition: opacity 0.15s ease;
@@ -325,31 +365,10 @@
     transition: opacity 0.2s ease 0.12s;
 }
 
-.cancel-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 96rpx;
-    height: 96rpx;
-    font-size: 40rpx;
-    color: var(--text-2);
-    border: 2rpx dashed var(--text-3);
-    border-radius: 50%;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
-}
-
 .cancel-label {
-    margin-bottom: 12rpx;
+    margin: 20rpx 0 0 0;
     font-size: 22rpx;
     color: var(--text-3);
-}
-
-.record-sheet.canceling .cancel-icon {
-    color: var(--text-inv);
-    background: var(--danger);
-    border-color: var(--danger);
-    border-style: solid;
-    transform: scale(1.12);
 }
 
 .record-sheet.canceling .cancel-label {
@@ -364,9 +383,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    /* 取消区占掉了左侧 176rpx，右边补回同宽，时长与波形才真正落在屏幕中轴上 */
-    margin-right: 176rpx;
-    padding: 24rpx 0 72rpx;
+    /* 上留 100rpx 让位给顶部 ✕ 横带（离顶 12rpx + 圆 80rpx），下留 72rpx 让位给底句提示；
+       取消横带改成绝对定位后不再挤占左侧，主体天然落在屏幕中轴上 */
+    padding: 100rpx 0 72rpx;
     opacity: 0;
     transition: opacity 0.15s ease;
 }
@@ -455,11 +474,11 @@
 }
 
 .sheet-hint {
-    /* 脱主体贴底单独占整条面板宽：这句最长（带「最长 60 秒」），
-       留在被取消区挤过的半宽里会折行；绝对定位基准是 .record-sheet */
+    /* 脱主体贴底单独占整条面板宽：这句最长（带「最长 60 秒」），塞在主体里会被挤到折行；
+       绝对定位基准是 .record-sheet */
     position: absolute;
     right: 0;
-    /* 20rpx 而不更高：再往上就会与左侧 ✕ 圆（离底 62rpx 起）蹭上 */
+    /* 20rpx 而不更高：再往上就会与主体的下沿（离底 72rpx）蹭上 */
     bottom: 20rpx;
     left: 0;
     font-size: 24rpx;

@@ -13,7 +13,9 @@ Component({
 
   properties: {
     // 时间线条目：{id,time,event,type,summary,content,tags,persons,position,address,lng,lat,
-    // firstThumb,firstUrl,thumbs,imageUrls,imageCount,score,isMine}
+    // firstThumb,firstUrl,thumbs,imageUrls,imageCount,score,isMine,pinned}
+    // pinned 只供页面弹菜单时判断「置顶还是取消置顶」，卡片自身不围它画任何东西：
+    // 置顶的那几条统一排在列表上方的置顶区里，由那一节的小标题说清身份
     entry: {
       type: Object,
       value: {},
@@ -73,6 +75,13 @@ Component({
   methods: {
     onTap() {
       this.triggerEvent("select", { id: this.properties.entry.id });
+    },
+    /**
+     * 长按卡片：把 id 交给页面弹操作菜单（置顶/编辑/删除都在列表页做，卡片只负责报信）。
+     * 微信里 longpress 之后不会再补一次 tap，因此长按不会顺带跳详情页。
+     */
+    onLongPress() {
+      this.triggerEvent("longpress", { id: this.properties.entry.id });
     },
     /** 点开缩略图：全屏预览整条图集，wx.previewImage 原生支持左右滑动翻页 */
     onPreview() {

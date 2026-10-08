@@ -33,9 +33,12 @@
   </view>
 
   <!-- 录音卡（内联于进度/记录下方，刚录的与日志已存的都走这里）：▶ 播放，有转写文本/失败成因时可折叠展开 -->
-  <view class="voice-panel" wx:if="{{voice}}">
+  <!-- 条件带个 || recording：卡片只跟 voice 存在的话，「手上没录音直接开录」那一轮连个停止按钮都没处点 -->
+  <view class="voice-panel" wx:if="{{voice || recording}}">
+    <!-- 其它表单项都是「卡片内顶部一行标题」，录音卡同款跟进，不另开一层标题 -->
+    <view class="label">录音</view>
     <view class="voice-head">
-      <view class="voice-play" catchtap="togglePlay">
+      <view class="voice-play" wx:if="{{voice}}" catchtap="togglePlay">
         <image class="voice-glyph" wx:if="{{playing}}" mode="aspectFit" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48cmVjdCB4PSI2IiB5PSI1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxNCIgcng9IjEuMiIgZmlsbD0iI2ZmZmZmZiIvPjxyZWN0IHg9IjE0IiB5PSI1IiB3aWR0aD0iNCIgaGVpZ2h0PSIxNCIgcng9IjEuMiIgZmlsbD0iI2ZmZmZmZiIvPjwvc3ZnPg==" />
         <image class="voice-glyph" wx:else mode="aspectFit" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48cGF0aCBkPSJNOCA1djE0bDExLTd6IiBmaWxsPSIjZmZmZmZmIi8+PC9zdmc+" />
       </view>
@@ -45,14 +48,24 @@
       <!-- 无转写正文也无失败成因时，折叠/展开没有可展示的内容，直接隐藏这个开关 -->
       <text class="voice-fold {{voiceCollapsed ? 'fold-down' : 'fold-up'}}" wx:if="{{voice.text || voiceReason}}" catchtap="toggleVoiceCollapsed">›</text>
     </view>
-    <view class="voice-text" wx:if="{{!voiceCollapsed && voice.text}}">{{voice.text}}</view>
+    <view class="voice-text" wx:if="{{!voiceCollapsed && voice.text}}" bindlongpress="copyVoiceText">{{voice.text}}</view>
+    <!-- 识别文字的工具行：长按正文也能复制，但得给个看得见的入口 -->
+    <view class="voice-tools" wx:if="{{!voiceCollapsed && voice.text}}">
+      <text class="voice-act" catchtap="copyVoiceText">复制文字</text>
+    </view>
     <!-- 失败成因单独一行完整展示：头部 .voice-status 是单行省略，装不下“额度不足需充值”这种长句 -->
     <view class="voice-reason" wx:if="{{!voiceCollapsed && voiceReason}}">{{voiceReason}}</view>
-    <!-- 操作行：与图片的加/删对称 —— 重录（点按开/停，结束即替换）、移除（保存时告知后端清空旧文件） -->
+    <!-- 操作行：与图片的加/删对称 —— 覆盖表单（弹窗里选了只留录音后的反悔入口）、录音（点按开/停，结束即替换）、移除（保存时告知后端清空旧文件） -->
     <view class="voice-actions">
-      <text class="voice-act {{recording ? 'voice-act-on' : ''}}" catchtap="toggleReRecord">{{recording ? '停止录音' : '重录'}}</text>
-      <text class="voice-act voice-act-del" catchtap="removeVoice">移除录音</text>
+      <text class="voice-act" wx:if="{{voiceApplyable}}" catchtap="applyVoiceResult">覆盖表单</text>
+      <text class="voice-act {{recording ? 'voice-act-on' : ''}}" catchtap="toggleReRecord">{{recording ? '停止录音' : (voice ? '重录' : '录一段')}}</text>
+      <text class="voice-act voice-act-del" wx:if="{{voice}}" catchtap="removeVoice">移除录音</text>
     </view>
+  </view>
+  <!-- 移除了录音、或新建时压根没录：给一个同款入口留在页内重开，不必退回首页按住录音重进 -->
+  <view class="voice-add" wx:if="{{!voice && !recording}}" catchtap="toggleReRecord">
+    <view class="label">录音</view>
+    <view class="voice-add-act">🎙 录一段语音</view>
   </view>
 
   <!-- 评价 -->
