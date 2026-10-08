@@ -19,16 +19,26 @@ const SHEET_FRAME_MS = 40;
 const HINT_SEND = `松开发送 · 最长 ${RECORD_MAX} 秒`;
 const HINT_CANCEL = "松开手指，取消本次录音";
 
-// 列表查看范围：三态循环 all（全部）→ mine（只看自己）→ others（只看组织内他人）
-const SCOPE_ORDER = ["all", "mine", "others"];
-const SCOPE_HINT = { all: "全部日志", mine: "只看自己", others: "只看他人" };
-// 图标（base64 内联，免额外网络请求）：灰单人=all，蓝单人=mine，蓝双人=others
+// 列表查看范围：四态循环 all（全部）→ mine（只看自己）→ private（只看自己写的
+// 且标为「仅自己可见」的）→ others（只看组织内他人）。
+// private 紧跟 mine：两档都是「我自己写的」的子集，顺着一按就继续收窄
+const SCOPE_ORDER = ["all", "mine", "private", "others"];
+const SCOPE_HINT = {
+  all: "全部日志",
+  mine: "只看自己",
+  private: "只看仅自己可见",
+  others: "只看他人",
+};
+// 图标（base64 内联，免额外网络请求）：灰单人=all，蓝单人=mine，蓝锁=private，蓝双人=others
 const PERSON_ICON =
   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM4YThmOTgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCIvPjwvc3ZnPg==";
 const PERSON_ICON_ON =
   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNjc3ZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCIvPjwvc3ZnPg==";
 const USERS_ICON =
   "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNjc3ZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTcgMjF2LTJhNCA0IDAgMCAwLTQtNEg1YTQgNCAwIDAgMC00IDR2MiIvPjxjaXJjbGUgY3g9IjkiIGN5PSI3IiByPSI0Ii8+PHBhdGggZD0iTTIzIDIxdi0yYTQgNCAwIDAgMC0zLTMuODciLz48cGF0aCBkPSJNMTYgMy4xM2E0IDQgMCAwIDEgMCA3Ljc1Ii8+PC9zdmc+";
+// 「仅自己可见」那一档用锁：与单人图标同色（#1677ff），换形状而不是在人头上叠小图，32rpx 下才看得清
+const LOCK_ICON =
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNjc3ZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB3aWR0aD0iMTgiIGhlaWdodD0iMTEiIHg9IjMiIHk9IjExIiByeD0iMiIgcnk9IjIiLz48cGF0aCBkPSJNNyAxMVY3YTUgNSAwIDAgMSAxMCAwdjQiLz48L3N2Zz4=";
 
 /** 取触点坐标：touchend 时 touches 已空，需回落 changedTouches；都拿不到返回 {-1,-1} */
 function touchPoint(e) {
@@ -60,11 +70,12 @@ Page({
     keyword: "",
     searchMode: false,
     searchExpanded: false,
-    // 列表查看范围（本页局部状态，真值存 auth，切换即重拉）：all/mine/others
+    // 列表查看范围（本页局部状态，真值存 auth，切换即重拉）：all/mine/others/private
     filterScope: "all",
-    // 三态图标：灰单人(all)/蓝单人(mine)/蓝双人(others)
+    // 四态图标：灰单人(all)/蓝单人(mine)/蓝锁(private)/蓝双人(others)
     personIcon: PERSON_ICON,
     personIconOn: PERSON_ICON_ON,
+    lockIcon: LOCK_ICON,
     usersIcon: USERS_ICON,
     // 顶部三分之一处的低存在感文字提示（切换筛选时闪现一句，自动消失）
     hintText: "",
@@ -145,7 +156,7 @@ Page({
     }
   },
 
-  /** 循环列表查看范围：全部 → 只看自己 → 只看他人 → 全部；写入本地偏好后按新范围重拉 */
+  /** 循环列表查看范围：全部 → 只看自己 → 只看仅自己可见 → 只看他人 → 全部；写入本地偏好后按新范围重拉 */
   onCycleScope() {
     const idx = SCOPE_ORDER.indexOf(this.data.filterScope || "all");
     const next = SCOPE_ORDER[(idx + 1) % SCOPE_ORDER.length];

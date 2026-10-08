@@ -67,14 +67,14 @@
     height: 72rpx;
 }
 
-/* 右侧图标组：搜索 + 只看自己 + 新增 */
+/* 右侧图标组：搜索 + 查看范围 + 新增 */
 .top-actions {
     display: flex;
     align-items: center;
     flex-shrink: 0;
 }
 
-/* 「只看自己」人形图标按钮：与搜索按钮同构（白底圆），置于搜索与 + 之间 */
+/* 「查看范围」循环按钮（四态）：与搜索按钮同构（白底圆），置于搜索与 + 之间 */
 .mine-btn {
     display: flex;
     align-items: center;

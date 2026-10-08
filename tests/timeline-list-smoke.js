@@ -515,10 +515,10 @@ function section(title) {
   check("P02b", "下拉刷新收起搜索框（不留空框抢焦点）", p.data.searchExpanded === false, `expanded=${p.data.searchExpanded}`);
   check("P02c", "下拉刷新后列表为全量而非旧搜索结果", p.data.entries[0] && p.data.entries[0].event === "全量列表", `first=${p.data.entries[0] && p.data.entries[0].event}`);
 
-  // ==================== F 筛选按钮（三态查看范围）====================
-  section("F 筛选按钮：三态循环 / 写偏好 / 按新范围重拉");
+  // ==================== F 筛选按钮（四态查看范围）====================
+  section("F 筛选按钮：四态循环 / 写偏好 / 按新范围重拉");
 
-  // F01 循环顺序 all → mine → others → all
+  // F01 循环顺序 all → mine → private → others → all
   clock.reset();
   apiState.reset();
   authState.scope = "all";
@@ -531,10 +531,14 @@ function section(title) {
   check("F01h", "切换时给出顶部提示", p.data.hintText === "只看自己", `hint=${p.data.hintText}`);
   p.onCycleScope();
   await idle();
-  check("F01b", "第二次点：只看自己 → 只看他人", p.data.filterScope === "others" && authState.scope === "others", `scope=${p.data.filterScope}`);
+  check("F01b", "第二次点：只看自己 → 只看仅自己可见", p.data.filterScope === "private" && authState.scope === "private", `scope=${p.data.filterScope}`);
+  check("F01bh", "私密档的顶部提示用「可见范围」那个叫法", p.data.hintText === "只看仅自己可见", `hint=${p.data.hintText}`);
   p.onCycleScope();
   await idle();
-  check("F01c", "第三次点：只看他人 → 回到全部", p.data.filterScope === "all" && authState.scope === "all", `scope=${p.data.filterScope}`);
+  check("F01c", "第三次点：仅自己可见 → 只看他人", p.data.filterScope === "others" && authState.scope === "others", `scope=${p.data.filterScope}`);
+  p.onCycleScope();
+  await idle();
+  check("F01d", "第四次点：只看他人 → 回到全部", p.data.filterScope === "all" && authState.scope === "all", `scope=${p.data.filterScope}`);
 
   // F02 切换后按新范围重拉列表（scope 透传给 event.page）
   apiState.reset();

@@ -101,11 +101,11 @@ function markHasPassword(v) {
 
 /**
  * 日志列表「查看范围」筛选（本地记住，仅作用于列表页及其搜索）
- * @returns {'all'|'mine'|'others'} 兼容旧的布尔存储：true → 'mine'，其余 → 'all'
+ * @returns {'all'|'mine'|'others'|'private'} 兼容旧的布尔存储：true → 'mine'，其余 → 'all'
  */
 function getFilterScope() {
   const v = wx.getStorageSync(ONLY_MINE_KEY);
-  if (v === "mine" || v === "others") return v;
+  if (v === "mine" || v === "others" || v === "private") return v;
   return v === true ? "mine" : "all";
 }
 
@@ -127,7 +127,7 @@ function consumeManualLogout() {
   return hit;
 }
 
-/** 写入列表查看范围偏好（'all'|'mine'|'others'） */
+/** 写入列表查看范围偏好（'all'|'mine'|'others'|'private'） */
 function setFilterScope(scope) {
   wx.setStorageSync(ONLY_MINE_KEY, scope || "all");
 }

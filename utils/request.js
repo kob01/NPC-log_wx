@@ -33,16 +33,19 @@ function showError(msg) {
 // 只缓存调用方显式声明了 cache 的只读接口，写接口一律不缓存。
 const memoryCache = {};
 
+/** 可收窄可见范围的取值（'all' 是默认，不进这张表） */
+const VIEW_SCOPES = ["mine", "others", "private"];
+
 /** 归一化本次请求的查看范围：优先 options.scope，兼容旧的 options.onlyMine 布尔 */
 function scopeOf(options) {
   const s = options.scope;
-  if (s === "mine" || s === "others") return s;
+  if (VIEW_SCOPES.indexOf(s) !== -1) return s;
   if (options.onlyMine) return "mine";
   return "all";
 }
 
 function cacheKeyOf(key, scope) {
-  // 查看范围（all/mine/others）会改变同一接口的返回内容，必须进 key，
+  // 查看范围（all/mine/others/private）会改变同一接口的返回内容，必须进 key，
   // 否则切换范围后会读到另一种范围的数据
   return `${key}|${scope}|${auth.getToken() ? "1" : "0"}`;
 }
@@ -143,11 +146,11 @@ function buildHeader(extra, scope) {
   if (token) {
     header.Authorization = `Bearer ${token}`;
   }
-  // 查看范围逐请求决定：mine 带 X-Only-Mine，others 带 X-View-Scope（后端据此收窄可见范围）
+  // 查看范围逐请求决定：mine 带 X-Only-Mine，others/private 带 X-View-Scope（后端据此收窄可见范围）
   if (scope === "mine") {
     header["X-Only-Mine"] = "1";
-  } else if (scope === "others") {
-    header["X-View-Scope"] = "others";
+  } else if (scope === "others" || scope === "private") {
+    header["X-View-Scope"] = scope;
   }
   return header;
 }

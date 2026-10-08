@@ -33,7 +33,7 @@ module.exports = {
   // 与 Web 端保持一致的本地缓存 key
   TOKEN_KEY: "NPC_token",
   USER_KEY: "NPC_user",
-  ONLY_MINE_KEY: "npc_only_mine", // 日志列表查看范围（'all'|'mine'|'others'，旧版可能为布尔）
+  ONLY_MINE_KEY: "npc_only_mine", // 日志列表查看范围（'all'|'mine'|'others'|'private'，旧版可能为布尔）
   // 「用户主动退出登录」的一次性标记：微信一键登录的账号一点退出就会被
   // 静默登录立刻送回首页，看起来像退出没生效（见 pages/login/login.js 的 onLoad）
   MANUAL_LOGOUT_KEY: "npc_manual_logout",

@@ -32,10 +32,11 @@
           class="mine-btn {{filterScope !== 'all' ? 'mine-btn-on' : ''}}"
           bindtap="onCycleScope"
         >
+          <!-- 四态图标：灰单人=all，蓝单人=mine，蓝锁=仅自己可见，蓝双人=他人 -->
           <image
             class="mine-glyph"
             mode="aspectFit"
-            src="{{filterScope === 'others' ? usersIcon : (filterScope === 'mine' ? personIconOn : personIcon)}}"
+            src="{{filterScope === 'others' ? usersIcon : (filterScope === 'private' ? lockIcon : (filterScope === 'mine' ? personIconOn : personIcon))}}"
           />
         </view>
         <view class="add-btn" bindtap="goEdit">
@@ -154,6 +155,6 @@
     </view>
   </view>
 
-  <!-- 顶部三分之一处的轻提示：切换「只看自己」时闪现一句，固定于页面根之下（祖先无 transform） -->
+  <!-- 顶部三分之一处的轻提示：切换查看范围时闪现一句，固定于页面根之下（祖先无 transform） -->
   <view class="top-hint" wx:if="{{hintText}}">{{hintText}}</view>
 </view>
