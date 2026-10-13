@@ -401,11 +401,9 @@
     color: var(--text-1);
     font-size: 26rpx;
     line-height: 1.6;
-    max-height: 160rpx;
-    overflow: hidden;
 }
 
-/* 识别文字的工具行（复制）：单独一行放正文下方，不调进 max-height 被截断的那块区域；
+/* 识别文字的工具行（复制）：单独一行放正文下方，不与正文挤在同一点击区里；
    按钮靠右（卡片里除播放键外一律走右边，与左侧的播放/时长/状态拉开点击区）；用 margin 不用 flex gap */
 .voice-tools {
     display: flex;

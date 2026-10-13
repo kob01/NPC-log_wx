@@ -3,7 +3,16 @@
   "projectname": "NPC-log_wx",
   "description": "NPC存档 · 人生记录小程序",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "tests"
+      },
+      {
+        "type": "folder",
+        "value": "work_space"
+      }
+    ],
     "include": []
   },
   "setting": {
