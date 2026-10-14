@@ -566,7 +566,8 @@ Page({
       const smooth = (mailOnlyTip || subOk) && !calBad;
       wx.showToast({
         title:
-          (mailOnlyTip || subOk ? okTip : "已保存，但未授权可能收不到") + calTip,
+          (mailOnlyTip || subOk ? okTip : "已保存，但未授权可能收不到") +
+          calTip,
         icon: smooth ? "success" : "none",
         duration: smooth ? 1500 : 2500,
       });

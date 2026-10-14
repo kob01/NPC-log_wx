@@ -72,27 +72,49 @@ function check(name, got, want) {
 }
 
 const rowOf = (over) =>
-  Object.assign({ id: 1, title: "交报告", time: "2026-11-05 09:00", remark: "" }, over);
+  Object.assign(
+    { id: 1, title: "交报告", time: "2026-11-05 09:00", remark: "" },
+    over,
+  );
 
 console.log("\n[1] 重复规则映射（微信只有 day/week/month/year 四档）");
-check("每天 → day", calendar.planOf(rowOf({ repeat: "daily" })).repeatInterval, "day");
-check("每周 → week", calendar.planOf(rowOf({ repeat: "weekly" })).repeatInterval, "week");
-check("每年 → year", calendar.planOf(rowOf({ repeat: "yearly" })).repeatInterval, "year");
-check("不重复 → 单次", calendar.planOf(rowOf({ repeat: "none" })).repeatInterval, "");
+check(
+  "每天 → day",
+  calendar.planOf(rowOf({ repeat: "daily" })).repeatInterval,
+  "day",
+);
+check(
+  "每周 → week",
+  calendar.planOf(rowOf({ repeat: "weekly" })).repeatInterval,
+  "week",
+);
+check(
+  "每年 → year",
+  calendar.planOf(rowOf({ repeat: "yearly" })).repeatInterval,
+  "year",
+);
+check(
+  "不重复 → 单次",
+  calendar.planOf(rowOf({ repeat: "none" })).repeatInterval,
+  "",
+);
 check(
   "每月 5 日 → month",
-  calendar.planOf(rowOf({ repeat: "monthly", time: "2026-11-05 09:00" })).repeatInterval,
+  calendar.planOf(rowOf({ repeat: "monthly", time: "2026-11-05 09:00" }))
+    .repeatInterval,
   "month",
 );
 check(
   "每月 30 日 → 退化单次（month 档不能大于 28 日）",
-  calendar.planOf(rowOf({ repeat: "monthly", time: "2026-11-30 09:00" })).repeatInterval,
+  calendar.planOf(rowOf({ repeat: "monthly", time: "2026-11-30 09:00" }))
+    .repeatInterval,
   "",
 );
 check(
   "「每月 30 日」的退化原因必须带日期",
   /28 日.*30 日/.test(
-    calendar.planOf(rowOf({ repeat: "monthly", time: "2026-11-30 09:00" })).degrade,
+    calendar.planOf(rowOf({ repeat: "monthly", time: "2026-11-30 09:00" }))
+      .degrade,
   ),
   true,
 );
@@ -129,7 +151,7 @@ console.log("\n[2] 时间戳（必须按本机时区解释墙钟串，读不出�
 const okPlan = calendar.planOf(rowOf({ time: "2026-11-05 09:00" }));
 const okDate = new Date(okPlan.startTime * 1000);
 check(
-  '2026-11-05 09:00 解回本机同一墙钟',
+  "2026-11-05 09:00 解回本机同一墙钟",
   [
     okDate.getFullYear(),
     okDate.getMonth() + 1,
@@ -140,7 +162,11 @@ check(
   [2026, 11, 5, 9, 0],
 );
 check("事件默认占半小时", okPlan.endTime - okPlan.startTime, 30 * 60);
-check("空时间 → startTime=0", calendar.planOf(rowOf({ time: "" })).startTime, 0);
+check(
+  "空时间 → startTime=0",
+  calendar.planOf(rowOf({ time: "" })).startTime,
+  0,
+);
 check(
   "iOS 易踩的空格分隔写法与 T 分隔等价",
   calendar.planOf(rowOf({ time: "2026-11-05T09:00:00" })).startTime,
@@ -159,7 +185,11 @@ console.log("\n[3] addRow 的三条出口（成功 / 已写过 / 未授权）");
   check("说明里带上提醒 ID", /#7/.test(wx.__calls[0].args.description), true);
 
   const again = await calendar.addRow(rowOf({ id: 7, repeat: "daily" }));
-  check("同一行再点是「已写过」而不是第二条", [again.ok, again.repeated], [false, true]);
+  check(
+    "同一行再点是「已写过」而不是第二条",
+    [again.ok, again.repeated],
+    [false, true],
+  );
 
   const changed = await calendar.addRow(
     rowOf({ id: 7, repeat: "daily", time: "2026-11-05 10:00" }),

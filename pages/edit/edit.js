@@ -873,7 +873,9 @@ Page({
     if (!done || done.busy) return;
     const tmplId = (this._voiceCfg || {}).templateId || "";
     if (!tmplId) {
-      this.setData({ "remindDone.tip": "服务端未配置提醒模板，找服务端看一下" });
+      this.setData({
+        "remindDone.tip": "服务端未配置提醒模板，找服务端看一下",
+      });
       return;
     }
     this.setData({ "remindDone.busy": true });
@@ -888,7 +890,8 @@ Page({
     // 额度攒到了但账号没绑 openid，等于「有钱没地址」，得单独递一句
     if (sub.ok && sub.needBind) {
       this.setData({
-        "remindDone.tip": "次数到账了，但这个账号还没绑微信，去「我的」里绑一下",
+        "remindDone.tip":
+          "次数到账了，但这个账号还没绑微信，去「我的」里绑一下",
       });
     }
   },

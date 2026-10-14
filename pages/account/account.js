@@ -4,7 +4,8 @@ const wxLogin = require("../../utils/wxLogin");
 
 /**
  * 账号资料页：从「我的」页顶部的用户卡片进入，集中管理
- * 用户名 / 邮箱 / 登录密码 / 微信登录 这四项与账号身份相关的设置。
+ * 用户名 / 邮箱 / 登录密码 / 微信登录 这四项与账号身份相关的设置，
+ * 外加一个「人物图谱屏蔽」名单（恢复入口故意只放在这里，不进图谱页）。
  */
 Page({
   behaviors: [require("../../utils/themeBehavior")],
@@ -17,11 +18,16 @@ Page({
     noPassword: false,
     // 资料修改提交中，防重复点
     profileBusy: false,
+    // 人物图谱的屏蔽名单：条数为 0 时整组不渲染（给一个点开是空的行只会让人以为坏了）
+    blockedCount: 0,
+    showBlocks: false,
+    blocks: [],
   },
 
   onShow() {
     if (!auth.checkLogin()) return;
     this.applyUser();
+    this.loadBlocks();
   },
 
   /**
@@ -130,6 +136,60 @@ Page({
 
   goPassword() {
     wx.navigateTo({ url: "/pages/password/password" });
+  },
+
+  // ==================== 人物图谱屏蔽名单 ====================
+
+  /**
+   * 拉屏蔽名单（条数与名单一次拿回）
+   *
+   * 为什么进页就拉而不等展开：得先知道「屏蔽过几个人」才能决定这一行要不要出现。
+   * 这是一张主键 (user_id, person) 的几十行小表（LIMIT 50），比页面上已经在跑的
+   * /api/user/profile 便宜得多，不多开一个入口又不给准确条数的方案不值当。
+   */
+  async loadBlocks() {
+    try {
+      const { code, data } = await api.memory.personBlocks();
+      if (Number(code) !== 200 || !data) return;
+      const blocks = data.blocks || [];
+      this.setData({ blocks, blockedCount: blocks.length });
+    } catch (err) {
+      // 拉不到就当没有：这一行不出现比错删了用户的屏蔽名单好（提示已由 request 层弹过）
+    }
+  },
+
+  /** 展开/收起：展开时重拉一次，把在网页端新屏蔽的人也带进来 */
+  toggleBlocks() {
+    const show = !this.data.showBlocks;
+    this.setData({ showBlocks: show });
+    if (show) this.loadBlocks();
+  },
+
+  /**
+   * 恢复一个人（不做二次确认：恢复是往安全方向走，顶多多看一个人，不像解绑那样会把自己锁在门外）
+   * 图谱那边会在下次进入时自己重拉（api 层已清掉 memory: 本地缓存，后端也已失效聚合缓存）
+   */
+  async onUnblock(e) {
+    const name = e.currentTarget.dataset.name;
+    if (!name) return;
+    try {
+      const res = await api.memory.unblockPerson(name);
+      if (Number(res.code) !== 200) {
+        wx.showToast({ title: res.message || "恢复失败", icon: "none" });
+        return;
+      }
+      const left = this.data.blocks.filter((b) => b.person !== name);
+      this.setData({
+        blocks: left,
+        // 条数以后端回的值为准（两端同时改时不会被本地算错）
+        blockedCount: Number((res.data || {}).blockedCount || left.length),
+        // 剔完了就自己收起（条数为 0 时整行也不再生效）
+        showBlocks: left.length > 0,
+      });
+      wx.showToast({ title: `已恢复 ${name}`, icon: "success" });
+    } catch (err) {
+      wx.showToast({ title: "网络异常，请重试", icon: "none" });
+    }
   },
 
   /** 微信登录行：未绑定去绑定，已绑定走解绑（一个入口，避免两行几乎一样的按钮） */

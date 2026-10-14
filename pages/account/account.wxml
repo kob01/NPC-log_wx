@@ -41,4 +41,35 @@
       </view>
     </view>
   </view>
+
+  <!-- 人物图谱的屏蔽名单：入口故意不放图谱页而收在这一页最后一组 ——
+       恢复是极低频动作，但必须找得回来（否则与「人没了」无法区分）。
+       一条都没屏蔽时整组不出现，不给一个点开是空的行。 -->
+  <view class="group" wx:if="{{blockedCount}}">
+    <view class="cell" bindtap="toggleBlocks">
+      <view class="cell-left">
+        <text class="cell-title">人物图谱屏蔽</text>
+        <text class="cell-desc">{{showBlocks ? '点这里收起名单' : '屏蔽过的人在这里恢复'}}</text>
+      </view>
+      <view class="tag tag-blue wx-action">
+        已屏蔽 {{blockedCount}} 人 · {{showBlocks ? '收起' : '查看'}}
+      </view>
+    </view>
+    <block wx:if="{{showBlocks}}">
+      <view class="divider"></view>
+      <view
+        class="cell"
+        wx:for="{{blocks}}"
+        wx:key="person"
+        data-name="{{item.person}}"
+        bindtap="onUnblock"
+      >
+        <view class="cell-left">
+          <text class="cell-title">{{item.person}}</text>
+          <text class="cell-desc ellipsis">屏蔽于 {{item.createTime}}</text>
+        </view>
+        <view class="tag tag-green wx-action">恢复</view>
+      </view>
+    </block>
+  </view>
 </view>

@@ -10,7 +10,8 @@
   <!-- 过滤条：全屏时隐藏，把整屏留给地图 -->
   <view class="filter" wx:if="{{!fs}}">
     <scroll-view class="chips" scroll-x>
-      <view class="chip {{year === '' ? 'active' : ''}}" data-year="" bindtap="onYearChip">全部({{total}})</view>
+      <!-- 「全部」带的是全年份之和（allTotal），不是当年那一档的数量 -->
+      <view class="chip {{year === '' ? 'active' : ''}}" data-year="" bindtap="onYearChip">全部({{allTotal}})</view>
       <view
         class="chip {{year === item.year ? 'active' : ''}}"
         wx:for="{{years}}"

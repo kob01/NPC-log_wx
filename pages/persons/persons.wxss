@@ -70,53 +70,9 @@
   color: var(--text-3);
 }
 
-/* ---------- 屏蔽（长按卡片那一格的动作在这里给出口）---------- */
+/* 屏蔽动作的提示行（恢复入口在「账号资料」页，本页不再有名单） */
 .list-tip {
   margin: 8rpx 0 0 4rpx;
-  font-size: 22rpx;
-  color: var(--text-3);
-}
-
-.block-row {
-  margin-top: 12rpx;
-}
-
-.block-toggle {
-  font-size: 24rpx;
-  color: var(--primary);
-}
-
-/* 名单不是一张卡片：它只是列表下面的一叠行，给重音量会把上面的图谱抢掉 */
-.block-list {
-  margin-top: 10rpx;
-  padding: 8rpx 16rpx;
-  border-radius: var(--radius);
-  background: var(--fill-2);
-}
-
-.block-item {
-  display: flex;
-  align-items: center;
-  padding: 8rpx 0;
-}
-
-.block-name {
-  /* flex 子项要截断必须先拿到可收缩的宽度（min-width:0），否则长名字会把「恢复」顶出屏幕 */
-  flex: 1;
-  min-width: 0;
-  font-size: 26rpx;
-  color: var(--text-2);
-}
-
-.block-act {
-  flex: none;
-  margin-left: 16rpx;
-  font-size: 24rpx;
-  color: var(--primary);
-}
-
-.block-tip {
-  padding: 8rpx 0;
   font-size: 22rpx;
   color: var(--text-3);
 }

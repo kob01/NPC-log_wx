@@ -12,6 +12,8 @@ Page({
     scale: 4,
     years: [],
     total: 0,
+    // 「全部(N)」用的是所有年份之和；total 是当前这一档命中的数（两者在选了年份后并不相等）
+    allTotal: 0,
     year: "",
     tag: "",
     loading: true,
@@ -60,6 +62,9 @@ Page({
           points,
           years: data.years || [],
           total: data.total || 0,
+          // 年份 chip 的计数不受 year 过滤影响（后端另走一条直方图 SQL），
+          // 所以选了 2026 之后 2025/2024 仍在；这里只拿它算「全部」那一个数
+          allTotal: Number(data.totalAllYears || data.total || 0),
           loading: false,
         });
       } else {
@@ -70,6 +75,7 @@ Page({
           includePoints: [],
           years: [],
           total: 0,
+          allTotal: 0,
           loading: false,
         });
         if (message) wx.showToast({ title: message, icon: "none" });
