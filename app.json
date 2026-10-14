@@ -50,6 +50,9 @@
     "permission": {
         "scope.userLocation": {
             "desc": "用于在地图上选择日志地点与展示足迹"
+        },
+        "scope.addPhoneCalendar": {
+            "desc": "用于把提醒写入手机系统日历，到点由手机自己提醒"
         }
     },
     "requiredPrivateInfos": [

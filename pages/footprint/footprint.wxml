@@ -1,6 +1,14 @@
+<page-meta
+  page-orientation="{{orientation}}"
+  page-style="{{fs ? 'overflow:hidden;' : ''}}"
+  bind:resize="onPageResize"
+/>
+
+<!-- page-meta 必须是页面第一个节点（注释也可能被打断判定，故说明写在下方），它自身不渲染内容，页面内容仍是它的兄弟节点 -->
+
 <view class="footprint page-root {{themeClass}}">
-  <!-- 过滤条 -->
-  <view class="filter">
+  <!-- 过滤条：全屏时隐藏，把整屏留给地图 -->
+  <view class="filter" wx:if="{{!fs}}">
     <scroll-view class="chips" scroll-x>
       <view class="chip {{year === '' ? 'active' : ''}}" data-year="" bindtap="onYearChip">全部({{total}})</view>
       <view
@@ -27,7 +35,7 @@
   </view>
 
   <!-- 地图 -->
-  <view class="map-wrap" wx:if="{{markers.length}}">
+  <view class="map-wrap {{fs ? 'map-wrap--fs' : ''}}" wx:if="{{markers.length}}">
     <map
       id="footprintMap"
       class="map"
@@ -39,6 +47,9 @@
       bindmarkertap="onMarkerTap"
       show-location
     />
+    <!-- 全屏入口右上、退出左上：同一位置反复点不会误触，且避开微信右上胶囊 -->
+    <view class="fs-btn" wx:if="{{!fs}}" bindtap="enterFs">全屏</view>
+    <view class="fs-exit" wx:if="{{fs}}" bindtap="exitFs">退出全屏</view>
     <!-- 选中点位后的操作按钮：绝对定位浮在地图右下角上层 -->
     <view class="map-actions" wx:if="{{selected}}">
       <view class="map-btn" data-id="{{selected.id}}" bindtap="goDetail">详情</view>
@@ -50,7 +61,7 @@
   <view class="hint-bar empty-hint" wx:if="{{!loading && !markers.length}}">暂无带坐标的足迹</view>
 
   <!-- 地点列表 -->
-  <view class="list" wx:if="{{points.length}}">
+  <view class="list" wx:if="{{points.length && !fs}}">
     <view class="list-title">足迹列表</view>
     <view class="list-item" wx:for="{{points}}" wx:key="id" data-index="{{index}}" bindtap="onListTap">
       <view class="li-body">

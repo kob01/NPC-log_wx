@@ -27,6 +27,8 @@
       <view class="tag tag-gray" wx:if="{{cfg.pending}}">{{cfg.pending}} 条待发</view>
     </view>
     <view class="hint-bar hint-gap" wx:if="{{hint}}">{{hint}}</view>
+    <!-- 手机日历那一路的说明（退化原因 / 没写进去的原因）：toast 只占 2 秒，这两句得留在页上 -->
+    <view class="hint-bar hint-gap" wx:if="{{calNote}}">{{calNote}}</view>
     <view class="link-row">
       <text class="link" bindtap="onTest">发一条测试</text>
       <text class="link-sep" wx:if="{{cfg && cfg.mailEnabled}}">·</text>
@@ -124,6 +126,25 @@
       />
     </view>
 
+    <!-- 手机日历：不消耗订阅次数、不依赖 openid 绑定；微信与邮件那两路都不响时，它是唯一还响的那只闹钟 -->
+    <view class="fld" wx:if="{{calAvailable}}">
+      <view class="row-between">
+        <view class="flex-1">
+          <view class="fld-label">同时写入手机日历</view>
+          <view class="quick-tip cal-tip">到点由手机自己提醒，不消耗上面那些次数</view>
+        </view>
+        <switch
+          checked="{{form.calendar}}"
+          color="#1677ff"
+          bindchange="onToggleCalendar"
+        />
+      </view>
+      <!-- 选了才看得见的坑：每月 29~31 日与「每 N 天」在日历里没有对应档，只能写成单次 -->
+      <view class="quick-row" wx:if="{{form.calendar && calWarn}}">
+        <text class="quick-tip cal-tip">{{calWarn}}</text>
+      </view>
+    </view>
+
     <view class="fld">
       <view class="fld-label">备注（可选，会一起推到通知与邮件里）</view>
       <textarea
@@ -194,6 +215,12 @@
       <view class="rm-actions">
         <text class="link" wx:if="{{item.eventId}}" data-id="{{item.eventId}}" bindtap="goEvent">查看日志</text>
         <text class="link" data-id="{{item.id}}" bindtap="onEdit">编辑</text>
+        <text
+          class="link"
+          wx:if="{{calAvailable}}"
+          data-id="{{item.id}}"
+          bindtap="onAddCalendar"
+        >{{item.calWritten ? '已在日历' : '存入日历'}}</text>
         <text class="link link-danger" data-id="{{item.id}}" bindtap="onDelete">删除</text>
       </view>
     </view>

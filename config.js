@@ -52,6 +52,10 @@ module.exports = {
   VISIT_MERGE_MS: 5000,
   // 结果缓存落盘的 key 前缀（冷启动秒开用）
   CACHE_KEY_PREFIX: "npc_cache_",
+  // 「这条提醒已经写进过手机日历」的指纹表（见 utils/calendar.js）。
+  // 有意不挂在 CACHE_KEY_PREFIX 下：清缓存会把「已写过」抹掉，而下一次点击
+  // 因为不知道写过，会在用户日历里静默多出一条事件 —— 微信没有按 ID 改/删的接口。
+  CAL_WRITTEN_KEY: "npc_cal_written",
   // 普通接口超时：后端读接口分级超时是 8s，客户端不需要同步等 60s。
   // 原来统一 60s 会让突发时用户长时间白屏，也不触发重试。
   TIMEOUT: 8000,

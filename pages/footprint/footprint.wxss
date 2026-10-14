@@ -102,6 +102,56 @@
     color: var(--text-inv);
 }
 
+/* 全屏态：地图脱离 sticky 流铺满整个可视区（横屏由 page-meta 的 page-orientation 驱动） */
+.map-wrap--fs {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+    margin-top: 0;
+    box-shadow: none;
+}
+
+.map-wrap--fs .map {
+    height: 100%;
+}
+
+/* 全屏入口：浮在地图右上角。
+   全屏相关元素一律用 px：rpx 以屏幕宽度为基准，横竖屏动态切换时不保证重算，会尺寸漂移 */
+.fs-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 30;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--primary);
+    background: var(--card);
+    border: 1px solid var(--primary);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* 退出全屏：换到左上角，与入口错开避免连点误触 */
+.fs-exit {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 30;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--text-inv);
+    background: var(--primary);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
 .empty-hint {
     margin: 30rpx 24rpx;
 }

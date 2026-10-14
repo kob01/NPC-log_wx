@@ -312,6 +312,67 @@
     box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
 }
 
+/* ==================== 语音直接建好的提醒回执 ==================== */
+.rm-done {
+    /* 与录音卡同款卡片底：这条回执与录音是同一句话的两个结果，长得像一处出来的更重要 */
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24rpx;
+    margin-bottom: 20rpx;
+}
+
+.rm-done-title {
+    font-size: 30rpx;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-top: 4rpx;
+}
+
+.rm-done-meta {
+    font-size: 24rpx;
+    color: var(--text-2);
+    margin-top: 6rpx;
+}
+
+.rm-done-tip {
+    margin-top: 12rpx;
+    padding: 10rpx 16rpx;
+    border-radius: var(--radius);
+    background: var(--fill-2);
+    font-size: 22rpx;
+    color: var(--warning);
+    line-height: 1.5;
+}
+
+.rm-done-acts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 16rpx;
+}
+
+/* 与录音卡那排按钮同款描边胶囊；flex-wrap 下靠 margin-right 收间距（gap 在旧内核不生效） */
+.rm-done-act {
+    margin-right: 16rpx;
+    margin-bottom: 12rpx;
+    padding: 4rpx 22rpx;
+    border: 1rpx solid var(--primary);
+    border-radius: var(--radius-pill);
+    color: var(--primary);
+    font-size: 24rpx;
+    line-height: 1.7;
+}
+
+.rm-done-act-on {
+    border-color: var(--warning);
+    color: var(--warning);
+}
+
+.rm-done-undo {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
 /* ==================== 录音卡（内联于进度/记录下方） ==================== */
 .voice-panel {
     /* 与其它 .form-item 同款：浅色卡片底 + 主题圆角，随深/浅色模式自动换肤 */

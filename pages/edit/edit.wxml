@@ -68,6 +68,26 @@
     <view class="voice-add-act">🎙 录一段语音</view>
   </view>
 
+  <!-- 那句语音被判成「只是在要求提醒」：提醒已直接建好，不占表单。回执留在本页，撤销/补授权都在这张卡上 -->
+  <view class="rm-done" wx:if="{{remindDone}}">
+    <view class="label">已建 1 条提醒</view>
+    <view class="rm-done-title">{{remindDone.title}}</view>
+    <view class="rm-done-meta">
+      {{remindDone.timeText}}<text wx:if="{{remindDone.repeatText}}"> · {{remindDone.repeatText}}</text>
+    </view>
+    <view class="rm-done-tip" wx:if="{{remindDone.tip}}">{{remindDone.tip}}</view>
+    <view class="rm-done-acts">
+      <text
+        class="rm-done-act {{remindDone.busy ? 'rm-done-act-on' : ''}}"
+        wx:if="{{remindDone.needAuth}}"
+        catchtap="onAuthorizeFromVoice"
+      >补一次授权</text>
+      <text class="rm-done-act" catchtap="goReminders">查看提醒</text>
+      <text class="rm-done-act" catchtap="applyVoiceResult">也记一条</text>
+      <text class="rm-done-act rm-done-undo" catchtap="onUndoReminder">撤销</text>
+    </view>
+  </view>
+
   <!-- 评价 -->
   <view class="form-item">
     <view class="label">评价</view>

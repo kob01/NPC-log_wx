@@ -132,6 +132,13 @@
     color: var(--text-3);
 }
 
+/* 日历那一路的说明文字：quick-tip 自带 margin-left 是给「现在」那颗 chip 让位的，
+   这几行前面没有控件，得把它收回来，否则整段文字会平白向右缩一格 */
+.cal-tip {
+    margin-left: 0;
+    line-height: 1.5;
+}
+
 .picker-line {
     background: var(--fill-2);
     border-radius: var(--radius);

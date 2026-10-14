@@ -1,6 +1,7 @@
 const api = require("../../utils/api");
 const auth = require("../../utils/auth");
 const audioHub = require("../../utils/audioHub");
+const subscribe = require("../../utils/subscribe");
 const { resolveFileUrl, nowDateTime } = require("../../utils/format");
 const { SUPPORTED_EXT_RE, inspectImage } = require("../../utils/imageFormat");
 
@@ -37,6 +38,35 @@ const REC_MAX_SEC = 60;
 // 开发者工具与低版本微信可能没有 chooseMessageFile：拿不到就整条入口不显示，
 // 免得用户点了只换来一句「不支持」
 const CAN_PICK_CHAT = typeof wx.chooseMessageFile === "function";
+
+/** 提醒重复规则的人读文案（回执卡那一行用，与提醒页同一口径） */
+const REPEAT_TEXT = {
+  none: "",
+  daily: "每天",
+  weekly: "每周",
+  monthly: "每月",
+  yearly: "每年",
+};
+const UNIT_TEXT = { month: "个月", day: "天", hour: "小时", minute: "分钟" };
+
+function remindRepeatText(draft) {
+  if (draft.repeat === "custom") {
+    return `每${draft.intervalValue}${UNIT_TEXT[draft.intervalUnit] || ""}`;
+  }
+  return REPEAT_TEXT[draft.repeat] || "";
+}
+
+/**
+ * 'YYYY-MM-DD HH:mm' → 「今天 15:00」这种短句
+ * 只在字符串空间里切：拿 Date 解服务器墙钟串会跟着本机时区漂移几个小时，
+ * 而提醒时间本来就以服务器为准（与提醒页 prettyTime 同一做法）
+ */
+function prettyAt(at) {
+  const day = String(at).slice(0, 10);
+  const hm = String(at).slice(11, 16);
+  if (day === nowDateTime().slice(0, 10)) return `今天 ${hm}`;
+  return `${day.slice(5)} ${hm}`;
+}
 
 /**
  * 复制出一份带合法后缀的临时文件
@@ -122,6 +152,8 @@ Page({
     voiceApplyable: false,
     // 识别结果已经写进表单了（控制不重复问、也不重复显示覆盖入口）
     voiceApplied: false,
+    // 语音里「只是在要求提醒」的那一类：直接建好了提醒，回执卡留在页内（null=没建或已撤销）
+    remindDone: null,
     playing: false,
     // 随日志留存的录音（相对路径 + 时长秒），详情页据此回放
     audioUrl: "",
@@ -279,10 +311,12 @@ Page({
     const seq = this._transcribeSeq + 1;
     this._transcribeSeq = seq;
     this._transcribing = true;
+    // 新一轮转写先把上一张提醒回执收掉：否则页上会同时挂着「已建提醒」与「识别中」两张卡
     this.setData({
       voiceStatus: "识别中…",
       voiceReason: "",
       voiceRetryable: false,
+      remindDone: null,
     });
     try {
       const { code, data, message } = await api.event.transcribe(target);
@@ -321,8 +355,24 @@ Page({
           text,
           degraded: Boolean(data.degraded),
         };
+        // 后端在同一轮转写里顺手判过意图：整句只是在「要求未来某时提醒我」时直接建提醒，
+        // 不再把这句话塞进日志表单（建完不跳走：fields 仍在 _voiceParsed 里，想改成记一条不用重录）
+        const remind = data.reminder;
+        if (remind && remind.auto) {
+          await this.createReminderFromVoice(remind, text);
+          return;
+        }
+        // 认得出是提醒，但下面那三条本地判据没全部满足（多个时间、时间在过去）：照常填表，
+        // 但要说清「为什么没自动建」，
+        // 否则用户会当成「它怎么没提醒我」去反复重录
+        const remindWhy = remind && remind.why ? remind.why : "";
         // 没碰到已有内容就直接填，碰到了就问一句（录音无论如何都已先留在卡片上）
         this.settleVoiceFields();
+        if (remindWhy) {
+          this.setData({
+            voiceReason: `听着像提醒，但${remindWhy}，先按日志填表`,
+          });
+        }
       } else {
         this.setData({
           voiceStatus: "识别失败，可重试",
@@ -735,6 +785,147 @@ Page({
       voiceStatus: "只保留录音，未改动表单",
       voiceReason: "需要时可点下面的「覆盖表单」把识别结果写进去",
     });
+  },
+
+  // ==================== 语音直接建提醒（不建日志那一条岔路）====================
+
+  /**
+   * 语音识别出「只是一条提醒」时直接建
+   *
+   * 为什么建完不问一句：录这句就是为了省事，再点一下把省下的事又还回去了；
+   * 所以换成「建完给一张可撤销的回执」。微信 toast 不带按钮，撤销只能做在卡片上。
+   * 为什么渠道固定微信：邮件那一路要账号有邮箱或行上填地址，语音里没这句话；
+   * 拿不准就退回那条「到点会提示补授权」的老路，比默默发到别处安全。
+   */
+  async createReminderFromVoice(draft, text) {
+    const payload = {
+      title: draft.title,
+      time: draft.at,
+      repeat: draft.repeat || "none",
+      channel: "wx",
+      // 原话留在备注里：事后看着一条「交报告」想不起是哪句语音建的，比没建还让人困扰
+      remark: String(text || "").slice(0, 200),
+    };
+    if (draft.repeat === "custom") {
+      payload.intervalValue = draft.intervalValue;
+      payload.intervalUnit = draft.intervalUnit;
+    }
+    let res = null;
+    try {
+      res = await api.reminder.create(payload);
+    } catch (err) {
+      res = null;
+    }
+    if (!res || Number(res.code) !== 200) {
+      // 建不成（时间已过/条数上限/登录态失效）不能把这句口述丢了：回落成填表
+      this.setData({
+        voiceStatus: "没能建成提醒，已回落填表",
+        voiceReason: (res && res.message) || "建提醒失败，可手动填写",
+        voiceRetryable: false,
+      });
+      this.settleVoiceFields();
+      return;
+    }
+
+    // 额度不够不拦建提醒（建了总比不建好），但要把「到点可能收不到」说出来；
+    // 订阅弹窗不能在这里自动弹：转写回来那一刻早已离开用户点击的窗口，真机直接会被拒
+    let cfg = {};
+    try {
+      const cfgRes = await api.reminder.config();
+      cfg = (cfgRes && cfgRes.data) || {};
+    } catch (err) {
+      cfg = {};
+    }
+    this._voiceCfg = cfg;
+    const needAuth =
+      !!cfg.templateId && Number(cfg.quota || 0) <= Number(cfg.pending || 0);
+
+    this.setData({
+      remindDone: {
+        id: (res.data && res.data.id) || 0,
+        title: draft.title,
+        timeText: prettyAt(draft.at),
+        repeatText: remindRepeatText(draft),
+        needAuth,
+        busy: false,
+        tip:
+          draft.note ||
+          (needAuth
+            ? "微信提醒次数用完了，点下面「补一次授权」才会推到手机"
+            : ""),
+      },
+      voiceStatus: "已建成提醒，未改动表单",
+      voiceReason: "",
+      // 给一个反悔入口：想「既要提醒也要记一条」时点覆盖表单就行，不必重录
+      voiceApplyable: true,
+      voiceApplied: false,
+    });
+    wx.showToast({ title: "已建提醒", icon: "success" });
+  },
+
+  /**
+   * 回执卡上的「补一次授权」
+   * 必须由这一下点击现调 subscribe.addSubscribeQuota（与提醒页 onSave 同一做法），
+   * 额度到账后后端会把因没额度而挂起来的提醒重新放回队列
+   */
+  async onAuthorizeFromVoice() {
+    const done = this.data.remindDone;
+    if (!done || done.busy) return;
+    const tmplId = (this._voiceCfg || {}).templateId || "";
+    if (!tmplId) {
+      this.setData({ "remindDone.tip": "服务端未配置提醒模板，找服务端看一下" });
+      return;
+    }
+    this.setData({ "remindDone.busy": true });
+    const sub = await subscribe.addSubscribeQuota(tmplId, 1);
+    this.setData({
+      "remindDone.busy": false,
+      "remindDone.needAuth": !sub.ok,
+      "remindDone.tip": sub.ok
+        ? `次数已到账（共 ${sub.quota} 次），到点会推`
+        : sub.reason || "没拿到授权，到点推不到",
+    });
+    // 额度攒到了但账号没绑 openid，等于「有钱没地址」，得单独递一句
+    if (sub.ok && sub.needBind) {
+      this.setData({
+        "remindDone.tip": "次数到账了，但这个账号还没绑微信，去「我的」里绑一下",
+      });
+    }
+  },
+
+  /** 撤销刚才那句语音建的提醒（直接剔行：反正到点还没到，留一条不发的那条在列表里只是碍事）*/
+  onUndoReminder() {
+    const done = this.data.remindDone;
+    if (!done || !done.id) return;
+    wx.showModal({
+      title: "撤销这条提醒",
+      content: `确定删掉「${done.title}」？这是刚才那句语音建的，删掉后到点不会再推送。`,
+      confirmText: "撤销",
+      confirmColor: "#f5222d",
+      success: async (r) => {
+        if (!r.confirm) return;
+        try {
+          const res = await api.reminder.remove(done.id);
+          if (Number(res.code) !== 200) {
+            wx.showToast({ title: res.message || "撤销失败", icon: "none" });
+            return;
+          }
+          // 回执收起，但表单一个字没动；覆盖入口留着，用户想改记一条仍然点得到
+          this.setData({
+            remindDone: null,
+            voiceStatus: "提醒已撤销",
+            voiceApplyable: true,
+          });
+          wx.showToast({ title: "已撤销", icon: "success" });
+        } catch (err) {
+          wx.showToast({ title: "网络异常，请重试", icon: "none" });
+        }
+      },
+    });
+  },
+
+  goReminders() {
+    wx.navigateTo({ url: "/pages/reminders/reminders" });
   },
 
   /** 复制识别出的文字：录的内容经常要捭到别处，先给一个能带走文本的出口 */

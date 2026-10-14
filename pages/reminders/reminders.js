@@ -12,6 +12,7 @@
 const api = require("../../utils/api");
 const auth = require("../../utils/auth");
 const subscribe = require("../../utils/subscribe");
+const calendar = require("../../utils/calendar");
 const { nowDate } = require("../../utils/format");
 
 /** 与后端 REPEAT_RULES 一一对应（顺序即 picker 顺序，后端不认识顺序，只认 value） */
@@ -192,6 +193,13 @@ Page({
     // 选中的渠道需不需要走微信那一路（决定要不要弹订阅框、按钮该叫什么）
     needWxSub: true,
     emailHint: "邮件提醒不消耗订阅次数，到点直接发到下面这个邮箱",
+    // ==================== 手机系统日历（第三只不消耗额度的闹钟）====================
+    // 基础库 <2.15.0 没有写入接口，整行入口直接隐掉，而不是给了再报错
+    calAvailable: calendar.supported(),
+    // 表单里的退化预告（选了才看得见）与写入后的结果说明（放在顶部提示条，toast 装不下长句）
+    calWarn: "",
+    calNote: "",
+    busyCal: false,
     // 表单：新建与编辑共用一套字段（channelIndex 选到邮件时不弹订阅框）
     form: {
       id: 0,
@@ -205,6 +213,9 @@ Page({
       channelIndex: 0,
       email: "",
       remark: "",
+      // 同时写入手机日历：一次性的勾选，不作为行的属性落库（日历里的事件改不掉，
+      // 拿它当「持久状态」会造出一堆「勾着但早就和日历不一致」的假象）
+      calendar: false,
       eventId: 0,
       eventName: "",
       origTime: "",
@@ -263,9 +274,14 @@ Page({
             statusText: st.text,
             statusCls: st.cls,
             enabled: r.status === 1 || r.status === 3,
+            // 本地指纹命中才算「已在日历」：日历里有没有这一条只有端上知道，
+            // 后端那一路压根不关心（也没法关心 —— 微信没有查询已写事件的接口）
+            calWritten: calendar.isWritten(r),
           });
         });
       }
+      // 上一轮的日历写入说明随这次刷新收掉：它只解释「刚才那一下」，不该长期挂在页上
+      patch.calNote = "";
       this.setData(patch);
       this.prefillEmail();
     } catch (err) {
@@ -297,23 +313,28 @@ Page({
 
   onDateChange(e) {
     this.setData({ "form.date": e.detail.value });
+    this.syncCalWarn();
   },
 
   onTimeChange(e) {
     this.setData({ "form.timeStr": e.detail.value });
+    this.syncCalWarn();
   },
 
   onRepeatChange(e) {
     this.setData({ "form.repeatIndex": Number(e.detail.value) });
+    this.syncCalWarn();
   },
 
   /** 间隔数值：input 给的是字符串，提交前才转数字（非法值在 onSave 里统一拦） */
   onIntervalInput(e) {
     this.setData({ "form.intervalValue": e.detail.value });
+    this.syncCalWarn();
   },
 
   onIntervalUnitChange(e) {
     this.setData({ "form.intervalUnitIndex": Number(e.detail.value) });
+    this.syncCalWarn();
   },
 
   onChannelChange(e) {
@@ -378,10 +399,12 @@ Page({
         // 行上没单独填过就展示账号邮箱（后端会自己回落，但让用户看到实际地址更不容易理解错）
         email: row.email || (this.data.cfg || {}).accountEmail || "",
         remark: row.remark || "",
+        calendar: false,
         eventId: row.eventId || 0,
         eventName: row.eventName || "",
       },
     });
+    this.syncCalWarn();
     wx.pageScrollTo({ scrollTop: 0, duration: 200 });
   },
 
@@ -401,10 +424,12 @@ Page({
         channelIndex: 0,
         email: "",
         remark: "",
+        calendar: false,
         eventId: 0,
         eventName: "",
       },
     });
+    this.setData({ calWarn: "" });
   },
 
   /** 拼出后端要的 'YYYY-MM-DD HH:mm'，并在这里挡掉明显不可能的时间（省一次往返） */
@@ -502,6 +527,35 @@ Page({
         wx.showToast({ title: res.message || "保存失败", icon: "none" });
         return;
       }
+      // 3) 勾选了「同时写入手机日历」：在 toast 之前写完，好把结果并进同一句话里 ——
+      //    微信同一时刻只显一个 toast，先弹「已创建」再弹「日历没写进去」等于后者永远看不见
+      let calTip = "";
+      let calBad = false;
+      let calNote = "";
+      if (f.calendar) {
+        const cal = await calendar.addRow({
+          id: (res.data && res.data.id) || f.id,
+          title: payload.title,
+          // 时间没改时提交里没有 time，日历必须按行上的原值写（后端 remind_time 就是它）
+          time: payload.time || f.origTime || time,
+          repeat,
+          intervalValue: payload.intervalValue,
+          intervalUnit: payload.intervalUnit,
+          remark: payload.remark,
+        });
+        if (cal.ok) {
+          calTip = cal.degrade ? "｜日历只写了这一次" : "｜已入手机日历";
+          calNote = [cal.degrade, cal.stale ? "日历里那条旧的得你自己删" : ""]
+            .filter(Boolean)
+            .join("；");
+        } else if (cal.repeated) {
+          calTip = "｜日历里已有这条";
+        } else {
+          calTip = "｜日历没写进去";
+          calBad = true;
+          calNote = cal.reason || "写入日历失败";
+        }
+      }
       // 没拿到订阅授权不算失败（提醒已经入库），但必须把「收不到」说出来
       const mailOnlyTip = channel === "email";
       const okTip = f.id
@@ -509,13 +563,17 @@ Page({
         : mailOnlyTip
           ? "邮件提醒已创建"
           : "提醒已创建";
+      const smooth = (mailOnlyTip || subOk) && !calBad;
       wx.showToast({
-        title: mailOnlyTip || subOk ? okTip : "已保存，但未授权可能收不到",
-        icon: mailOnlyTip || subOk ? "success" : "none",
-        duration: mailOnlyTip || subOk ? 1500 : 2500,
+        title:
+          (mailOnlyTip || subOk ? okTip : "已保存，但未授权可能收不到") + calTip,
+        icon: smooth ? "success" : "none",
+        duration: smooth ? 1500 : 2500,
       });
       this.onCancelForm();
-      this.refresh();
+      // refresh() 会把上一轮的 calNote 收掉，所以这句说明必须排在它后面再写回去
+      await this.refresh();
+      if (calNote) this.setData({ calNote });
     } catch (err) {
       wx.showToast({ title: "保存失败，请稍后重试", icon: "none" });
     } finally {
@@ -587,6 +645,99 @@ Page({
     const withDone = !this.data.withDone;
     this.setData({ withDone });
     this.refresh();
+  },
+
+  // ==================== 手机日历 ====================
+
+  onToggleCalendar(e) {
+    this.setData({ "form.calendar": !!e.detail.value });
+    this.syncCalWarn();
+  },
+
+  /**
+   * 表单里的「日历退化预告」
+   *
+   * 为什么要在选择当下就提醒：微信的 month 档不能落在 29~31 日、也没有「每 N 天」这一档，
+   * 而这两条都是选了才看得见。与其等用户保存完发现「日历里只躺了一条」，不如先把话说在前面。
+   * 后端那一路不受影响（它自己会按规则继续排期），退化只发生在手机日历这一侧。
+   */
+  syncCalWarn() {
+    if (!this.data.calAvailable) return;
+    const f = this.data.form;
+    const repeat = (REPEATS[f.repeatIndex] || REPEATS[0]).value;
+    const plan = calendar.planOf({
+      time: `${f.date || ""} ${f.timeStr || ""}`.trim(),
+      repeat,
+      intervalValue: Number(f.intervalValue) || 0,
+      intervalUnit: (INTERVAL_UNITS[f.intervalUnitIndex] || {}).value || "",
+    });
+    this.setData({ calWarn: plan.degrade || "" });
+  },
+
+  /**
+   * 行内「存入日历」
+   *
+   * 顺序上的两个讲究：
+   * 1. 先去拿授权、再问「已写过要不要再写一条」：wx.showModal 之后再接 authorize 就多一段等待，
+   *    真机上落在点击窗口外就有被拒的风险（订阅弹窗那边是硬规则，这里不赌）；
+   * 2. 拒绝过一次时 authorize 不会再弹窗（微信的规则），只能带用户去设置页补。
+   */
+  async onAddCalendar(e) {
+    if (this.data.busyCal) return;
+    const id = Number(e.currentTarget.dataset.id);
+    const row = this.data.list.filter((r) => r.id === id)[0];
+    if (!row) return;
+    this.setData({ busyCal: true });
+    try {
+      let res = await calendar.addRow(row);
+      if (res.denied) {
+        const granted = await calendar.openSettingForCalendar();
+        if (granted) res = await calendar.addRow(row);
+      }
+      if (res.repeated) {
+        const again = await this.askRewrite(row);
+        if (again) res = await calendar.addRow(row, { force: true });
+      }
+      if (!res.ok && !res.repeated) {
+        await this.refresh();
+        this.setData({ calNote: res.reason || "写入日历失败" });
+        wx.showToast({ title: "日历没写进去", icon: "none" });
+        return;
+      }
+      if (res.ok) {
+        const note = [
+          res.degrade,
+          res.stale ? "日历里那条旧的（时间不同）得你自己删" : "",
+        ]
+          .filter(Boolean)
+          .join("；");
+        await this.refresh();
+        if (note) this.setData({ calNote: note });
+        wx.showToast({
+          title: res.degrade ? "已写入（重复退化）" : "已写入日历",
+          icon: "success",
+        });
+      }
+    } catch (err) {
+      wx.showToast({ title: "写入日历失败，请重试", icon: "none" });
+    } finally {
+      this.setData({ busyCal: false });
+    }
+  },
+
+  /** 已写过还要不要再写一条：微信没有「改/删已写事件」的接口，再写就是两条 */
+  askRewrite() {
+    return new Promise((resolve) => {
+      wx.showModal({
+        title: "这条已在日历里",
+        content:
+          "微信没有修改已写日历事件的接口。要再写一条新的吗？旧的那条需要你自己去日历里删除。",
+        confirmText: "再写一条",
+        cancelText: "不用了",
+        success: (r) => resolve(!!r.confirm),
+        fail: () => resolve(false),
+      });
+    });
   },
 
   // ==================== 额度与自检 ====================

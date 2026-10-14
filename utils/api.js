@@ -193,6 +193,28 @@ const memory = {
       onlyMine: true,
       cache: { key: `memory:person:${name}:${year || "all"}`, ttl: 120 * SEC },
     }),
+  /**
+   * 屏蔽/恢复图谱里的一个人（只影响自己的图谱列表，不动任何日志）
+   * 写完必须清 memory: 这一片客户端缓存：persons 带 5 分钟 TTL，不清的话
+   * 「屏蔽成功了但那个人还在」；后端那边也已做了进程内聚合失效，两边缺一边都不生效
+   */
+  blockPerson: (name) =>
+    http
+      .post("/api/memory/person/block", { name }, { silent: true })
+      .then((res) => {
+        if (Number(res && res.code) === 200) http.invalidateCache("memory:");
+        return res;
+      }),
+  unblockPerson: (name) =>
+    http
+      .post("/api/memory/person/unblock", { name }, { silent: true })
+      .then((res) => {
+        if (Number(res && res.code) === 200) http.invalidateCache("memory:");
+        return res;
+      }),
+  /** 被屏蔽名单（不走缓存：它只有几行，且刚屏蔽完就得看到最新的一行） */
+  personBlocks: () =>
+    http.get("/api/memory/person/blocks", {}, { silent: true, onlyMine: true }),
   footprints: (params = {}) =>
     http.get("/api/memory/footprints", params, {
       silent: true,

@@ -23,6 +23,7 @@
       wx:key="person"
       data-name="{{item.person}}"
       bindtap="selectPerson"
+      bindlongpress="onBlockPerson"
     >
       <view class="p-avatar" style="background: {{item.avatarColor}}; color: {{item.avatarFg}};">{{item.initial}}</view>
       <view class="p-name ellipsis">{{item.person}}</view>
@@ -30,6 +31,20 @@
     </view>
   </scroll-view>
   <empty-state wx:else text="暂无人物数据（需 AI 抽取人物）" />
+
+  <!-- 屏蔽入口只露这一行：横滑卡片本来就只有头像+姓名+条数，再塞一个 ✕ 就会挤掉名字 -->
+  <view class="list-tip" wx:if="{{!listLoading && filtered.length}}">长按卡片可把某人从图谱里隐藏</view>
+  <view class="block-row" wx:if="{{blockedCount}}">
+    <text class="block-toggle" bindtap="toggleBlocks">已屏蔽 {{blockedCount}} 人 {{showBlocks ? '▴' : '▾'}}</text>
+    <view class="block-list" wx:if="{{showBlocks}}">
+      <view class="block-item" wx:for="{{blocks}}" wx:key="person">
+        <text class="block-name ellipsis">{{item.person}}</text>
+        <text class="block-act" data-name="{{item.person}}" bindtap="onUnblock">恢复</text>
+      </view>
+      <!-- 条数与名单不一致时（刚恢复完还没重拉）宁可说一句空，不能给一个看起来像报错的空白块 -->
+      <view class="block-tip" wx:if="{{!blocks.length}}">名单已空，上面的数字下一次进页就会跟着清掉</view>
+    </view>
+  </view>
 
   <!-- 所选人物时间线 -->
   <view class="tl" wx:if="{{selected}}">

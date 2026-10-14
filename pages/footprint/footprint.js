@@ -16,6 +16,11 @@ Page({
     tag: "",
     loading: true,
     selected: null,
+    // 全屏态：地图铺满整屏。orientation 绑到 page-meta 的 page-orientation 实现一键横屏
+    // （基础库 2.12.0+；低版本忽略该属性，退化为竖屏铺满）
+    // 初始留空串表示“不干预”，避免在 PC/iPad 端把窗口锁成竖向
+    fs: false,
+    orientation: "",
   },
 
   onShow() {
@@ -27,6 +32,16 @@ Page({
     this.load(this.data.year, this.data.tag).then(() =>
       wx.stopPullDownRefresh(),
     );
+  },
+
+  onHide() {
+    // 横屏态泄漏防护：离开本页必须回竖屏并恢复 tabBar，否则其它页面会停在横屏
+    this.resetFs();
+  },
+
+  onUnload() {
+    if (this._refitTimer) clearTimeout(this._refitTimer);
+    this.resetFs();
   },
 
   async load(year, tag) {
@@ -158,6 +173,62 @@ Page({
       address: p.address || "",
       scale: 18,
     });
+  },
+
+  /** 进入全屏（横屏） */
+  enterFs() {
+    this.applyFs(true);
+  },
+
+  /** 退出全屏（回竖屏） */
+  exitFs() {
+    this.applyFs(false);
+  },
+
+  /**
+   * 切换全屏态
+   * @param {boolean} fs - 是否全屏
+   * @param {boolean} refit - 切换后是否重算地图视野（页面已不可见时传 false）
+   */
+  applyFs(fs, refit = true) {
+    if (this.data.fs === fs) return;
+    this.setData({
+      fs,
+      orientation: fs ? "landscape" : "portrait",
+    });
+    // 横屏下 tabBar 会吃掉一条地图高度，全屏期间收起，退出时恢复
+    if (fs) {
+      wx.hideTabBar({ animation: false });
+    } else {
+      wx.showTabBar({ animation: false });
+    }
+    if (refit) this.refitMap();
+  },
+
+  /** 静默复位，只用于 onHide/onUnload 防横屏泄漏 */
+  resetFs() {
+    this.applyFs(false, false);
+  },
+
+  /** 可视区尺寸变了要重新贴合点位，否则横屏后点位会挤在半边屏幕外 */
+  refitMap() {
+    const points = this.data.includePoints;
+    if (!points || !points.length) return;
+    // 等 setData 与旋转动画落地再算，早了会按旧尺寸出缩放
+    if (this._refitTimer) clearTimeout(this._refitTimer);
+    this._refitTimer = setTimeout(() => {
+      this._refitTimer = null;
+      wx.createMapContext("footprintMap").includePoints({
+        points,
+        padding: [40, 40, 40, 40],
+      });
+    }, 320);
+  },
+
+  /** page-meta 的 resize：横竖屏切换落地后重新贴合（键盘弹起也会触发 resize，非全屏时不干预用户当前的缩放） */
+  onPageResize() {
+    if (!this.data.fs) return;
+    this.refitMap();
   },
 
   goDetail(e) {
