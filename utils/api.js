@@ -220,7 +220,10 @@ const memory = {
       silent: true,
       onlyMine: true,
       cache: {
-        key: `memory:foot:${params.year || "all"}:${params.tag || ""}`,
+        // key 必须带页码：同一过滤条件第 2 页不额外带参数就会命中第 1 页的缓存
+        key: `memory:foot:${params.year || "all"}:${params.tag || ""}:p${
+          params.page || 1
+        }`,
         ttl: 300 * SEC,
       },
     }),

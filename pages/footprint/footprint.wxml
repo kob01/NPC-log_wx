@@ -61,7 +61,9 @@
   </view>
 
   <loading wx:if="{{loading}}" />
-  <view class="hint-bar empty-hint" wx:if="{{!loading && !markers.length}}">暂无带坐标的足迹</view>
+  <view class="hint-bar empty-hint" wx:if="{{!loading && !markers.length}}">
+    {{year && allTotal > 0 ? year + ' 年暂无足迹，可切「全部」看看' : '暂无带坐标的足迹'}}
+  </view>
 
   <!-- 地点列表 -->
   <view class="list" wx:if="{{points.length && !fs}}">
@@ -71,7 +73,11 @@
         <view class="li-name ellipsis">{{item.event}}</view>
         <view class="li-meta ellipsis">{{item.time}} · {{item.address || item.position}}</view>
       </view>
-      <image class="li-thumb" wx:if="{{item.thumb}}" src="{{item.thumb}}" mode="aspectFill" />
+      <image class="li-thumb" wx:if="{{item.thumb}}" src="{{item.thumb}}" mode="aspectFill" lazy-load />
     </view>
+    <!-- 分页脚标：30 条一批自动续拉；触顶时提示上限，到底后与时间线同款「没有更多」 -->
+    <view class="list-foot" wx:if="{{loadingMore}}">加载中…</view>
+    <view class="list-foot limit-tip" wx:elif="{{limitReached}}">已显示前 {{maxPoints}} 条，更多足迹请切换年份或标签</view>
+    <view class="list-foot" wx:elif="{{!hasMore}}">— 没有更多了 —</view>
   </view>
 </view>

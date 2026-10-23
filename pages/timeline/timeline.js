@@ -1,11 +1,66 @@
 const api = require("../../utils/api");
 const auth = require("../../utils/auth");
 const audioHub = require("../../utils/audioHub");
+const CFG = require("../../config");
 const { dayKey } = require("../../utils/format");
 // 分类/评价候选与编辑页 picker 同一份，不在此重复定义（缘由见 utils/options.js）
 const { TYPE_OPTIONS, RATING_OPTIONS } = require("../../utils/options");
 
 const PAGE_SIZE = 10;
+
+// ==================== 首屏缓存：冷启动先出内容，再后台校正 ====================
+// 只缓存「无游标、无筛选、无搜索」的第一页，key 带查看范围；写入时记 userId 与时间戳，
+// 读取时任一项对不上就整份丢弃。前缀 eventList: 与 api.js 的写后失效
+// （invalidateCache("eventList:")）对齐：新增/编辑/删除/置顶后缓存自动作废。
+const FIRST_PAGE_CACHE_TTL = 3 * 24 * 60 * 60 * 1000;
+// 体积保护：正常一页 10 条约 10KB，超过这条线说明数据异常，宁可不写
+const FIRST_PAGE_CACHE_MAX_BYTES = 64 * 1024;
+
+function firstPageCacheKey(scope) {
+  return CFG.CACHE_KEY_PREFIX + "eventList:first:" + (scope || "all");
+}
+
+/** 当前登录用户 id：换号/退出后上一个人的缓存不能复用 */
+function currentUserId() {
+  const user = typeof auth.getUser === "function" ? auth.getUser() : null;
+  if (user && user.id != null) return Number(user.id);
+  return typeof auth.getUserId === "function" ? Number(auth.getUserId() || 0) : 0;
+}
+
+/** 读首屏快照：任何一项校验不过都返回 null（由调用方回落到骨架屏 + 请求） */
+function readFirstPageCache(scope) {
+  try {
+    const raw = wx.getStorageSync(firstPageCacheKey(scope));
+    // 落盘的是 JSON 串（只序列化一次）；对象形态兼容旧数据
+    const hit = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (!hit || !Array.isArray(hit.items) || !hit.items.length) return null;
+    if (Date.now() - Number(hit.ts || 0) > FIRST_PAGE_CACHE_TTL) return null;
+    if (Number(hit.userId || 0) !== currentUserId()) return null;
+    return {
+      items: hit.items,
+      pinned: Array.isArray(hit.pinned) ? hit.pinned : [],
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+function writeFirstPageCache(scope, items, pinned) {
+  if (!Array.isArray(items) || !items.length) return;
+  try {
+    const text = JSON.stringify({
+      v: 1,
+      ts: Date.now(),
+      userId: currentUserId(),
+      items,
+      pinned: Array.isArray(pinned) ? pinned : [],
+    });
+    if (text.length > FIRST_PAGE_CACHE_MAX_BYTES) return;
+    wx.setStorageSync(firstPageCacheKey(scope), text);
+  } catch (e) {
+    /* 存储不可用/写满时静默降级：缓存只是加速，不影响列表本身 */
+  }
+}
 
 // ==================== 结构化筛选（与搜索互斥） ====================
 // 时间快捷档：除 all/custom 外都换算成本地日期区间（含当天）
@@ -24,13 +79,22 @@ const FILTER_SCOPES = [
   { value: "private", label: "仅自己可见" },
   { value: "others", label: "只看他人" },
 ];
-// 内容形态：key 与参数名一一对应（image → hasImage），抽屉与请求都从这里取
+// 内容形态：每个形态都有「有/无」两档，同一形态两档互斥（再点一次取消）。
+// field → 请求参数 hasImage/hasAudio/hasLocation，want='1' 有 / '0' 无
 const FILTER_MEDIA = [
-  { key: "image", label: "有图片" },
-  { key: "audio", label: "有录音" },
-  { key: "link", label: "有链接" },
-  { key: "location", label: "有地点" },
+  { field: "image", want: "1", label: "有图片" },
+  { field: "image", want: "0", label: "无图片" },
+  { field: "audio", want: "1", label: "有录音" },
+  { field: "audio", want: "0", label: "无录音" },
+  { field: "location", want: "1", label: "有地点" },
+  { field: "location", want: "0", label: "无地点" },
 ];
+// 形态字段 → 列表接口参数名（只在这两处之间做映射，不再散写在拼参数里）
+const MEDIA_PARAM = {
+  image: "hasImage",
+  audio: "hasAudio",
+  location: "hasLocation",
+};
 
 // 筛选入口图标（base64 内联，与查看范围按钮同一套写法）：灰=未筛选，蓝=已筛选
 const FILTER_ICON =
@@ -66,7 +130,8 @@ function emptyFilter() {
     time: "all",
     start: "",
     end: "",
-    media: { image: false, audio: false, link: false, location: false },
+    // 内容形态三态："" 不限 / "1" 有 / "0" 无
+    media: { image: "", audio: "", location: "" },
     types: [],
     ratings: [],
     tags: [],
@@ -168,7 +233,10 @@ Page({
     typeChips: TYPE_OPTIONS.map((v) => ({ value: v, on: false })),
     ratingChips: RATING_OPTIONS.map((v) => ({ value: v, on: false })),
     mediaChips: FILTER_MEDIA.map((o) => ({
-      key: o.key,
+      // wx:key 必须唯一：同一 field 有「有/无」两档
+      key: o.field + ":" + o.want,
+      field: o.field,
+      want: o.want,
       label: o.label,
       on: false,
     })),
@@ -197,6 +265,11 @@ Page({
 
   // 完整条目流（不进 data，见 data 上方注释）：合并去重、长按查找、置顶移位都在这里做
   _entries: [],
+  // 首屏请求在途标记：loading 在「已有内容」时不再置 true（否则整屏 loading 会盖住列表），
+  // 重入保护改由这个实例字段负责
+  _inflight: false,
+  // 乐观插入的那条（编辑页写成功时塞进 globalData）：首屏替换后要能把它补回来
+  _pendingInsert: null,
   // 行对象缓存 id → { src, first, row }：buildGroups 靠它复用没变的行，
   // 配合 renderGroups 的路径级下发，翻页时已渲染的卡片不会收到新数据、observer 不重跑
   _rowsById: null,
@@ -377,7 +450,12 @@ Page({
       if (label) brief.push({ key: "time", label });
     }
     FILTER_MEDIA.forEach((o) => {
-      if (f.media[o.key]) brief.push({ key: "media:" + o.key, label: o.label });
+      if (f.media[o.field] === o.want) {
+        brief.push({
+          key: "media:" + o.field + ":" + o.want,
+          label: o.label,
+        });
+      }
     });
     // 分类/评价全部平铺，不再合并成「分类 x 项」：胶囊现在只当进抽屉的入口，
     // 平铺才能一眼看出到底选了哪几档
@@ -417,17 +495,22 @@ Page({
       params.tagMode = "or";
     }
     if (f.authorId) params.authorId = f.authorId;
-    if (f.media.image) params.hasImage = 1;
-    if (f.media.audio) params.hasAudio = 1;
-    if (f.media.link) params.hasLink = 1;
-    if (f.media.location) params.hasLocation = 1;
+    // 内容形态：三态 → hasXxx=1/0；未选不传（后端据此不拼条件）
+    Object.keys(MEDIA_PARAM).forEach((field) => {
+      const want = f.media[field];
+      if (want === "1" || want === "0") {
+        params[MEDIA_PARAM[field]] = Number(want);
+      }
+    });
     return params;
   },
 
   /** 抽屉里改完条件后同步 chips 的选中态 + 草稿条件数 */
   buildDraftChips() {
     const f = this.data.filter;
-    const mediaOn = FILTER_MEDIA.filter((o) => f.media[o.key]).length;
+    const mediaOn = FILTER_MEDIA.filter(
+      (o) => f.media[o.field] === o.want,
+    ).length;
     const draftCount =
       (f.time !== "all" ? 1 : 0) +
       mediaOn +
@@ -446,9 +529,11 @@ Page({
         on: f.ratings.indexOf(v) >= 0,
       })),
       mediaChips: FILTER_MEDIA.map((o) => ({
-        key: o.key,
+        key: o.field + ":" + o.want,
+        field: o.field,
+        want: o.want,
         label: o.label,
-        on: !!f.media[o.key],
+        on: f.media[o.field] === o.want,
       })),
     });
     this.buildTagChips();
@@ -478,10 +563,12 @@ Page({
   },
 
   onToggleMedia(e) {
-    const key = e.currentTarget.dataset.key;
-    const patch = {};
-    patch["filter.media." + key] = !this.data.filter.media[key];
-    this.setData(patch);
+    const field = e.currentTarget.dataset.key;
+    const want = String(e.currentTarget.dataset.want || "1");
+    const media = Object.assign({}, this.data.filter.media);
+    // 再点同一档 = 取消；点另一档 = 直接切换（「有」「无」天然互斥）
+    media[field] = media[field] === want ? "" : want;
+    this.setData({ "filter.media": media });
     this.buildDraftChips();
   },
 
@@ -607,8 +694,11 @@ Page({
    * 到达一次的 touchstart，代价从 60 次/秒降到 1 次/手势（滑动必定从触摸开始，体感一致）。
    */
   onListTouch() {
-    if (this.data.searchExpanded && !this.data.keyword) {
-      this.collapseSearchBox();
+    if (this.data.searchExpanded) {
+      // 先落盘再判要不要收（不打断待发的自动搜索）：用户可能刚打完字就滑动，
+      // 400ms 防抖还没到，data.keyword 还是空 —— 只看 data 会把有词的框收掉
+      this.flushKeyword(false);
+      if (!this.data.keyword) this.collapseSearchBox();
     }
   },
 
@@ -991,7 +1081,8 @@ Page({
   },
 
   onReachBottom() {
-    if (!this.data.searchMode && this.data.hasMore && !this.data.loading) {
+    // 翻页时 loading 不再置 true（见 loadMore），防重入改看在途标记
+    if (!this.data.searchMode && this.data.hasMore && !this._inflight) {
       this.loadMore();
     }
   },
@@ -1136,9 +1227,15 @@ Page({
   /** 加载下一页（游标模式） */
   async loadMore() {
     if (this.data.searchMode) return;
+    // 重入保护：loading 在「已有内容」时不再置 true，不能拿它当锁
+    if (this._inflight) return;
+    this._inflight = true;
+    const isFirst = this._cursor == null;
     const version = this._version;
     try {
-      this.setData({ loading: true });
+      // 手上已有内容（首屏快照/上一页）时保持 loading=false：
+      // 整屏 loading 会把刚渲染出来的列表盖住，秒开就白做了
+      if (!this._entries.length) this.setData({ loading: true });
       // 结构化筛选参数与分页参数合并；筛选态不传 withPins：
       // 置顶是独立查询、不吃任何检索条件，混进筛选结果就是三条不相干的卡片
       const params = Object.assign(
@@ -1146,12 +1243,10 @@ Page({
         this.buildFilterParams(),
       );
       if (!this.data.hasFilter) params.withPins = 1;
-      if (this._cursor != null) {
-        params.beforeId = this._cursor;
-        // 游标翻页时本列表只用 items.length 判有没有下一页，
-        // 让后端跳过带可见性子句的 COUNT(*)（突发时这一句最贵）
-        params.withTotal = 0;
-      }
+      // 本列表从不读 total（有没有下一页只看 items.length），首屏也一并跳过 COUNT：
+      // 带可见性 OR/EXISTS 的 COUNT 是全范围扫，是这条链路上最贵的一句
+      params.withTotal = 0;
+      if (!isFirst) params.beforeId = this._cursor;
       const { code, data } = await api.event.page(
         params,
         auth.getFilterScope(),
@@ -1159,7 +1254,11 @@ Page({
       if (version !== this._version) return; // 已被新的 reset/搜索覆盖，丢弃过期结果
       if (Number(code) === 200 && data) {
         const items = (data.items || []).map(this.fromListItem);
-        const merged = this.mergeUnique(this._entries, items);
+        // 首屏是「替换」不是「合并」：快照里可能留着已被删除的旧条目，
+        // 合并会让幽灵卡片永远挂在列表上；翻页仍然合并去重
+        const merged = isFirst
+          ? this.keepPendingInsert(items)
+          : this.mergeUnique(this._entries, items);
         if (items.length) {
           // 游标取「本页最后一条」而不是本页最小 id：后端按 event_time 倒序返回，
           // 最后一条就是本页时间最旧的锚点。取 min(id) 会让「id 大但时间是补记的旧日期」
@@ -1178,6 +1277,14 @@ Page({
           pinnedEntries: pinnedItems,
           hasMore: items.length >= PAGE_SIZE,
         });
+        // 纯列表首屏落地后留一份快照，供下次冷启动先出内容
+        if (isFirst && !this.data.hasFilter) {
+          writeFirstPageCache(
+            auth.getFilterScope(),
+            data.items || [],
+            data.pinned || [],
+          );
+        }
       } else {
         // 业务错误（HTTP 200 + code!==200）不等于「没有更多」：留着 hasMore、记一次失败，
         // 让用户还能靠下拉/翻页重试（与 catch 里的网络异常同一口径，别一次报错就封死到底）
@@ -1188,7 +1295,11 @@ Page({
       // 之前这里把 hasMore 永久置 false，一次限流就会让用户到底了。
       if (version === this._version) this._loadFailed = true;
     } finally {
-      if (version === this._version) this.setData({ loading: false });
+      // 只有「这一发」能解锁：reset 期间旧请求回来不得把新请求的锁打开
+      if (version === this._version) {
+        this._inflight = false;
+        this.setData({ loading: false });
+      }
     }
   },
 
@@ -1198,29 +1309,66 @@ Page({
     return [...prev, ...incoming.filter((e) => !ids.has(String(e.id)))];
   },
 
-  /** 重置并重新加载时间线（loading 一起置 true，避免清列表后空态闪一下） */
+  /**
+   * 首屏替换时把「乐观插入」的那条补回来：
+   * 它的时间可能比第一页还早（用户手填了旧日期），服务器第一页里没有，不能因此丢掉
+   */
+  keepPendingInsert(items) {
+    const pending = this._pendingInsert;
+    if (!pending) return items;
+    if (items.some((e) => String(e.id) === String(pending.id))) return items;
+    return [pending, ...items];
+  },
+
+  /** 重置并重新加载时间线（有快照先用快照撑住首帧，再后台校正） */
   async reset() {
     this._version += 1;
     this._cursor = null;
     this._loadFailed = false;
+    // 在途请求的锁作废：reset 后要能立刻发新请求（旧请求回来时按版本号自行退出）
+    this._inflight = false;
     // 取消未触发的搜索防抖：既然要回到全量列表，就别让上一条待发的关键词又冒出来搜一遍
     if (this._searchTimer) {
       clearTimeout(this._searchTimer);
       this._searchTimer = null;
     }
+    // 没落盘的搜索词草稿一起作废：reset 的目标态就是无词全量，不能被停笔落盘盖回去
+    this._kwDraft = null;
     this._entries = [];
+    // 乐观插入只对紧接着的这一次首屏负责，不能跨轮残留
+    this._pendingInsert = null;
     // 行对象缓存跟着条目流一起作废，免得复用上一轮列表的行
     this._rowsById = null;
-    this.setData({
-      groups: [],
-      pinnedEntries: [],
-      hasMore: true,
-      searchMode: false,
-      // 回到纯列表就清掉搜索框里的残留词：否则会出现「框里还写着关键词、
-      // 列表却已经是全量」的错位（下拉刷新 / 切范围 / 编辑后重进都会触发）
-      keyword: "",
-      loading: true,
-    });
+    // 首屏快照只在「无筛选」的纯列表视图下才有对应内容；命中就先渲染，
+    // 随后那次请求把整页替换成最新——用户看到的是「秒开 + 后台校正」而不是白屏
+    const cached = this.data.hasFilter
+      ? null
+      : readFirstPageCache(auth.getFilterScope());
+    if (cached) {
+      const entries = cached.items.map(this.fromListItem);
+      this._entries = entries;
+      // 游标保持 null：这份快照还没与服务器对齐，不能拿来当翻页锚点
+      this.setData({
+        groups: this.buildGroups(entries),
+        pinnedEntries: cached.pinned.map(this.fromListItem),
+        hasMore: entries.length >= PAGE_SIZE,
+        searchMode: false,
+        keyword: "",
+        // 有内容就不能再点整屏 loading，否则它会把刚渲染的列表盖住
+        loading: false,
+      });
+    } else {
+      this.setData({
+        groups: [],
+        pinnedEntries: [],
+        hasMore: true,
+        searchMode: false,
+        // 回到纯列表就清掉搜索框里的残留词：否则会出现「框里还写着关键词、
+        // 列表却已经是全量」的错位（下拉刷新 / 切范围 / 编辑后重进都会触发）
+        keyword: "",
+        loading: true,
+      });
+    }
     // 先插本地刚保存的记录（乐观更新）：后端此时可能正在排队，
     // 先把用户自己刚写的那条展示出来，再后台拉第一页校正
     this.applyPendingInsert();
@@ -1237,12 +1385,11 @@ Page({
     if (this._entries.some((e) => String(e.id) === String(pending.id))) return;
     // 本地这条必是本人刚写的，补上 isMine：后端第一页回来前它已经在列表里，
     // 否则刚存的那条会先不出竖条，拉到数据后再闪一下
-    const merged = [
-      Object.assign({}, pending, { isMine: true }),
-      ...this._entries,
-    ];
-    this._entries = merged;
-    this.renderGroups(this.buildGroups(merged));
+    const entry = Object.assign({}, pending, { isMine: true });
+    // 记住它：首屏替换（isFirst 分支）时用它兜底，避免「刚写完的日志凭空消失」
+    this._pendingInsert = entry;
+    this._entries = [entry, ...this._entries];
+    this.renderGroups(this.buildGroups(this._entries));
   },
 
   // ==================== 长按卡片：置顶 / 取消置顶 / 编辑 / 删除 ====================
@@ -1384,19 +1531,42 @@ Page({
   },
 
   onKeywordInput(e) {
-    this.setData({ keyword: e.detail.value });
-    // 输入后 400ms 自动搜（清空则回到列表），避免每条关键字都靠用户点一下搜索重复发请求
+    // 草稿先攒在实例上，停笔 400ms 一次落盘再搜：value 绑定的输入框逐字符 setData
+    // 等于每键一次跨线程回灌，还会打断中文输入法组词（同 edit.js 的输入草稿方案）。
+    // 落盘与自动搜索共用这一个定时器，不再各跑各的
+    this._kwDraft = e.detail.value;
     if (this._searchTimer) clearTimeout(this._searchTimer);
     this._searchTimer = setTimeout(() => {
       this._searchTimer = null;
+      this.flushKeyword(false);
       const kw = (this.data.keyword || "").trim();
       if (kw) this.onSearch();
       else if (this.data.searchMode) this.onClear();
     }, 400);
   },
 
+  /**
+   * 把搜索词草稿一次写进 data。keyword 的所有读取方（搜索/收起/触摸列表）都得先过这里，
+   * 否则会出现「框里看着有词、data 里还是空」的错位。
+   * @param {boolean} cancelTimer - 是否连 400ms 待发的自动搜索一起取消：
+   *   主动检索（bindconfirm）要取消，触摸列表（只想收搜索框）不能取消，否则这次输入就不搜了
+   */
+  flushKeyword(cancelTimer) {
+    if (cancelTimer && this._searchTimer) {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = null;
+    }
+    if (this._kwDraft == null) return;
+    const v = this._kwDraft;
+    this._kwDraft = null;
+    if (v !== this.data.keyword) this.setData({ keyword: v });
+  },
+
   /** 搜索（记忆混合检索）：防抖 + 禁止重复提交，避免突发时把 AI 接口点成一排并发 */
   async onSearch() {
+    // 主动检索时草稿必须先落盘（键盘「搜索」键/点放大镜都可能停在停笔 400ms 之内），
+    // 顺带取消还没到点的自动搜索，避免同一个词二次请求
+    this.flushKeyword(true);
     const q = (this.data.keyword || "").trim();
     if (!q) {
       this.setData({ searchMode: false });
@@ -1459,6 +1629,8 @@ Page({
   },
 
   collapseSearch() {
+    // 失焦收起前先落盘：草稿里还有词就不能收（收起会 reset 清词，等于把刚打的字弄丢）
+    this.flushKeyword(true);
     if (this.data.keyword) return;
     this.collapseSearchBox();
   },

@@ -27,6 +27,18 @@ Page({
 
   // 输入防抖定时器（不进 data，避免无谓的 setData）
   _searchTimer: null,
+  // 输入草稿（不进 data）：value 绑定的输入框逐字符 setData 等于每键一次跨线程回灌，
+  // 落盘时机见 onQuestionInput / onKeywordInput
+  _qDraft: null,
+  _kwDraft: null,
+
+  onUnload() {
+    // 防抖定时器挂着页面方法，不摘会往已卸载的页 setData
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = null;
+    }
+  },
 
   onShow() {
     if (!auth.checkLogin()) return;
@@ -48,10 +60,21 @@ Page({
   },
 
   onQuestionInput(e) {
-    this.setData({ question: e.detail.value });
+    // 草稿先攒在实例上，点「提问」时一次落盘：textarea 逐字符 setData 等于
+    // 每键一次跨线程回灌 + auto-height 重排（同 edit.js 的输入草稿方案）
+    this._qDraft = e.detail.value;
+  },
+
+  /** 把未落盘的提问草稿写进 data：onAsk 是唯一读取方，落笔后立刻点按钮也能读到全文 */
+  flushQuestion() {
+    if (this._qDraft == null) return;
+    const v = this._qDraft;
+    this._qDraft = null;
+    if (v !== this.data.question) this.setData({ question: v });
   },
 
   async onAsk() {
+    this.flushQuestion(); // 停笔立刻点「提问」：草稿先落盘，不能按 data 里的旧值搜
     const q = (this.data.question || "").trim();
     if (!q) {
       wx.showToast({ title: "请输入你的问题", icon: "none" });
@@ -102,16 +125,31 @@ Page({
   },
 
   onKeywordInput(e) {
-    this.setData({ keyword: e.detail.value });
-    // 输入停顿 400ms 自动搜：避免用户反复点“搜索”造成并发 AI 检索请求
+    // 草稿先攒在实例上，停笔 400ms 一次落盘再搜（同 timeline 搜索框）：
+    // 逐字符 setData 等于每键一次跨线程回灌，还会打断中文输入法组词
+    this._kwDraft = e.detail.value;
     if (this._searchTimer) clearTimeout(this._searchTimer);
     this._searchTimer = setTimeout(() => {
       this._searchTimer = null;
+      this.flushKeyword();
       if ((this.data.keyword || "").trim()) this.onSearch();
     }, 400);
   },
 
+  /** 把搜索词草稿一次写进 data：onSearch（bindconfirm/搜索按钮）与自动搜索都先过这里 */
+  flushKeyword() {
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = null;
+    }
+    if (this._kwDraft == null) return;
+    const v = this._kwDraft;
+    this._kwDraft = null;
+    if (v !== this.data.keyword) this.setData({ keyword: v });
+  },
+
   async onSearch(size) {
+    this.flushKeyword(); // 停笔立刻点「搜索」/键盘确认：草稿先落盘，顺带取消待发的自动搜索
     const q = (this.data.keyword || "").trim();
     if (!q) {
       wx.showToast({ title: "请输入搜索关键词", icon: "none" });
@@ -142,6 +180,12 @@ Page({
 
   onTagClick(e) {
     const tag = e.currentTarget.dataset.tag;
+    // 程序化写词前作废草稿与待发的自动搜索：否则停笔落盘会把标签盖回手打的旧词
+    this._kwDraft = null;
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer);
+      this._searchTimer = null;
+    }
     this.setData({ keyword: tag });
     this.onSearch(8);
   },

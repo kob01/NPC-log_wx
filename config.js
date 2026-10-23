@@ -40,7 +40,7 @@ module.exports = {
   MANUAL_LOGOUT_KEY: "npc_manual_logout",
   // ==================== 访问打点（见 utils/appVisit.js）====================
   // 总开关：置 false 就彻底不上报（只改端上，不动后端也能关）
-  VISIT_TRACK: true,
+  VISIT_TRACK: false,
   // 当前这次打开的 {visitKey, closeKey}：onHide 收尾后用掉即清。
   // 必须落存储而不是只放内存：小程序被系统回收时 JS 模块会重启，
   // 而「上次根本没机会上报关闭」正是最需要补记的那种情况

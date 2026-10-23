@@ -196,19 +196,6 @@
     </view>
   </view>
 
-  <!-- 作品链接 -->
-  <view class="form-item">
-    <view class="label">作品链接</view>
-    <view class="link-row" wx:for="{{links}}" wx:key="index">
-      <picker class="link-platform" mode="selector" range="{{platformLabels}}" value="{{item.platformIndex}}" data-index="{{index}}" bindchange="onLinkPlatform">
-        <view class="picker-box small">{{platformLabels[item.platformIndex]}}</view>
-      </picker>
-      <input class="link-url" placeholder="链接地址" value="{{item.url}}" data-index="{{index}}" bindinput="onLinkUrl" />
-      <text class="link-del" data-index="{{index}}" catchtap="removeLink">✕</text>
-    </view>
-    <view class="link-add" bindtap="addLink">＋ 添加链接</view>
-  </view>
-
   <view class="footer-space"></view>
 
   <view class="submit-bar">

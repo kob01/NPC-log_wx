@@ -143,31 +143,6 @@
   word-break: break-all;
 }
 
-.link-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid var(--divider);
-}
-
-.link-title {
-  flex: 1;
-  font-size: 28rpx;
-  color: var(--primary);
-}
-
-/* 最后一行不再拖一条无意义的分隔线 */
-.link-item-last {
-  border-bottom: none;
-}
-
-.link-copy {
-  font-size: 24rpx;
-  color: var(--text-3);
-  margin-left: 20rpx;
-}
-
 /* 定时提醒入口（整张卡就是按钮） */
 .rm-entry {
   display: flex;

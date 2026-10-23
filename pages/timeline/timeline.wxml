@@ -246,14 +246,15 @@
       <view class="fs-group">
         <view class="fs-group-head">
           <text class="fs-name">内容形态</text>
-          <text class="fs-hint">多选时需同时具备</text>
+          <text class="fs-hint">同一形态选有或无，多选需同时满足</text>
         </view>
         <view class="fs-switches">
           <view
             class="fs-switch {{item.on ? 'on' : ''}}"
             wx:for="{{mediaChips}}"
             wx:key="key"
-            data-key="{{item.key}}"
+            data-key="{{item.field}}"
+            data-want="{{item.want}}"
             bindtap="onToggleMedia"
           >
             <text>{{item.label}}</text>

@@ -77,15 +77,6 @@
     <view class="body-text">{{detail.rating}}</view>
   </view>
 
-  <!-- 作品链接 -->
-  <view class="card" wx:if="{{detail.links.length}}">
-    <view class="section-title">🔗 作品链接</view>
-    <view class="link-item {{last ? 'link-item-last' : ''}}" wx:for="{{detail.links}}" wx:key="id" data-url="{{item.url}}" bindtap="onCopyLink">
-      <view class="link-title ellipsis">{{item.title || item.url}}</view>
-      <text class="link-copy">复制</text>
-    </view>
-  </view>
-
   <!-- 定时提醒入口：只能给本人可编辑的日志设（后端同样会按归属拦住） -->
   <view class="card rm-entry" wx:if="{{canEdit}}" bindtap="goReminders">
     <text class="rm-entry-text">🔔 给这条日志设个提醒</text>

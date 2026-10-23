@@ -10,8 +10,6 @@ const { TYPE_OPTIONS, RATING_OPTIONS } = require("../../utils/options");
 const typeOptions = TYPE_OPTIONS;
 const ratingOptions = RATING_OPTIONS;
 const visibilityOptions = ["仅自己可见", "组织可见"];
-const platformLabels = ["抖音", "小红书", "其他"];
-const platformValues = ["douyin", "xiaohongshu", "other"];
 
 // 与后端 .env 的 MAX_UPLOAD_MB 默认值对齐：超上限在本地就挡下，省一趟注定失败的上传
 const MAX_UPLOAD_MB = 10;
@@ -205,8 +203,6 @@ Page({
     visibilityOptions,
     visibilityIndex: 0,
     orgOptions: [],
-    links: [],
-    platformLabels,
     submitting: false,
     // 录音信息（悬浮卡片）
     voice: null,
@@ -1061,14 +1057,6 @@ Page({
         thumbUrl: img.thumbUrl || img.url,
         displayUrl: resolveFileUrl(img.thumbUrl || img.url),
       }));
-      const links = (data.links || []).map((l) => ({
-        platformIndex: Math.max(
-          0,
-          platformValues.indexOf(l.platform || "other"),
-        ),
-        url: l.url || "",
-        title: l.title || "",
-      }));
       const visibilityIndex = Number(data.visibility) === 1 ? 1 : 0;
       const visibleOrgIds = data.visibleOrgIds || [];
       const orgOptions = this.data.orgOptions.map((o) =>
@@ -1095,7 +1083,6 @@ Page({
           lat: data.lat != null ? data.lat : null,
         },
         images,
-        links,
         visibilityIndex,
         orgOptions,
         // 已有录音原样保留，否则保存时会被置空
@@ -1550,46 +1537,10 @@ Page({
     this.setData({ orgOptions });
   },
 
-  addLink() {
-    this.setData({
-      links: this.data.links.concat([{ platformIndex: 0, url: "", title: "" }]),
-    });
-  },
-
-  removeLink(e) {
-    const index = e.currentTarget.dataset.index;
-    const links = this.data.links.slice();
-    links.splice(index, 1);
-    this.setData({ links });
-  },
-
-  onLinkPlatform(e) {
-    const index = e.currentTarget.dataset.index;
-    const links = this.data.links.slice();
-    links[index] = Object.assign({}, links[index], {
-      platformIndex: Number(e.detail.value),
-    });
-    this.setData({ links });
-  },
-
-  onLinkUrl(e) {
-    const index = e.currentTarget.dataset.index;
-    const links = this.data.links.slice();
-    links[index] = Object.assign({}, links[index], { url: e.detail.value });
-    this.setData({ links });
-  },
-
   buildPayload() {
     // 先把停笔中的输入草稿落盘：从这里开始读的都是 data
     this.flushInputs();
     const d = this.data;
-    const validLinks = d.links
-      .filter((l) => l.url && l.url.trim())
-      .map((l) => ({
-        platform: platformValues[l.platformIndex] || "other",
-        url: l.url.trim(),
-        title: (l.title || "").trim(),
-      }));
     const payload = {
       time: `${d.date} ${d.timeStr}`,
       event: d.event,
@@ -1612,7 +1563,6 @@ Page({
         thumbUrl: img.thumbUrl || img.url,
         sort: i,
       })),
-      links: validLinks,
     };
     // 只在「挂着录音」或「本次主动移除」时带录音字段：
     // 未迁移 event_audio_url 列的环境也不会因为无录音的常规保存而写失败
@@ -1642,13 +1592,6 @@ Page({
     }
     if (!this.data.event.trim()) {
       wx.showToast({ title: "请填写事件标题", icon: "none" });
-      return;
-    }
-    const badLink = this.data.links.some(
-      (l) => l.url && l.url.trim() && !/^https?:\/\/.+/.test(l.url.trim()),
-    );
-    if (badLink) {
-      wx.showToast({ title: "作品链接需以 http(s):// 开头", icon: "none" });
       return;
     }
     try {

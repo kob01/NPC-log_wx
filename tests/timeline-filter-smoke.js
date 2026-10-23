@@ -349,7 +349,9 @@ function dateStr(d) {
   apiState.reset();
   p = newPage();
   p.openFilter();
-  p.onToggleMedia({ currentTarget: { dataset: { key: "audio" } } });
+  p.onToggleMedia({
+    currentTarget: { dataset: { key: "audio", want: "1" } },
+  });
   p.applyFilter();
   await idle();
   call = lastPage();
@@ -381,30 +383,56 @@ function dateStr(d) {
     JSON.stringify(call && call.params),
   );
 
+  // 有/无互斥：先点「有图片」再点「无图片」，最终只带 hasImage=0
   apiState.reset();
   p = newPage();
   p.openFilter();
-  ["image", "audio", "link", "location"].forEach((key) =>
-    p.onToggleMedia({ currentTarget: { dataset: { key } } }),
+  p.onToggleMedia({
+    currentTarget: { dataset: { key: "image", want: "1" } },
+  });
+  p.onToggleMedia({
+    currentTarget: { dataset: { key: "image", want: "0" } },
+  });
+  p.applyFilter();
+  await idle();
+  call = lastPage();
+  check(
+    "P12b",
+    "同一形态「有/无」互斥：最终只剩 hasImage=0",
+    call && call.params.hasImage === 0 && call.params.hasAudio === undefined,
+    JSON.stringify(call && call.params),
+  );
+  check(
+    "P12c",
+    "互斥后摘要只剩「无图片」一枚",
+    p.data.filterBrief.length === 1 &&
+      p.data.filterBrief[0].label === "无图片",
+    JSON.stringify(p.data.filterBrief),
+  );
+
+  apiState.reset();
+  p = newPage();
+  p.openFilter();
+  ["image", "audio", "location"].forEach((key) =>
+    p.onToggleMedia({ currentTarget: { dataset: { key, want: "1" } } }),
   );
   p.applyFilter();
   await idle();
   call = lastPage();
   check(
     "P13",
-    "内容形态多选取交集：四个参数同时带上",
+    "内容形态多选取交集：三个参数同时带上",
     call &&
       call.params.hasImage === 1 &&
       call.params.hasAudio === 1 &&
-      call.params.hasLink === 1 &&
       call.params.hasLocation === 1,
     JSON.stringify(call && call.params),
   );
   check(
     "P14",
-    "四条媒体条件各占一枚摘要",
+    "三条媒体条件各占一枚摘要",
     p.data.filterBrief.filter((x) => x.key.indexOf("media:") === 0).length ===
-      4,
+      3,
     JSON.stringify(p.data.filterBrief),
   );
 
@@ -417,7 +445,9 @@ function dateStr(d) {
   p.onToggleChip({
     currentTarget: { dataset: { field: "types", value: "工作" } },
   });
-  p.onToggleMedia({ currentTarget: { dataset: { key: "audio" } } });
+  p.onToggleMedia({
+    currentTarget: { dataset: { key: "audio", want: "1" } },
+  });
   p.applyFilter();
   await idle();
   check(
@@ -437,7 +467,7 @@ function dateStr(d) {
     "B02b",
     "抽屉里回填的是当前生效条件",
     p.data.filter.types.join(",") === "工作" &&
-      p.data.filter.media.audio === true,
+      p.data.filter.media.audio === "1",
     JSON.stringify(p.data.filter),
   );
   p.cancelFilter();

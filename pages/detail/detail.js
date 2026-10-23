@@ -64,7 +64,7 @@ Page({
         return;
       }
       const detail = Object.assign(
-        { tags: [], persons: [], images: [], links: [] },
+        { tags: [], persons: [], images: [] },
         data,
       );
       // 轮播用小图（列表同款 300px 缩略图）：详情页一进来就要把整组图拉下来，
@@ -171,15 +171,6 @@ Page({
       name: detail.position || "日志地点",
       address: detail.address || "",
       scale: 18,
-    });
-  },
-
-  onCopyLink(e) {
-    const url = e.currentTarget.dataset.url;
-    wx.setClipboardData({
-      data: url,
-      success: () =>
-        wx.showToast({ title: "链接已复制，请在浏览器打开", icon: "none" }),
     });
   },
 

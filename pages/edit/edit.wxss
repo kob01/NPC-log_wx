@@ -283,37 +283,6 @@
     border-color: var(--primary);
 }
 
-.link-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 16rpx;
-}
-
-.link-platform {
-    margin-right: 12rpx;
-}
-
-.link-url {
-    flex: 1;
-    height: 64rpx;
-    padding: 0 18rpx;
-    background: var(--bg);
-    border-radius: var(--radius);
-    font-size: 26rpx;
-}
-
-.link-del {
-    margin-left: 16rpx;
-    color: var(--danger);
-    font-size: 30rpx;
-}
-
-.link-add {
-    font-size: 26rpx;
-    color: var(--primary);
-    padding: 8rpx 0;
-}
-
 .footer-space {
     /* 高度需盖住底部提交栏（含安全区），否则最后一项表单会被提交栏遮住 */
     height: calc(180rpx + env(safe-area-inset-bottom));

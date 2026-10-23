@@ -209,3 +209,18 @@
     color: var(--text-3);
     margin-top: 4rpx;
 }
+
+/* 分页脚标：与时间线「没有更多了」同款口吻，只在到底或加载中时出现 */
+.list-foot {
+    text-align: center;
+    color: var(--text-4);
+    font-size: 24rpx;
+    padding: 20rpx 0 10rpx;
+}
+
+/* 触顶提示：一行放不下时自然折行，颜色比「没有更多」略重一档 */
+.list-foot.limit-tip {
+    color: var(--text-3);
+    line-height: 1.6;
+    padding: 20rpx 40rpx 10rpx;
+}
