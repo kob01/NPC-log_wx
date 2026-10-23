@@ -92,6 +92,18 @@
     box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
 }
 
+/* 点位过多时 marker 不带 callout，选中点位的标题改在这里显示（原生 callout 不支持 max-width） */
+.map-title {
+    max-width: 300rpx;
+    padding: 6rpx 16rpx;
+    margin-right: 12rpx;
+    border-radius: var(--radius-pill);
+    font-size: 22rpx;
+    line-height: 1.4;
+    color: var(--text-inv);
+    background: rgba(0, 0, 0, 0.55);
+}
+
 /* 旧内核不支持 flex gap，改用相邻兄弟 margin-left 拉开间距 */
 .map-btn+.map-btn {
     margin-left: 12rpx;

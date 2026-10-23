@@ -197,6 +197,9 @@ Page({
 
   // 完整条目流（不进 data，见 data 上方注释）：合并去重、长按查找、置顶移位都在这里做
   _entries: [],
+  // 行对象缓存 id → { src, first, row }：buildGroups 靠它复用没变的行，
+  // 配合 renderGroups 的路径级下发，翻页时已渲染的卡片不会收到新数据、observer 不重跑
+  _rowsById: null,
   // 游标：已加载部分里时间最旧那条的 event_id（存实例上，不进 data）
   _cursor: null,
   _version: 0, // 列表版本号，用于丢弃过期的异步结果
@@ -1056,6 +1059,8 @@ Page({
 
   /** 由 entries 重建按月分组：月份间插入分割标题，日内卡片直接顺排（日期由卡片右上角时间展示） */
   buildGroups(entries) {
+    const prev = this._rowsById || {};
+    const next = {};
     const groups = [];
     entries.forEach((entry) => {
       const day = dayKey(entry.time);
@@ -1065,18 +1070,67 @@ Page({
           ? month
           : `${month.slice(0, 4)}年${Number(month.slice(5, 7))}月`;
       const last = groups[groups.length - 1];
+      const first = !(last && last.month === month);
+      const key = String(entry.id);
+      const hit = prev[key];
+      // 同一条 entry（引用没变）且 first 标记也没变时复用旧行对象：
+      // 翻页只新建「新拉到的那几条」，已渲染卡片的 entry property 引用不动。
       // 用 Object.assign 而非对象展开 { ...entry }：展开会被增强编译转成
       // require('@swc/runtime/...') helper，工具端 runtime 缺失时整页注册失败
-      const row = Object.assign({}, entry, {
-        first: !(last && last.month === month),
-      });
+      const row =
+        hit && hit.src === entry && hit.first === first
+          ? hit.row
+          : Object.assign({}, entry, { first });
+      next[key] = { src: entry, first, row };
       if (last && last.month === month) {
         last.items.push(row);
       } else {
         groups.push({ month, label, items: [row] });
       }
     });
+    this._rowsById = next;
     return groups;
+  },
+
+  /**
+   * 把新分组结果同步进视图，只下发真正变化的部分（原来每次都把整份列表重传一遍，
+   * 100 条约 180KB，翻得越深越慢；而且新对象会让所有卡片 observer 全部重跑）：
+   * - 月份前缀一致、分组数不减少时按组比对：组内是尾部追加就只写新下标，
+   *   否则（删除/移位）只重写这一个组；
+   * - 尾部新增的整组直接按下标续上；
+   * - 中间插月、分组变少这类结构变化退回整表替换（低频且无法用下标表达）。
+   * extraPatch 与分组补丁合并成一次 setData。
+   */
+  renderGroups(nextGroups, extraPatch) {
+    const prev = this.data.groups || [];
+    const patch = Object.assign({}, extraPatch);
+    let full = !prev.length || nextGroups.length < prev.length;
+    const overlap = Math.min(prev.length, nextGroups.length);
+    for (let i = 0; i < overlap && !full; i += 1) {
+      if (prev[i].month !== nextGroups[i].month) full = true;
+    }
+    if (full) {
+      patch.groups = nextGroups;
+    } else {
+      for (let i = 0; i < overlap; i += 1) {
+        const a = prev[i].items;
+        const b = nextGroups[i].items;
+        const samePrefix = a.every((row, j) => row === b[j]);
+        if (samePrefix && a.length === b.length) continue;
+        if (samePrefix) {
+          for (let j = a.length; j < b.length; j += 1) {
+            patch[`groups[${i}].items[${j}]`] = b[j];
+          }
+          continue;
+        }
+        patch[`groups[${i}].items`] = b;
+      }
+      for (let i = prev.length; i < nextGroups.length; i += 1) {
+        patch[`groups[${i}]`] = nextGroups[i];
+      }
+    }
+    if (!Object.keys(patch).length) return;
+    this.setData(patch);
   },
 
   /** 加载下一页（游标模式） */
@@ -1119,8 +1173,8 @@ Page({
           ? data.pinned.map(this.fromListItem)
           : this.data.pinnedEntries;
         this._entries = merged;
-        this.setData({
-          groups: this.buildGroups(merged),
+        // 只把新增的那几条/新增的月份组下发到视图，已渲染的卡片不重传
+        this.renderGroups(this.buildGroups(merged), {
           pinnedEntries: pinnedItems,
           hasMore: items.length >= PAGE_SIZE,
         });
@@ -1155,6 +1209,8 @@ Page({
       this._searchTimer = null;
     }
     this._entries = [];
+    // 行对象缓存跟着条目流一起作废，免得复用上一轮列表的行
+    this._rowsById = null;
     this.setData({
       groups: [],
       pinnedEntries: [],
@@ -1186,7 +1242,7 @@ Page({
       ...this._entries,
     ];
     this._entries = merged;
-    this.setData({ groups: this.buildGroups(merged) });
+    this.renderGroups(this.buildGroups(merged));
   },
 
   // ==================== 长按卡片：置顶 / 取消置顶 / 编辑 / 删除 ====================
@@ -1272,9 +1328,8 @@ Page({
         pinned,
       );
       this._entries = rest;
-      this.setData({
+      this.renderGroups(this.buildGroups(rest), {
         pinnedEntries: nextPinned,
-        groups: this.buildGroups(rest),
       });
       return;
     }
@@ -1283,10 +1338,7 @@ Page({
       Object.assign({}, entry, { pinned: false }),
     );
     this._entries = next;
-    this.setData({
-      pinnedEntries: pinned,
-      groups: this.buildGroups(next),
-    });
+    this.renderGroups(this.buildGroups(next), { pinnedEntries: pinned });
   },
 
   /** 按时间倒序插入一个条目（'YYYY-MM-DD HH:mm' 是定长格式，字符串比大小就是时序） */
@@ -1325,10 +1377,7 @@ Page({
         );
         const rest = this._entries.filter((e) => String(e.id) !== key);
         this._entries = rest;
-        this.setData({
-          groups: this.buildGroups(rest),
-          pinnedEntries: pinned,
-        });
+        this.renderGroups(this.buildGroups(rest), { pinnedEntries: pinned });
         this.showHint("已删除");
       },
     });

@@ -53,6 +53,8 @@
     <view class="fs-exit" wx:if="{{fs}}" bindtap="exitFs">退出全屏</view>
     <!-- 选中点位后的操作按钮：绝对定位浮在地图右下角上层 -->
     <view class="map-actions" wx:if="{{selected}}">
+      <!-- 点位多时 marker 不再带 callout（省掉逐点样式字段），标题改在这里显示 -->
+      <view class="map-title ellipsis" wx:if="{{slimCallout}}">{{selected.event}}</view>
       <view class="map-btn" data-id="{{selected.id}}" bindtap="goDetail">详情</view>
       <view class="map-btn primary" bindtap="openNav">导航</view>
     </view>

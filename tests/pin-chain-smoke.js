@@ -167,11 +167,26 @@ const timelineDef = captured;
 function clone(v) {
   return JSON.parse(JSON.stringify(v));
 }
+function applyPatch(data, patch) {
+  Object.keys(patch).forEach((key) => {
+    // 支持 "groups[2].items[5]" 这种下标路径（与 wx setData 的数组下标写法一致）
+    const parts = key.replace(/\[(\d+)\]/g, ".$1").split(".");
+    let cur = data;
+    for (let i = 0; i < parts.length - 1; i += 1) {
+      const k = parts[i];
+      if (!cur[k] || typeof cur[k] !== "object") {
+        cur[k] = /^\d+$/.test(parts[i + 1]) ? [] : {};
+      }
+      cur = cur[k];
+    }
+    cur[parts[parts.length - 1]] = patch[key];
+  });
+}
 function newPage(def) {
   const p = Object.assign({}, def);
   p.data = clone(def.data);
   p.setData = (patch) => {
-    Object.assign(p.data, patch || {});
+    applyPatch(p.data, patch || {});
   };
   return p;
 }

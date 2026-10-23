@@ -439,16 +439,15 @@ function clone(v) {
 
 function applyPatch(data, patch) {
   Object.keys(patch).forEach((key) => {
-    if (key.indexOf(".") === -1) {
-      data[key] = patch[key];
-      return;
-    }
-    const parts = key.split(".");
+    // 支持 "groups[2].items[5]" 这种下标路径（与 wx setData 的数组下标写法一致）
+    const parts = key.replace(/\[(\d+)\]/g, ".$1").split(".");
     let cur = data;
     for (let i = 0; i < parts.length - 1; i += 1) {
-      if (!cur[parts[i]] || typeof cur[parts[i]] !== "object")
-        cur[parts[i]] = {};
-      cur = cur[parts[i]];
+      const k = parts[i];
+      if (!cur[k] || typeof cur[k] !== "object") {
+        cur[k] = /^\d+$/.test(parts[i + 1]) ? [] : {};
+      }
+      cur = cur[k];
     }
     cur[parts[parts.length - 1]] = patch[key];
   });

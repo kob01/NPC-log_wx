@@ -57,9 +57,11 @@ function readCache(key, scope) {
   }
   try {
     const raw = wx.getStorageSync(CFG.CACHE_KEY_PREFIX + full);
-    if (raw && raw.exp > Date.now()) {
-      memoryCache[full] = raw;
-      return raw.data;
+    // 新版落盘的是 JSON 串（写入时只序列化一次）；老版本存的是对象，读回时兼容一下
+    const hit = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (hit && hit.exp > Date.now()) {
+      memoryCache[full] = hit;
+      return hit.data;
     }
     if (raw) wx.removeStorageSync(CFG.CACHE_KEY_PREFIX + full);
   } catch (e) {
@@ -71,15 +73,15 @@ function readCache(key, scope) {
 function writeCache(key, data, ttl, scope) {
   if (!(ttl > 0) || data === undefined || data === null) return;
   const full = cacheKeyOf(key, scope);
-  memoryCache[full] = { data, exp: Date.now() + ttl };
+  const exp = Date.now() + ttl;
+  memoryCache[full] = { data, exp };
   try {
+    // 只序列化一次：落盘的就是这串 JSON，读回时再解析。
+    // 原来先 JSON.stringify 量体积、setStorageSync 内部再序列化一遍，大响应等于白算两遍
+    const text = JSON.stringify({ data, exp });
     // 体积保护：单条 > 64KB 不落盘（小程序本地存储上限 10MB，且大对象序列化本身耗时）
-    const size = JSON.stringify(data).length;
-    if (size <= 64 * 1024) {
-      wx.setStorageSync(CFG.CACHE_KEY_PREFIX + full, {
-        data,
-        exp: Date.now() + ttl,
-      });
+    if (text.length <= 64 * 1024) {
+      wx.setStorageSync(CFG.CACHE_KEY_PREFIX + full, text);
     }
   } catch (e) {
     /* 存储写满时忽略，不影响请求本身 */

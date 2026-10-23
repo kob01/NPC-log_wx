@@ -2,6 +2,11 @@ const api = require("../../utils/api");
 const auth = require("../../utils/auth");
 const { resolveFileUrl } = require("../../utils/format");
 
+// 点位超过这个数量就不再逐点带 callout：一个 callout 有 7 个样式字段，
+// 上千个点位光这一项就多传几千个字段，地图首屏渲染明显变慢。
+// 少点位保持「点标记弹标题」的原体验；超阈值后标题改在选中面板里显示（见 map-actions）
+const CALLOUT_MAX_POINTS = 200;
+
 Page({
   behaviors: [require("../../utils/themeBehavior")],
   data: {
@@ -18,6 +23,8 @@ Page({
     tag: "",
     loading: true,
     selected: null,
+    // 点位过多时 marker 不带 callout，标题改在选中面板显示（模板据此决定要不要出标题）
+    slimCallout: false,
     // 全屏态：地图铺满整屏。orientation 绑到 page-meta 的 page-orientation 实现一键横屏
     // （基础库 2.12.0+；低版本忽略该属性，退化为竖屏铺满）
     // 初始留空串表示“不干预”，避免在 PC/iPad 端把窗口锁成竖向
@@ -100,23 +107,29 @@ Page({
       const s = (str || "").trim() || "日志";
       return s.length > maxChars ? s.slice(0, maxChars) + "…" : s;
     };
-    const markers = valid.map((p) => ({
-      id: Number(p.id),
-      latitude: Number(p.lat),
-      longitude: Number(p.lng),
-      width: 28,
-      height: 28,
-      callout: {
-        content: clipTitle(p.event),
-        color: "#333333",
-        fontSize,
-        borderRadius: 8,
-        bgColor: "#ffffff",
-        padding: 8,
-        display: "BYCLICK",
-        textAlign: "center",
-      },
-    }));
+    const slimCallout = valid.length > CALLOUT_MAX_POINTS;
+    const markers = valid.map((p) => {
+      const marker = {
+        id: Number(p.id),
+        latitude: Number(p.lat),
+        longitude: Number(p.lng),
+        width: 28,
+        height: 28,
+      };
+      if (!slimCallout) {
+        marker.callout = {
+          content: clipTitle(p.event),
+          color: "#333333",
+          fontSize,
+          borderRadius: 8,
+          bgColor: "#ffffff",
+          padding: 8,
+          display: "BYCLICK",
+          textAlign: "center",
+        };
+      }
+      return marker;
+    });
     const includePoints = valid.map((p) => ({
       latitude: Number(p.lat),
       longitude: Number(p.lng),
@@ -132,7 +145,7 @@ Page({
       };
       scale = valid.length === 1 ? 14 : 4;
     }
-    this.setData({ markers, includePoints, center, scale });
+    this.setData({ markers, includePoints, center, scale, slimCallout });
   },
 
   onYearChip(e) {
