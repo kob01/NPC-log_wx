@@ -10,8 +10,17 @@ function sync(instance) {
   applyTheme(instance, theme);
 }
 
-/** 切换根节点 .theme-dark 类，并同步窗口底色（消除 iOS 下拉回弹时露出的浅色边缘） */
+/**
+ * 切换根节点 .theme-dark 类，并同步窗口底色（消除 iOS 下拉回弹时露出的浅色边缘）
+ *
+ * 值没变就直接返回：onLoad/onShow 每次进页都会走这里，无脑写一遍等于每个页面每次曝光
+ * 都白发一次 setData（跨线程）+ 一次原生调用；切 tab、从详情页返回都属于这种高频场景。
+ * 记在实例上的 `_themeApplied` 而不是读 data.themeClass：后者首次进页是空串，
+ * 与「浅色」无法区分，会漏掉第一轮真正需要落地的那次。
+ */
 function applyTheme(instance, theme) {
+  if (instance._themeApplied === theme) return;
+  instance._themeApplied = theme;
   const dark = theme === "dark";
   instance.setData({ themeClass: dark ? "theme-dark" : "" });
   if (wx.setBackgroundColor) {

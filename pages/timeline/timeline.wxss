@@ -143,8 +143,7 @@
 /* ==================== 左侧竖向时间轴 ==================== */
 .tl-body {
     position: relative;
-    /* 底部不留 padding：末行卡片的 margin 会塌陷到容器外，竖线不再多出一截尾巴 */
-    padding: 8rpx 0 0;
+    padding: 0;
     transition: opacity 0.32s ease, transform 0.32s ease;
 }
 
@@ -172,12 +171,10 @@
 /* 月份分割标题：滚动时 sticky 悬浮在左上角 */
 .tl-month {
     position: sticky;
-    /* 顶部 .search-bar 为 fixed，高 20+72+20=112rpx，悬浮位置需避开它，否则胶囊会被搜索栏压住 */
     top: 0;
     /* 低于顶部搜索栏(10)与录音遮罩(18)/面板(19) */
     z-index: 6;
-    /* 左距 72rpx 与卡片左边缘齐平，同时避开 39rpx 处的竖线；上边距留小量，避免胶囊紧贴搜索栏底边 */
-    padding: 12rpx 24rpx 16rpx 72rpx;
+    padding: 16rpx 0 16rpx 72rpx;
 }
 
 /* 圆角胶囊底：卡片从下方滚过时不透字；颜色跟 --card，深色模式自动生效 */
@@ -270,7 +267,7 @@
     width: 60rpx;
     height: 60rpx;
     /* 轻微呼吸：静态 emoji 换成图形后仍嫌不够抢眼，动一下才像「按住就能说」 */
-    animation: fab-breathe 3.6s ease-in-out infinite;
+    animation: fab-breathe 2.7s ease-in-out infinite;
 }
 
 @keyframes fab-breathe {
@@ -281,7 +278,7 @@
     }
 
     50% {
-        transform: scale(1.2);
+        transform: scale(1.15);
     }
 }
 
@@ -484,4 +481,340 @@
     font-size: 24rpx;
     color: var(--text-3);
     text-align: center;
+}
+
+/* ==================== 结构化筛选：入口 / 条件条 / 抽屉 ==================== */
+/* 入口与查看范围按钮同构（白底圆、56rpx），激活态只换底与图标色 */
+.filter-btn {
+    position: relative;
+}
+
+.filter-btn-on {
+    background: rgba(22, 119, 255, 0.12);
+    box-shadow: none;
+}
+
+/* 生效条件数角标：超过 99 也只显示两位，避免撑破圆形按钮 */
+.filter-badge {
+    position: absolute;
+    top: -6rpx;
+    right: -6rpx;
+    min-width: 28rpx;
+    height: 28rpx;
+    padding: 0 6rpx;
+    border-radius: 14rpx;
+    background: var(--danger);
+    color: #fff;
+    font-size: 18rpx;
+    line-height: 28rpx;
+    text-align: center;
+    font-weight: 600;
+    box-sizing: border-box;
+}
+
+/* 条件条：固定在 tabBar 上方（不占顶部），多行换行不裁切。
+   高度由 JS 测量后回写给列表的 padding-bottom，避免最后一条被遮 */
+.filter-brief {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 16rpx 24rpx calc(12rpx + env(safe-area-inset-bottom)) 24rpx;
+    background: var(--bg);
+    box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+
+.brief-chip {
+    display: flex;
+    align-items: center;
+    height: 52rpx;
+    padding: 0 18rpx;
+    margin: 0 12rpx 8rpx 0;
+    border-radius: var(--radius-pill);
+    background: var(--card);
+    box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.07);
+    font-size: 22rpx;
+    color: var(--primary);
+}
+
+/* 末尾 ×：margin-left:auto 贴当前行右侧；本行放不下就换到下一行（即最后一排）右侧 */
+.brief-clear {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52rpx;
+    height: 52rpx;
+    margin: 0 0 8rpx auto;
+    border-radius: 50%;
+    background: var(--card);
+    box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.07);
+    font-size: 26rpx;
+    color: var(--text-3);
+}
+
+/* 抽屉：z-index 高于录音面板(19)与 fab(20)，打开时把两者都盖住 */
+.filter-mask {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 21;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.filter-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 22;
+    height: 78vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--card);
+    border-radius: var(--radius) var(--radius) 0 0;
+    box-shadow: 0 -8rpx 30rpx rgba(0, 0, 0, 0.14);
+    overflow: hidden;
+}
+
+.fs-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 24rpx 32rpx 16rpx;
+    border-bottom: 1rpx solid var(--divider);
+}
+
+.fs-title {
+    font-size: 32rpx;
+    font-weight: 600;
+    color: var(--text-1);
+}
+
+.fs-count {
+    margin-left: 16rpx;
+    font-size: 22rpx;
+    color: var(--text-3);
+}
+
+.fs-reset {
+    margin-left: auto;
+    padding: 8rpx 0 8rpx 24rpx;
+    font-size: 26rpx;
+    color: var(--text-2);
+}
+
+/* 滚动区必须能收缩（flex:1 + height:0），否则内容会把面板撑出屏幕、底部按钮被顶走 */
+.fs-body {
+    flex: 1;
+    height: 0;
+    padding: 0 32rpx;
+    box-sizing: border-box;
+}
+
+.fs-group {
+    padding: 24rpx 0 8rpx;
+}
+
+.fs-group+.fs-group {
+    border-top: 1rpx dashed var(--divider);
+}
+
+.fs-group-head {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 16rpx;
+}
+
+.fs-name {
+    font-size: 24rpx;
+    font-weight: 600;
+    color: var(--text-2);
+}
+
+.fs-hint {
+    margin-left: 12rpx;
+    font-size: 20rpx;
+    color: var(--text-4);
+}
+
+.fs-chips {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.fs-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60rpx;
+    padding: 0 24rpx;
+    margin: 0 16rpx 16rpx 0;
+    border-radius: var(--radius-pill);
+    background: var(--card-sub);
+    border: 1rpx solid transparent;
+    font-size: 24rpx;
+    color: var(--text-2);
+    box-sizing: border-box;
+}
+
+.fs-chip.sm {
+    height: 52rpx;
+    padding: 0 20rpx;
+    font-size: 22rpx;
+}
+
+.fs-chip.on {
+    background: var(--primary-weak);
+    border-color: rgba(22, 119, 255, 0.35);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.fs-more {
+    color: var(--text-3);
+    font-weight: 600;
+}
+
+.fs-empty {
+    padding: 12rpx 0;
+    font-size: 22rpx;
+    color: var(--text-4);
+}
+
+/* 自定义时间区间 */
+.fs-range {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16rpx;
+}
+
+.fs-picker {
+    flex: 1;
+    min-width: 0;
+}
+
+.fs-date {
+    height: 68rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    background: var(--card-sub);
+    font-size: 24rpx;
+    color: var(--text-2);
+}
+
+.fs-date.empty {
+    color: var(--text-4);
+}
+
+.fs-to {
+    margin: 0 16rpx;
+    font-size: 22rpx;
+    color: var(--text-4);
+}
+
+/* 内容形态开关：两列（旧内核不支持 flex gap，用 margin 拉开） */
+.fs-switches {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.fs-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: calc(50% - 8rpx);
+    height: 68rpx;
+    padding: 0 20rpx;
+    margin-bottom: 16rpx;
+    border-radius: var(--radius);
+    background: var(--card-sub);
+    font-size: 24rpx;
+    color: var(--text-2);
+    box-sizing: border-box;
+}
+
+.fs-switch:nth-child(odd) {
+    margin-right: 16rpx;
+}
+
+.fs-switch.on {
+    background: var(--primary-weak);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.fs-toggle {
+    position: relative;
+    width: 60rpx;
+    height: 34rpx;
+    border-radius: 17rpx;
+    background: #d9d9d9;
+    flex-shrink: 0;
+    transition: background 0.18s;
+}
+
+.fs-toggle::after {
+    content: "";
+    position: absolute;
+    top: 3rpx;
+    left: 3rpx;
+    width: 28rpx;
+    height: 28rpx;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.2);
+    transition: transform 0.18s;
+}
+
+.fs-switch.on .fs-toggle {
+    background: var(--primary);
+}
+
+.fs-switch.on .fs-toggle::after {
+    transform: translateX(26rpx);
+}
+
+/* 底部留白与操作条 */
+.fs-space {
+    height: 12rpx;
+}
+
+.fs-foot {
+    flex: 0 0 auto;
+    display: flex;
+    padding: 16rpx 32rpx calc(16rpx + env(safe-area-inset-bottom));
+    border-top: 1rpx solid var(--divider);
+}
+
+.fs-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 84rpx;
+    border-radius: var(--radius-pill);
+    font-size: 28rpx;
+    font-weight: 600;
+}
+
+.fs-btn.ghost {
+    width: 192rpx;
+    margin-right: 20rpx;
+    border: 1rpx solid var(--border-2);
+    color: var(--text-2);
+    font-weight: 500;
+}
+
+.fs-btn.primary {
+    flex: 1;
+    background: var(--primary);
+    color: #fff;
 }

@@ -8,11 +8,22 @@ const {
   MANUAL_LOGOUT_KEY,
 } = require("../config");
 
+/**
+ * token 在内存里留一份镜像：getToken 是每个请求都要走的热路径
+ * （request.js 的 buildHeader 与 cacheKeyOf 各调一次，一次带缓存的 GET 就是两三次），
+ * 每次都 wx.getStorageSync 等于把同步读盘压到每个请求上。
+ * 写入只走本文件的 setToken/clear，镜像与存储不会分叉；
+ * null 表示「还没从存储读过」，空串是合法值（未登录），两者不能混。
+ */
+let tokenCache = null;
+
 function getToken() {
-  return wx.getStorageSync(TOKEN_KEY) || "";
+  if (tokenCache === null) tokenCache = wx.getStorageSync(TOKEN_KEY) || "";
+  return tokenCache;
 }
 
 function setToken(token) {
+  tokenCache = token || "";
   wx.setStorageSync(TOKEN_KEY, token);
 }
 
@@ -25,6 +36,7 @@ function setUser(user) {
 }
 
 function clear() {
+  tokenCache = "";
   wx.removeStorageSync(TOKEN_KEY);
   wx.removeStorageSync(USER_KEY);
 }

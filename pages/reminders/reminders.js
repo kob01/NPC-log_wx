@@ -264,6 +264,8 @@ Page({
         patch.hint = (cfgRes.data && cfgRes.data.hint) || "";
       }
       if (Number(listRes.code) === 200) {
+        // 指纹表先读一次：逐行调 isWritten 会让每行都同步读一遍整个 storage 条目
+        const calMap = calendar.writtenMap();
         patch.list = (listRes.data || []).map((r) => {
           const st = statusOf(r);
           return Object.assign({}, r, {
@@ -276,7 +278,7 @@ Page({
             enabled: r.status === 1 || r.status === 3,
             // 本地指纹命中才算「已在日历」：日历里有没有这一条只有端上知道，
             // 后端那一路压根不关心（也没法关心 —— 微信没有查询已写事件的接口）
-            calWritten: calendar.isWritten(r),
+            calWritten: calendar.isWritten(r, calMap),
           });
         });
       }

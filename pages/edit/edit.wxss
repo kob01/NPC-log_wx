@@ -163,6 +163,22 @@
     font-size: 24rpx;
 }
 
+/* 上传占位：盖住整格并压暗，图本身还看得见（本地临时文件先上屏） */
+.img-uploading {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 160rpx;
+    height: 160rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    background: rgba(0, 0, 0, 0.45);
+    color: var(--text-inv);
+    font-size: 22rpx;
+}
+
 .img-add {
     width: 160rpx;
     height: 160rpx;
@@ -187,13 +203,16 @@
 }
 
 /* 跟手的拖拽浮层：以 left/top 落在手指处，transform 居中并略放大制造“抬起”感；
-   pointer-events: none 避免它拦截进行中的手势 */
+   pointer-events: none 避免它拦截进行中的手势。
+   transform 的位移由 pages/edit/drag.wxs 在渲染层逐帧写入（不再走 setData），
+   故这里声明 will-change 让它单独提层，改它不影响周围节点重绘 */
 .img-drag-ghost {
     position: fixed;
     z-index: 999;
     width: 160rpx;
     height: 160rpx;
     transform: translate(-50%, -50%) scale(1.08);
+    will-change: transform;
     border-radius: var(--radius);
     overflow: hidden;
     box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.3);

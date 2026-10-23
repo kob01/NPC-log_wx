@@ -6,10 +6,11 @@
  * 注意：正式发布需在小程序后台配置 HTTPS 备案域名，开发阶段在开发者工具
  * 勾选「不校验合法域名」即可使用下面的 HTTP 地址。
  */
-// 【临时】指向本地 node 服务（NPC-log_node 默认 3000 端口，若 .env 改了 PORT 需同步）；
+// 【临时】指向本地 node 服务（NPC-log_node 默认 3100 端口，若 .env 改了 PORT 需同步）；
+// 3000 落在 Windows 保留的 TCP 排除段 2976–3075，监听会报 EACCES，故本地联调改用 3100
 // ⚠️ 真机预览必须用手机能访问的局域网 IP，localhost 会被解析到手机自身
-const BASE_URL = "http://192.168.3.24:3000";
-// const BASE_URL = "https://47.116.208.170";
+// const BASE_URL = "http://192.168.3.24:3100";
+const BASE_URL = "https://47.116.208.170";
 
 // 需要走「长超时」的 AI 接口前缀：后端这些接口要等外部 LLM/ASR，普通 8s 会误判失败。
 // 与后端 src/utils/metrics.js 的 groupOf() 分流保持一致，改一边记得改另一边。

@@ -1,6 +1,6 @@
 <view class="page-root {{themeClass}}">
 <view class="detail" wx:if="{{detail}}">
-  <!-- 图片轮播 -->
+  <!-- 图片轮播：imageUrls 是 300px 缩略图（首屏省流量），点开全屏才取原图集 -->
   <swiper
     class="gallery"
     wx:if="{{imageUrls.length}}"

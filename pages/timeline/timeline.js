@@ -2,8 +2,78 @@ const api = require("../../utils/api");
 const auth = require("../../utils/auth");
 const audioHub = require("../../utils/audioHub");
 const { dayKey } = require("../../utils/format");
+// 分类/评价候选与编辑页 picker 同一份，不在此重复定义（缘由见 utils/options.js）
+const { TYPE_OPTIONS, RATING_OPTIONS } = require("../../utils/options");
 
 const PAGE_SIZE = 10;
+
+// ==================== 结构化筛选（与搜索互斥） ====================
+// 时间快捷档：除 all/custom 外都换算成本地日期区间（含当天）
+const FILTER_TIMES = [
+  { value: "all", label: "全部" },
+  { value: "today", label: "今天" },
+  { value: "week", label: "本周" },
+  { value: "month", label: "本月" },
+  { value: "year", label: "今年" },
+  { value: "custom", label: "自定义" },
+];
+// 查看范围四态：与顶部循环按钮共用 auth 里的同一份 scope
+const FILTER_SCOPES = [
+  { value: "all", label: "全部" },
+  { value: "mine", label: "只看自己" },
+  { value: "private", label: "仅自己可见" },
+  { value: "others", label: "只看他人" },
+];
+// 内容形态：key 与参数名一一对应（image → hasImage），抽屉与请求都从这里取
+const FILTER_MEDIA = [
+  { key: "image", label: "有图片" },
+  { key: "audio", label: "有录音" },
+  { key: "link", label: "有链接" },
+  { key: "location", label: "有地点" },
+];
+
+// 筛选入口图标（base64 内联，与查看范围按钮同一套写法）：灰=未筛选，蓝=已筛选
+const FILTER_ICON =
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM4YThmOTgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNNCA1aDE2Ii8+PHBhdGggZD0iTTcgMTJoMTAiLz48cGF0aCBkPSJNMTAgMTloNCIvPjwvc3ZnPg==";
+const FILTER_ICON_ON =
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxNjc3ZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNNCA1aDE2Ii8+PHBhdGggZD0iTTcgMTJoMTAiLz48cGF0aCBkPSJNMTAgMTloNCIvPjwvc3ZnPg==";
+
+/** 本地日期 YYYY-MM-DD（不能用 toISOString：那是 UTC，跨时区会差一天） */
+function dateStr(d) {
+  const pad = (n) => (n < 10 ? "0" + n : "" + n);
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+
+/** 时间档 → [start, end]；all/custom 返回空串（custom 由抽屉里选的两个日期决定） */
+function timeRangeOf(kind, now) {
+  const d = now || new Date();
+  if (kind === "today") return [dateStr(d), dateStr(d)];
+  if (kind === "week") {
+    const day = (d.getDay() + 6) % 7; // 周一 = 0
+    const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() - day);
+    return [dateStr(mon), dateStr(d)];
+  }
+  if (kind === "month") {
+    return [dateStr(new Date(d.getFullYear(), d.getMonth(), 1)), dateStr(d)];
+  }
+  if (kind === "year") return [d.getFullYear() + "-01-01", dateStr(d)];
+  return ["", ""];
+}
+
+/** 空筛选草稿（重置与「清空」共用） */
+function emptyFilter() {
+  return {
+    time: "all",
+    start: "",
+    end: "",
+    media: { image: false, audio: false, link: false, location: false },
+    types: [],
+    ratings: [],
+    tags: [],
+    tagExpanded: false,
+    authorId: 0,
+  };
+}
 
 // 录音时长上限（秒）：面板提示、自动发送、recorder.duration 共用这一处定义
 const RECORD_MAX = 60;
@@ -60,7 +130,9 @@ function fmtRecordTime(sec) {
 Page({
   behaviors: [require("../../utils/themeBehavior")],
   data: {
-    entries: [],
+    // 只把 groups 交给视图层：entries 与 groups[].items 是同一批数据，
+    // 两者都放进 data 等于每次翻页把整份列表跨线程传两遍（100 条约 180KB），
+    // 而 WXML 只渲染 groups。entries 留在实例上只做合并与查找
     groups: [],
     // 本人置顶的那几条（上限 3 条，谁长按谁生效）：已从 entries 那条时间序流里剔掉，
     // 单独摆在列表最上方的置顶区，不参与按月分组（否则会出现两个同名月份标题）
@@ -79,6 +151,32 @@ Page({
     usersIcon: USERS_ICON,
     // 顶部三分之一处的低存在感文字提示（切换筛选时闪现一句，自动消失）
     hintText: "",
+    // ==================== 结构化筛选（抽屉 + 顶部条件条） ====================
+    // filter 是抽屉里的草稿：点「完成」才写进条件条并重拉；点遮罩关闭会还原到打开时
+    filter: emptyFilter(),
+    filterOpen: false,
+    // 条件摘要：一条条件一枚 chip，key 用于点 ✕ 精确删除
+    filterBrief: [],
+    hasFilter: false,
+    // 抽屉里草稿的条件数（头部「已选 N 项」，随每步操作刷新）
+    draftCount: 0,
+    // 候选：chips 自带 on 标记，WXML 里不做 indexOf 之类运算
+    timeOptions: FILTER_TIMES,
+    scopeOptions: FILTER_SCOPES,
+    typeOptions: TYPE_OPTIONS,
+    ratingOptions: RATING_OPTIONS,
+    typeChips: TYPE_OPTIONS.map((v) => ({ value: v, on: false })),
+    ratingChips: RATING_OPTIONS.map((v) => ({ value: v, on: false })),
+    mediaChips: FILTER_MEDIA.map((o) => ({
+      key: o.key,
+      label: o.label,
+      on: false,
+    })),
+    tagChips: [],
+    tagHasMore: false,
+    authorOptions: [],
+    filterIcon: FILTER_ICON,
+    filterIconOn: FILTER_ICON_ON,
     // 后端语义召回被并发闸门拒时置 true（列表仍能给出关键词结果，只用来提示质量下降）
     semanticSkipped: false,
     // 录音面板：sheetVisible 管节点挂载，recording 管「圆 → 底部方形」的展开态
@@ -97,12 +195,17 @@ Page({
     sheetStyleOpen: "",
   },
 
+  // 完整条目流（不进 data，见 data 上方注释）：合并去重、长按查找、置顶移位都在这里做
+  _entries: [],
   // 游标：已加载部分里时间最旧那条的 event_id（存实例上，不进 data）
   _cursor: null,
   _version: 0, // 列表版本号，用于丢弃过期的异步结果
   _loadFailed: false, // 上次加载是否被限流/网络错误打断（不打断 hasMore 语义）
   _searching: false, // 搜索单飞，避免连续点击变成多个并发 AI 请求
   _searchTimer: null,
+  _filterSnapshot: null, // 打开抽屉时的条件快照：点遮罩关闭要还原
+  _tagsLoaded: false, // 标签候选只在首次打开抽屉时拉一次
+  _membersLoaded: false, // 组织成员候选同上
   _hintTimer: null, // 顶部轻提示自动消失定时器
   _recorder: null, // wx RecorderManager
   _recordTimer: null,
@@ -118,6 +221,7 @@ Page({
   _winH: 667, // 视口高（px）
 
   onLoad() {
+    this._entries = [];
     this._cursor = null;
     this._loaded = false;
     this._loadFailed = false;
@@ -149,7 +253,7 @@ Page({
     // 首次进入或从编辑/详情返回且列表为空时（重新）加载
     if (
       !this._loaded ||
-      (!this.data.searchMode && !this.data.entries.length && !this.data.loading)
+      (!this.data.searchMode && !this._entries.length && !this.data.loading)
     ) {
       this._loaded = true;
       this.reset();
@@ -167,6 +271,322 @@ Page({
     this.reset();
   },
 
+  // ==================== 结构化筛选：抽屉 / 顶部条件条 ====================
+
+  /**
+   * 打开筛选抽屉。
+   * 搜索是 AI 语义检索、不吃 type/rating 等结构条件，两者不能叠加：
+   * 进来先把搜索态退出（reset 会清关键词并回全量），抽屉里的条件点「完成」再生效。
+   */
+  openFilter() {
+    if (this.data.searchMode || this.data.keyword) {
+      this.setData({ searchExpanded: false });
+      this.reset();
+    }
+    // 快照：点遮罩/关闭时把抽屉里的改动还原，避免「关了却已经变了」
+    this._filterSnapshot = JSON.stringify({
+      filter: this.data.filter,
+      scope: this.data.filterScope,
+    });
+    this.setData({ filterOpen: true });
+    this.loadTagOptions();
+    this.loadAuthorOptions();
+  },
+
+  /** 取消：还原到打开抽屉前的状态（点遮罩或右上角关闭） */
+  cancelFilter() {
+    let snap = null;
+    try {
+      snap = JSON.parse(this._filterSnapshot || "null");
+    } catch (err) {
+      snap = null;
+    }
+    this._filterSnapshot = null;
+    if (!snap || !snap.filter) {
+      this.setData({ filterOpen: false });
+      return;
+    }
+    const scope = snap.scope || "all";
+    auth.setFilterScope(scope);
+    this.setData({
+      filter: snap.filter,
+      filterScope: scope,
+      filterOpen: false,
+    });
+    this.buildDraftChips();
+  },
+
+  /** 抽屉里的「重置」：清空全部结构化条件 + 查看范围回 all */
+  resetFilterDraft() {
+    auth.setFilterScope("all");
+    this.setData({ filter: emptyFilter(), filterScope: "all" });
+    this.buildDraftChips();
+  },
+
+  /** 抽屉里的「完成」：草稿落成条件摘要并重拉 */
+  applyFilter() {
+    this.setData({ filterOpen: false });
+    this.commitFilter();
+  },
+
+  /** 草稿 → 条件摘要 / 顶部占位，然后 reset 重拉（游标由 reset 清空） */
+  commitFilter() {
+    const brief = this.buildFilterBrief();
+    const hasFilter = brief.length > 0;
+    this.setData({
+      filterBrief: brief,
+      hasFilter,
+    });
+    // 先清游标再重拉：切条件绝不能沿用上一批结果的 cursors
+    this.reset();
+    // 条件变了就回到顶部：否则列表清空重拉时停在中间，看起来像「没刷新」
+    if (typeof wx.pageScrollTo === "function") {
+      setTimeout(() => {
+        wx.pageScrollTo({ scrollTop: 0, duration: 0 });
+      }, 50);
+    }
+  },
+
+  /** 只清结构化条件（不动查看范围）：搜索要沿用当前 scope */
+  clearStructuredFilter() {
+    this.setData({
+      filter: emptyFilter(),
+      filterBrief: [],
+      hasFilter: false,
+    });
+    this.buildDraftChips();
+  },
+
+  /** 条件摘要：一条条件一枚 chip，key 用于点 ✕ 精确删除 */
+  buildFilterBrief() {
+    const f = this.data.filter;
+    const brief = [];
+    if (f.time !== "all") {
+      let label = "";
+      if (f.time === "custom") {
+        if (f.start && f.end) label = f.start + " ~ " + f.end;
+        else if (f.start) label = f.start + " 起";
+        else if (f.end) label = "截至 " + f.end;
+      } else {
+        const hit = FILTER_TIMES.find((o) => o.value === f.time);
+        label = hit ? hit.label : "";
+      }
+      if (label) brief.push({ key: "time", label });
+    }
+    FILTER_MEDIA.forEach((o) => {
+      if (f.media[o.key]) brief.push({ key: "media:" + o.key, label: o.label });
+    });
+    // 分类/评价全部平铺，不再合并成「分类 x 项」：胶囊现在只当进抽屉的入口，
+    // 平铺才能一眼看出到底选了哪几档
+    f.types.forEach((t) => brief.push({ key: "type:" + t, label: t }));
+    f.ratings.forEach((r) => brief.push({ key: "rating:" + r, label: r }));
+    f.tags.forEach((tag) => brief.push({ key: "tag:" + tag, label: tag }));
+    if (f.authorId) {
+      const hit = (this.data.authorOptions || []).find(
+        (a) => a.id === f.authorId,
+      );
+      brief.push({ key: "author", label: hit ? hit.name : "指定作者" });
+    }
+    return brief;
+  },
+
+  /** 条件 → 列表请求参数（不传的键后端就是不筛，与旧请求逐字一致） */
+  buildFilterParams() {
+    const f = this.data.filter;
+    const params = {};
+    let start = "";
+    let end = "";
+    if (f.time === "custom") {
+      start = f.start;
+      end = f.end;
+    } else if (f.time !== "all") {
+      const range = timeRangeOf(f.time);
+      start = range[0];
+      end = range[1];
+    }
+    if (start) params.startTime = start;
+    if (end) params.endTime = end;
+    if (f.types.length) params.types = f.types.join(",");
+    if (f.ratings.length) params.ratings = f.ratings.join(",");
+    if (f.tags.length) {
+      params.tags = f.tags.join(",");
+      // 分类/评价/标签三组多选统一取并集（任一命中）；后端默认也是 or，这里显式写出
+      params.tagMode = "or";
+    }
+    if (f.authorId) params.authorId = f.authorId;
+    if (f.media.image) params.hasImage = 1;
+    if (f.media.audio) params.hasAudio = 1;
+    if (f.media.link) params.hasLink = 1;
+    if (f.media.location) params.hasLocation = 1;
+    return params;
+  },
+
+  /** 抽屉里改完条件后同步 chips 的选中态 + 草稿条件数 */
+  buildDraftChips() {
+    const f = this.data.filter;
+    const mediaOn = FILTER_MEDIA.filter((o) => f.media[o.key]).length;
+    const draftCount =
+      (f.time !== "all" ? 1 : 0) +
+      mediaOn +
+      (f.types.length ? 1 : 0) +
+      (f.ratings.length ? 1 : 0) +
+      f.tags.length +
+      (f.authorId ? 1 : 0);
+    this.setData({
+      draftCount,
+      typeChips: TYPE_OPTIONS.map((v) => ({
+        value: v,
+        on: f.types.indexOf(v) >= 0,
+      })),
+      ratingChips: RATING_OPTIONS.map((v) => ({
+        value: v,
+        on: f.ratings.indexOf(v) >= 0,
+      })),
+      mediaChips: FILTER_MEDIA.map((o) => ({
+        key: o.key,
+        label: o.label,
+        on: !!f.media[o.key],
+      })),
+    });
+    this.buildTagChips();
+  },
+
+  /** 时间档：只改档位；自定义区间由两个 picker 各自回写 start/end */
+  onFilterTime(e) {
+    this.setData({ "filter.time": e.currentTarget.dataset.value });
+    this.buildDraftChips();
+  },
+
+  onPickStart(e) {
+    this.setData({ "filter.start": e.detail.value, "filter.time": "custom" });
+    this.buildDraftChips();
+  },
+
+  onPickEnd(e) {
+    this.setData({ "filter.end": e.detail.value, "filter.time": "custom" });
+    this.buildDraftChips();
+  },
+
+  /** 查看范围：与顶部循环按钮共用 auth 里的 scope，改完两边同时生效 */
+  onFilterRange(e) {
+    const scope = e.currentTarget.dataset.value;
+    auth.setFilterScope(scope);
+    this.setData({ filterScope: scope });
+  },
+
+  onToggleMedia(e) {
+    const key = e.currentTarget.dataset.key;
+    const patch = {};
+    patch["filter.media." + key] = !this.data.filter.media[key];
+    this.setData(patch);
+    this.buildDraftChips();
+  },
+
+  /** 分类 / 评价多选：data-field 决定改哪个数组 */
+  onToggleChip(e) {
+    const field = e.currentTarget.dataset.field;
+    const value = e.currentTarget.dataset.value;
+    const list = (this.data.filter[field] || []).slice();
+    const idx = list.indexOf(value);
+    if (idx >= 0) list.splice(idx, 1);
+    else list.push(value);
+    const patch = {};
+    patch["filter." + field] = list;
+    this.setData(patch);
+    this.buildDraftChips();
+  },
+
+  onToggleTag(e) {
+    const tag = e.currentTarget.dataset.tag;
+    const list = (this.data.filter.tags || []).slice();
+    const idx = list.indexOf(tag);
+    if (idx >= 0) list.splice(idx, 1);
+    else list.push(tag);
+    this.setData({ "filter.tags": list });
+    this.buildTagChips();
+  },
+
+  onPickAuthor(e) {
+    const id = Number(e.currentTarget.dataset.id) || 0;
+    this.setData({
+      "filter.authorId": this.data.filter.authorId === id ? 0 : id,
+    });
+    this.buildDraftChips();
+  },
+
+  /** 标签 chips：已选排最前；全部展示（放下面后不再限制 4 枚） */
+  buildTagChips() {
+    const selected = this.data.filter.tags || [];
+    const all = this.data.tagOptions || [];
+    const ordered = selected.concat(
+      all.filter((tag) => selected.indexOf(tag) < 0),
+    );
+    this.setData({
+      tagChips: ordered.map((tag) => ({
+        tag,
+        on: selected.indexOf(tag) >= 0,
+      })),
+      tagHasMore: false,
+    });
+  },
+
+  /** 条件条「清空」：只清结构化条件，查看范围是独立维度 */
+  clearFilter() {
+    this.clearStructuredFilter();
+    this.commitFilter();
+  },
+
+  /**
+   * 标签候选：memory/tags 恒为「只看自己」的统计（分析类接口口径），
+   * 列表在「全部/他人」范围时候选可能不含他人标签，抽屉 hint 已写明来源
+   */
+  async loadTagOptions() {
+    if (this._tagsLoaded) return;
+    this._tagsLoaded = true;
+    try {
+      const { code, data } = await api.memory.tags();
+      if (Number(code) === 200 && data) {
+        this.setData({ tagOptions: (data.tags || []).map((t) => t.tag) });
+        this.buildTagChips();
+      }
+    } catch (err) {
+      this._tagsLoaded = false; // 失败允许下次重试
+    }
+  },
+
+  /**
+   * 作者候选：取我加入的前 3 个组织的成员（去重、排除自己）。
+   * 组织多时逐个拉成员成本高，所以只取前 3 个；作者筛选只对「全部/只看他人」有意义
+   */
+  async loadAuthorOptions() {
+    if (this._membersLoaded) return;
+    this._membersLoaded = true;
+    try {
+      const meId = Number((auth.getUser() || {}).id);
+      const { code, data } = await api.org.mine();
+      if (Number(code) !== 200) return;
+      const orgs = (Array.isArray(data) ? data : [])
+        .filter((o) => Number(o.my_status) === 1)
+        .slice(0, 3);
+      const seen = {};
+      const list = [];
+      for (let i = 0; i < orgs.length; i += 1) {
+        const resp = await api.org.members(orgs[i].id);
+        if (Number(resp.code) !== 200) continue;
+        (resp.data || []).forEach((m) => {
+          const id = Number(m.id);
+          if (!id || id === meId || seen[id]) return;
+          seen[id] = true;
+          // 成员接口返回的是 real_name（user_nick）与 username（登录名）
+          list.push({ id, name: m.real_name || m.username || "用户" + id });
+        });
+      }
+      this.setData({ authorOptions: list.slice(0, 30) });
+    } catch (err) {
+      this._membersLoaded = false;
+    }
+  },
+
   /** 顶部轻提示：显示一句文字，1.2s 后自动收起（wx.showToast 不能自定义位置，故用固定视图） */
   showHint(text) {
     this.setData({ hintText: text });
@@ -177,8 +597,13 @@ Page({
     }, 1200);
   },
 
-  /** 列表滑动时收起搜索框（已输入关键词时不打断浏览搜索结果） */
-  onPageScroll() {
+  /**
+   * 触摸列表时收起搜索框（已输入关键词时不打断浏览搜索结果）。
+   * 原先挂在 onPageScroll 上：页面只要注册了那个钩子，滚动期间每一帧都要跳一次
+   * 「渲染层 → 逻辑层」，而这里要的只是「开始滑就该收起」——用一个手势只在起点
+   * 到达一次的 touchstart，代价从 60 次/秒降到 1 次/手势（滑动必定从触摸开始，体感一致）。
+   */
+  onListTouch() {
     if (this.data.searchExpanded && !this.data.keyword) {
       this.collapseSearchBox();
     }
@@ -196,27 +621,70 @@ Page({
     if (this._sheetTimer) clearTimeout(this._sheetTimer);
     if (this._hintTimer) clearTimeout(this._hintTimer);
     if (this._searchTimer) clearTimeout(this._searchTimer);
+    // 录音回调挂在 wx.getRecorderManager() 这个进程级单例上：不摘掉就会连同页面实例
+    // 一起泄漏，且下次再进本页会累加出重复回调
+    this.detachRecorder();
   },
 
   // ==================== 录音（长按话筒按钮展开面板，松手带音频跳编辑页转写） ====================
   initRecorder() {
+    if (this._recorder) return;
     const recorder = wx.getRecorderManager();
     this._recorder = recorder;
 
     // RecorderManager 的 onStop/onError 是「注册回调的方法」，必须调用而非赋值
     // （赋值的写法原生层不会回调，导致松手后既不收起录音状态也不跳转）
-    recorder.onStop((res) => this.handleRecordStop(res));
+    // 回调按引用挂在实例上（不是匿名闭包）：退出页面时才能 offStop/offError 取得掉，
+    // 否则这个闭包会永久挂在全局单例上（连页面实例一起泄漏），且 reLaunch 回登录页
+    // 再进首页时会累加出第二份回调 —— 与编辑页 discardRecorder 同一个道理
+    this._recStopHandler = (res) => this.handleRecordStop(res);
+    this._recErrorHandler = () => this.handleRecordError();
+    recorder.onStop(this._recStopHandler);
+    recorder.onError(this._recErrorHandler);
+  },
 
-    recorder.onError(() => {
-      // 不是本页这一轮（编辑页重录报的错）就别接手，免得把本页面板与录音态搅乱
-      if (!this._recExpect && !this._started) return;
-      this._recExpect = false;
-      this._started = false;
-      this._cancelRequested = false;
-      this.clearRecordTimer();
-      this.closeSheet();
-      wx.showToast({ title: "录音失败，请检查麦克风权限", icon: "none" });
-    });
+  /** 录音器报错：只处理本页这一轮（编辑页重录报的错不该搅乱本页的面板与录音态） */
+  handleRecordError() {
+    if (!this._recExpect && !this._started) return;
+    this._recExpect = false;
+    this._started = false;
+    this._cancelRequested = false;
+    this.clearRecordTimer();
+    this.closeSheet();
+    wx.showToast({ title: "录音失败，请检查麦克风权限", icon: "none" });
+  },
+
+  /** 退出页面：抹掉归属标记 → 摘本页监听 → 必要时释放麦克风 */
+  detachRecorder() {
+    const wasRecording = this._started;
+    this._recExpect = false;
+    this._started = false;
+    this._down = false;
+    const rec = this._recorder;
+    this._recorder = null;
+    if (!rec) return;
+    try {
+      // 低版本基础库没有 offXxx：靠归属标记兜底，至少让回调白跑
+      if (this._recStopHandler && typeof rec.offStop === "function") {
+        rec.offStop(this._recStopHandler);
+      }
+      if (this._recErrorHandler && typeof rec.offError === "function") {
+        rec.offError(this._recErrorHandler);
+      }
+    } catch (err) {
+      /* 忽略：摘不掉也不影响功能 */
+    }
+    // 监听已摘，这段录音没人认领了；仍要 stop 一次把麦克风交还原生层
+    // （顺序不能反：先 stop 后摘，onStop 会把这段当成待发送的录音接管）
+    if (wasRecording) {
+      try {
+        rec.stop();
+      } catch (err) {
+        /* 没在录就忽略 */
+      }
+    }
+    this._recStopHandler = null;
+    this._recErrorHandler = null;
   },
 
   /** 视口尺寸取一次缓存住：拿不到就保留默认估值，不阻断录音主流程 */
@@ -617,9 +1085,13 @@ Page({
     const version = this._version;
     try {
       this.setData({ loading: true });
-      // withPins=1：让后端把自己置顶那几条单独放在 pinned 里带回来（同时已从 items 剔掉，
-      // 不会翻页翻到重复卡片）；只有日志页带这个参数，Web 表格与导出不受影响
-      const params = { page: 1, pageSize: PAGE_SIZE, withPins: 1 };
+      // 结构化筛选参数与分页参数合并；筛选态不传 withPins：
+      // 置顶是独立查询、不吃任何检索条件，混进筛选结果就是三条不相干的卡片
+      const params = Object.assign(
+        { page: 1, pageSize: PAGE_SIZE },
+        this.buildFilterParams(),
+      );
+      if (!this.data.hasFilter) params.withPins = 1;
       if (this._cursor != null) {
         params.beforeId = this._cursor;
         // 游标翻页时本列表只用 items.length 判有没有下一页，
@@ -633,7 +1105,7 @@ Page({
       if (version !== this._version) return; // 已被新的 reset/搜索覆盖，丢弃过期结果
       if (Number(code) === 200 && data) {
         const items = (data.items || []).map(this.fromListItem);
-        const merged = this.mergeUnique(this.data.entries, items);
+        const merged = this.mergeUnique(this._entries, items);
         if (items.length) {
           // 游标取「本页最后一条」而不是本页最小 id：后端按 event_time 倒序返回，
           // 最后一条就是本页时间最旧的锚点。取 min(id) 会让「id 大但时间是补记的旧日期」
@@ -646,8 +1118,8 @@ Page({
         const pinnedItems = Array.isArray(data.pinned)
           ? data.pinned.map(this.fromListItem)
           : this.data.pinnedEntries;
+        this._entries = merged;
         this.setData({
-          entries: merged,
           groups: this.buildGroups(merged),
           pinnedEntries: pinnedItems,
           hasMore: items.length >= PAGE_SIZE,
@@ -682,8 +1154,8 @@ Page({
       clearTimeout(this._searchTimer);
       this._searchTimer = null;
     }
+    this._entries = [];
     this.setData({
-      entries: [],
       groups: [],
       pinnedEntries: [],
       hasMore: true,
@@ -706,15 +1178,15 @@ Page({
     if (!pending) return;
     app.globalData._pendingTimelineInsert = null;
     if (!pending.id || !pending.event) return;
-    if (this.data.entries.some((e) => String(e.id) === String(pending.id)))
-      return;
+    if (this._entries.some((e) => String(e.id) === String(pending.id))) return;
     // 本地这条必是本人刚写的，补上 isMine：后端第一页回来前它已经在列表里，
     // 否则刚存的那条会先不出竖条，拉到数据后再闪一下
     const merged = [
       Object.assign({}, pending, { isMine: true }),
-      ...this.data.entries,
+      ...this._entries,
     ];
-    this.setData({ entries: merged, groups: this.buildGroups(merged) });
+    this._entries = merged;
+    this.setData({ groups: this.buildGroups(merged) });
   },
 
   // ==================== 长按卡片：置顶 / 取消置顶 / 编辑 / 删除 ====================
@@ -724,7 +1196,7 @@ Page({
     const key = String(id);
     return (
       (this.data.pinnedEntries || []).find((e) => String(e.id) === key) ||
-      this.data.entries.find((e) => String(e.id) === key) ||
+      (this._entries || []).find((e) => String(e.id) === key) ||
       null
     );
   },
@@ -793,15 +1265,15 @@ Page({
     const pinned = (this.data.pinnedEntries || []).filter(
       (e) => String(e.id) !== key,
     );
-    const rest = this.data.entries.filter((e) => String(e.id) !== key);
+    const rest = this._entries.filter((e) => String(e.id) !== key);
     if (want) {
       // 用 Object.assign 而非对象展开：展开会被增强编译转成 @swc/runtime helper（同 buildGroups）
       const nextPinned = [Object.assign({}, entry, { pinned: true })].concat(
         pinned,
       );
+      this._entries = rest;
       this.setData({
         pinnedEntries: nextPinned,
-        entries: rest,
         groups: this.buildGroups(rest),
       });
       return;
@@ -810,9 +1282,9 @@ Page({
       rest,
       Object.assign({}, entry, { pinned: false }),
     );
+    this._entries = next;
     this.setData({
       pinnedEntries: pinned,
-      entries: next,
       groups: this.buildGroups(next),
     });
   },
@@ -851,9 +1323,9 @@ Page({
         const pinned = (this.data.pinnedEntries || []).filter(
           (e) => String(e.id) !== key,
         );
-        const rest = this.data.entries.filter((e) => String(e.id) !== key);
+        const rest = this._entries.filter((e) => String(e.id) !== key);
+        this._entries = rest;
         this.setData({
-          entries: rest,
           groups: this.buildGroups(rest),
           pinnedEntries: pinned,
         });
@@ -883,6 +1355,9 @@ Page({
       return;
     }
     if (this._searching) return;
+    // 语义检索不吃结构化条件：一旦搜索先把筛选清掉，
+    // 避免「看着筛选结果、实际搜的是全量」的错位（查看范围保留，search 支持 scope）
+    if (this.data.hasFilter) this.clearStructuredFilter();
     // 主动检索（bindconfirm）时取消还没到点的防抖，避免同一个词二次请求
     if (this._searchTimer) {
       clearTimeout(this._searchTimer);
@@ -904,15 +1379,16 @@ Page({
         Number(code) === 200 && data
           ? (data.list || []).map(this.fromMemoryItem)
           : [];
+      this._entries = list;
       this.setData({
-        entries: list,
         groups: this.buildGroups(list),
         // 后端语义召回被限流时给出明确提示，而不是让用户以为「真的搜不到」
         semanticSkipped: !!(data && data.semanticSkipped),
       });
     } catch (err) {
       if (version !== this._version) return;
-      this.setData({ entries: [], groups: [] });
+      this._entries = [];
+      this.setData({ groups: [] });
     } finally {
       this._searching = false;
       if (version === this._version) this.setData({ loading: false });
@@ -927,6 +1403,9 @@ Page({
 
   // ==================== 搜索图标展开/收起 ====================
   expandSearch() {
+    // 搜索与结构化筛选互斥：展开搜索框就收掉筛选，
+    // 否则条件条被隐藏、列表却还让着 64rpx，顶部会多一条空白
+    if (this.data.hasFilter) this.clearStructuredFilter();
     this.setData({ searchExpanded: true });
   },
 

@@ -88,10 +88,16 @@ function markWritten(id, fingerprint) {
   }
 }
 
-/** 这一行是否已经写进过日历（列表按钮据此显示「已在日历」） */
-function isWritten(row) {
+/**
+ * 这一行是否已经写进过日历（列表按钮据此显示「已在日历」）
+ * @param {object} row 提醒行
+ * @param {object} [map] 已读好的指纹表：一次渲染多行时先读一次再逐行传进来，
+ *   否则每行都要同步读一次整个表（列表 30 条就是 30 次同步 storage 读）
+ */
+function isWritten(row, map) {
   if (!row || !row.id) return false;
-  const fp = writtenMap()[String(row.id)];
+  const table = map || writtenMap();
+  const fp = table[String(row.id)];
   return !!fp && fp === fingerprintOf(row);
 }
 
@@ -285,6 +291,8 @@ module.exports = {
   supported,
   capability,
   isWritten,
+  // 导出仅供「一次渲染多行」的调用方预读：逐行调用 isWritten 时不必自己持有它
+  writtenMap,
   planOf,
   addRow,
   openSettingForCalendar,

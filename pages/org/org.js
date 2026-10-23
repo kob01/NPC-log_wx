@@ -40,6 +40,13 @@ function displayName(row) {
   return row.real_name || row.username || "未知用户";
 }
 
+/**
+ * 进页重拉的节流窗口：本页一次 loadAll 要打 5 个接口，
+ * 原来每次 onShow（含从审批弹层/详情返回）都 force 一遍，等于缓存在本页完全失效。
+ * 组织与审批结果在 Web 端确实会变，但 60s 内的旧数据可接受，60s 后进页会真重拉。
+ */
+const ORG_REFRESH_MS = 60 * 1000;
+
 Page({
   behaviors: [require("../../utils/themeBehavior")],
   data: {
@@ -72,10 +79,16 @@ Page({
     submitting: false,
   },
 
+  // 上次成功拉全量数据的时间（不进 data：它不参与渲染）
+  _loadedAt: 0,
+
   onShow() {
     if (!auth.checkLogin()) return;
-    // 每次进页强制重拉：组织成员/审批状态在 Web 端也会变，60s 本地缓存会让人看到旧数据
-    this.loadAll(true);
+    // 首次进入、或距上次成功拉取超过 60s 才强制重拉；其余走 api 层 60s 缓存。
+    // 待审批数量（loadPendingAll）本身不带缓存，无论走哪条分支都是最新的
+    const stale =
+      !this._loadedAt || Date.now() - this._loadedAt > ORG_REFRESH_MS;
+    this.loadAll(stale);
   },
 
   onPullDownRefresh() {
@@ -98,6 +111,8 @@ Page({
         this.loadApplications(force),
         this.loadRecords(force),
       ]);
+      // 五个都成功才记时间：中途失败就不该进入 60s 静默期，下次 onShow 还得重试
+      this._loadedAt = Date.now();
     } catch (err) {
       // 请求层的提示已经弹过了，这里接一下只为让下拉刷新能收尾、列表不卡在 loading
     } finally {

@@ -1,3 +1,6 @@
+<!-- 拖拽浮层的跟手位移在 WXS 里做（渲染层，不过桥）：见 pages/edit/drag.wxs -->
+<wxs module="drag" src="./drag.wxs"></wxs>
+
 <view class="edit page-root {{themeClass}}">
   <!-- 时间 -->
   <view class="form-item">
@@ -122,7 +125,15 @@
   </view>
 
   <!-- 图片 -->
-  <view class="form-item">
+  <!-- touchstart/move/end 绑在这一层而不是 .img-grid：网格自己要用 bindtouchmove
+       跑换位命中判定，同一节点不能挂两个同名事件；事件从格子上冒泡到这里同样收得到 -->
+  <view
+    class="form-item"
+    bindtouchstart="{{drag.begin}}"
+    bindtouchmove="{{drag.move}}"
+    bindtouchend="{{drag.end}}"
+    bindtouchcancel="{{drag.end}}"
+  >
     <view class="label label-row">
       <text>图片（{{images.length}}/9）</text>
       <!-- 微信生态独有入口：会话里的图（单聊/群/文件传输助手）能直接选，不需资质也不需后端改动 -->
@@ -142,13 +153,15 @@
       <view
         class="img-cell {{dragging && dragIndex === index ? 'img-cell-dragging' : ''}}"
         wx:for="{{images}}"
-        wx:key="url"
+        wx:key="key"
         data-index="{{index}}"
         bindtouchstart="onImgTouchStart"
         bindlongpress="onImgLongPress"
       >
         <image class="img" src="{{item.displayUrl}}" mode="aspectFill" data-index="{{index}}" bindtap="previewImage" />
-        <view class="img-del" data-index="{{index}}" catchtap="removeImage">✕</view>
+        <!-- 占位项：图已先上屏（本地路径），上传完就换成服务器缩略图；期间不给删除也不许拖 -->
+        <view class="img-uploading" wx:if="{{item.pending}}">上传中</view>
+        <view class="img-del" wx:else data-index="{{index}}" catchtap="removeImage">✕</view>
       </view>
       <view class="img-add" wx:if="{{images.length < 9}}" bindtap="chooseImage">＋</view>
     </view>

@@ -9,6 +9,8 @@ Page({
     id: "",
     detail: null,
     imageUrls: [],
+    // 原图地址（仅用于点开全屏预览）；轮播本身走 imageUrls 的缩略图
+    fullImageUrls: [],
     visibilityText: "仅自己可见",
     // 地点（与可见范围同一行右侧）：locText 为空时不渲染，hasCoord 决定要不要带「›」导航提示
     locText: "",
@@ -53,16 +55,27 @@ Page({
       this.setData({ loading: true });
       const { code, data } = await api.event.detail(id);
       if (Number(code) !== 200 || !data) {
-        this.setData({ detail: null, loading: false });
+        this.setData({
+          detail: null,
+          imageUrls: [],
+          fullImageUrls: [],
+          loading: false,
+        });
         return;
       }
       const detail = Object.assign(
         { tags: [], persons: [], images: [], links: [] },
         data,
       );
-      const imageUrls = detail.images
-        .map((img) => resolveFileUrl(img.url))
-        .filter(Boolean);
+      // 轮播用小图（列表同款 300px 缩略图）：详情页一进来就要把整组图拉下来，
+      // 直接用原图（长边 2560、单张 300KB~1MB）在弱网下首屏会被图片卡住；
+      // 点开全屏时才换成 fullImageUrls（原图）。两数组严格同序同长（同一个 list 映射两遍），
+      // 否则 previewImage 的 index 会与轮播下标错位
+      const imgList = detail.images.filter((img) => img && img.url);
+      const imageUrls = imgList.map((img) =>
+        resolveFileUrl(img.thumbUrl || img.url),
+      );
+      const fullImageUrls = imgList.map((img) => resolveFileUrl(img.url));
       let visibilityText = "仅自己可见";
       if (Number(detail.visibility) === 1) {
         visibilityText = detail.visibleOrgNames
@@ -75,6 +88,7 @@ Page({
       this.setData({
         detail,
         imageUrls,
+        fullImageUrls,
         visibilityText,
         // 后端每次编辑（含只换图片/链接/可见组织）都会把这一列推到当前时间；
         // 存量从未编辑过的行它等于建档时间（列上没有自动变更子句，见 migrations.sql 段 4）
@@ -135,9 +149,13 @@ Page({
 
   onPreviewImage(e) {
     const index = e.currentTarget.dataset.index;
+    // 轮播是缩略图，点开必须给原图集，否则 300px 放大到全屏会糊
+    const urls = this.data.fullImageUrls.length
+      ? this.data.fullImageUrls
+      : this.data.imageUrls;
     wx.previewImage({
-      current: this.data.imageUrls[index],
-      urls: this.data.imageUrls,
+      current: urls[index],
+      urls,
     });
   },
 

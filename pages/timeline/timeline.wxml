@@ -39,6 +39,18 @@
             src="{{filterScope === 'others' ? usersIcon : (filterScope === 'private' ? lockIcon : (filterScope === 'mine' ? personIconOn : personIcon))}}"
           />
         </view>
+        <!-- 结构化筛选入口：与条件条联动，徽标显示生效条件数 -->
+        <view
+          class="mine-btn filter-btn {{hasFilter ? 'filter-btn-on' : ''}}"
+          bindtap="openFilter"
+        >
+          <image
+            class="mine-glyph"
+            mode="aspectFit"
+            src="{{hasFilter ? filterIconOn : filterIcon}}"
+          />
+          <text class="filter-badge" wx:if="{{filterBrief.length}}">{{filterBrief.length}}</text>
+        </view>
         <view class="add-btn" bindtap="goEdit">
           <image
             class="add-glyph"
@@ -51,7 +63,12 @@
   </view>
 
   <block wx:if="{{groups.length || pinnedEntries.length}}">
-    <view class="tl-body {{sheetVisible ? 'tl-body-shrunk' : ''}}">
+    <!-- touchstart 只用来收起搜索框（见 onListTouch）：换成 onPageScroll 的话，
+         页面滚动期间每帧都要往逻辑层跑一趟，而这里一次手势只需要知道一次 -->
+    <view
+      class="tl-body {{sheetVisible ? 'tl-body-shrunk' : ''}}"
+      bindtouchstart="onListTouch"
+    >
       <view class="tl-line"></view>
       <!-- 置顶区：只有我自己钉的那几条（上限 3，后端已把它们从下面那条时间序流里剔掉）。
            单独走一节而不混进月份分组：钉一条三年前的旧日志也该占住首屏，
@@ -98,7 +115,7 @@
   />
 
   <loading wx:if="{{loading}}" text="{{searchMode ? '检索中' : '加载中'}}" />
-  <view class="no-more" wx:if="{{!loading && !hasMore && !searchMode && entries.length}}">
+  <view class="no-more" wx:if="{{!loading && !hasMore && !searchMode && groups.length}}">
     — 没有更多了 —
   </view>
 
@@ -152,6 +169,182 @@
       </view>
 
       <view class="sheet-hint">{{cancelHint}}</view>
+    </view>
+  </view>
+
+  <!-- ==================== 结构化筛选抽屉 ====================
+       filter 是草稿：点「完成」才提交并重拉；点遮罩/关闭还原到打开时。
+       顶部条件条与这里的 chips 共用同一份 filter，避免两处状态漂移 -->
+  <view
+    class="filter-mask"
+    wx:if="{{filterOpen}}"
+    bindtap="cancelFilter"
+    catchtouchmove="noop"
+  ></view>
+  <view class="filter-sheet" wx:if="{{filterOpen}}" catchtouchmove="noop">
+    <view class="fs-head">
+      <text class="fs-title">筛选</text>
+      <text class="fs-count" wx:if="{{draftCount}}">已选 {{draftCount}} 项</text>
+      <text class="fs-reset" bindtap="resetFilterDraft">重置</text>
+    </view>
+
+    <scroll-view class="fs-body" scroll-y>
+      <!-- 时间 -->
+      <view class="fs-group">
+        <view class="fs-group-head">
+          <text class="fs-name">时间</text>
+          <text class="fs-hint">按日志发生时间</text>
+        </view>
+        <view class="fs-chips">
+          <view
+            class="fs-chip {{filter.time === item.value ? 'on' : ''}}"
+            wx:for="{{timeOptions}}"
+            wx:key="value"
+            data-value="{{item.value}}"
+            bindtap="onFilterTime"
+          >{{item.label}}</view>
+        </view>
+        <view class="fs-range" wx:if="{{filter.time === 'custom'}}">
+          <picker
+            class="fs-picker"
+            mode="date"
+            value="{{filter.start}}"
+            bindchange="onPickStart"
+          >
+            <view class="fs-date {{filter.start ? '' : 'empty'}}">{{filter.start || '开始日期'}}</view>
+          </picker>
+          <text class="fs-to">至</text>
+          <picker
+            class="fs-picker"
+            mode="date"
+            value="{{filter.end}}"
+            bindchange="onPickEnd"
+          >
+            <view class="fs-date {{filter.end ? '' : 'empty'}}">{{filter.end || '结束日期'}}</view>
+          </picker>
+        </view>
+      </view>
+
+      <!-- 查看范围 -->
+      <view class="fs-group">
+        <view class="fs-group-head">
+          <text class="fs-name">查看范围</text>
+          <text class="fs-hint">与顶部图标联动</text>
+        </view>
+        <view class="fs-chips">
+          <view
+            class="fs-chip {{filterScope === item.value ? 'on' : ''}}"
+            wx:for="{{scopeOptions}}"
+            wx:key="value"
+            data-value="{{item.value}}"
+            bindtap="onFilterRange"
+          >{{item.label}}</view>
+        </view>
+      </view>
+
+      <!-- 内容形态 -->
+      <view class="fs-group">
+        <view class="fs-group-head">
+          <text class="fs-name">内容形态</text>
+          <text class="fs-hint">多选时需同时具备</text>
+        </view>
+        <view class="fs-switches">
+          <view
+            class="fs-switch {{item.on ? 'on' : ''}}"
+            wx:for="{{mediaChips}}"
+            wx:key="key"
+            data-key="{{item.key}}"
+            bindtap="onToggleMedia"
+          >
+            <text>{{item.label}}</text>
+            <view class="fs-toggle"></view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 分类 -->
+      <view class="fs-group">
+        <view class="fs-group-head">
+          <text class="fs-name">分类</text>
+          <text class="fs-hint">可多选 · 任一命中</text>
+        </view>
+        <view class="fs-chips">
+          <view
+            class="fs-chip sm {{item.on ? 'on' : ''}}"
+            wx:for="{{typeChips}}"
+            wx:key="value"
+            data-field="types"
+            data-value="{{item.value}}"
+            bindtap="onToggleChip"
+          >{{item.value}}</view>
+        </view>
+      </view>
+
+      <!-- 评价 -->
+      <view class="fs-group">
+        <view class="fs-group-head">
+          <text class="fs-name">评价</text>
+          <text class="fs-hint">可多选 · 任一命中</text>
+        </view>
+        <view class="fs-chips">
+          <view
+            class="fs-chip sm {{item.on ? 'on' : ''}}"
+            wx:for="{{ratingChips}}"
+            wx:key="value"
+            data-field="ratings"
+            data-value="{{item.value}}"
+            bindtap="onToggleChip"
+          >{{item.value}}</view>
+        </view>
+      </view>
+
+      <!-- 标签：已选优先，全部展示（放下面后不再限制 4 枚） -->
+      <view class="fs-group">
+        <view class="fs-group-head">
+          <text class="fs-name">标签</text>
+          <text class="fs-hint">来自你的 AI 标签 · 任一命中</text>
+        </view>
+        <view class="fs-chips">
+          <view
+            class="fs-chip sm {{item.on ? 'on' : ''}}"
+            wx:for="{{tagChips}}"
+            wx:key="tag"
+            data-tag="{{item.tag}}"
+            bindtap="onToggleTag"
+          >{{item.tag}}</view>
+          <text class="fs-empty" wx:if="{{!tagChips.length}}">还没有 AI 标签</text>
+        </view>
+      </view>
+
+      <!-- 作者：只在能看他人日志时有意义 -->
+      <view class="fs-group" wx:if="{{filterScope === 'all' || filterScope === 'others'}}">
+        <view class="fs-group-head">
+          <text class="fs-name">作者</text>
+          <text class="fs-hint">仅「全部 / 只看他人」时可筛</text>
+        </view>
+        <view class="fs-chips">
+          <view
+            class="fs-chip sm {{!filter.authorId ? 'on' : ''}}"
+            data-id="0"
+            bindtap="onPickAuthor"
+          >不限</view>
+          <view
+            class="fs-chip sm {{filter.authorId === item.id ? 'on' : ''}}"
+            wx:for="{{authorOptions}}"
+            wx:key="id"
+            data-id="{{item.id}}"
+            bindtap="onPickAuthor"
+          >{{item.name}}</view>
+          <text class="fs-empty" wx:if="{{!authorOptions.length}}">暂无可选成员</text>
+        </view>
+      </view>
+
+      <view class="fs-space"></view>
+    </scroll-view>
+
+    <view class="fs-foot">
+      <view class="fs-btn ghost" bindtap="resetFilterDraft">重置</view>
+      <view class="fs-btn primary" bindtap="applyFilter">完成</view>
     </view>
   </view>
 

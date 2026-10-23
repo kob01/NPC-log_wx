@@ -4,24 +4,11 @@ const audioHub = require("../../utils/audioHub");
 const subscribe = require("../../utils/subscribe");
 const { resolveFileUrl, nowDateTime } = require("../../utils/format");
 const { SUPPORTED_EXT_RE, inspectImage } = require("../../utils/imageFormat");
-
-const typeOptions = [
-  "吃喝",
-  "生活",
-  "运动",
-  "爱好",
-  "学习",
-  "Her",
-  "旅游",
-  "家庭",
-  "社交",
-  "大事件",
-  "待办",
-  "衣",
-  "工作",
-  "其他",
-];
-const ratingOptions = ["夯", "好", "NPC", "拉", "拉完了"];
+// 分类/评价候选与存档页筛选抽屉共用一份（为何不能各写一份见 utils/options.js）；
+// 页内沿用原名：picker 的 range 与 typeIndex/ratingIndex 换算都按下标走
+const { TYPE_OPTIONS, RATING_OPTIONS } = require("../../utils/options");
+const typeOptions = TYPE_OPTIONS;
+const ratingOptions = RATING_OPTIONS;
 const visibilityOptions = ["仅自己可见", "组织可见"];
 const platformLabels = ["抖音", "小红书", "其他"];
 const platformValues = ["douyin", "xiaohongshu", "other"];
@@ -29,8 +16,21 @@ const platformValues = ["douyin", "xiaohongshu", "other"];
 // 与后端 .env 的 MAX_UPLOAD_MB 默认值对齐：超上限在本地就挡下，省一趟注定失败的上传
 const MAX_UPLOAD_MB = 10;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
+// 与后端 IMAGE_MAX_LONG_SIDE 的默认值（2560）对齐：超过这条线后端反正要降采样，
+// 端上先压一遍能把上传体量砍到几分之一（4000px 原图 5MB → 2560px 约 400KB），
+// 后端 sharp 仍按 q88 转 webp 兜底，所以这里 quality 取 85 不会有可见损失
+const UPLOAD_MAX_LONG_SIDE = 2560;
+const UPLOAD_JPEG_QUALITY = 85;
+// 尺寸没超但体积依然大的（长截图、高码率原图）也压一下
+const UPLOAD_COMPRESS_IF_BYTES = 1.5 * 1024 * 1024;
+// 并发上传数：9 张串行要叠 9 个往返；3 路既能把等待压到 1/3，
+// 又不会在弱网下把上行带宽一次占满（上传本就是最占带宽的动作）
+const UPLOAD_CONCURRENCY = 3;
 // 页内重录的时长上限（秒）：与首页按住录音一致，到点自动收（走结束上传路径）
 const REC_MAX_SEC = 60;
+// 输入框停笔多久把草稿写回 data（ms）：textarea 的 value 是绑定的，逐字符 setData
+// 等于每键一次跨线程回灌 + 一次 auto-height 重排（正文框 maxlength 4000）
+const INPUT_FLUSH_MS = 300;
 // multer 按「上传文件名的扩展名」校验，会话文件常常没有后缀，得先补一个合法后缀再传；
 // 能不能传交 utils/imageFormat 按文件头魔数判定 —— HEIC 虽在扩展名白名单里，但 sharp
 // 预编译包缺 HEVC 解码器，会变成一张小程序渲染不出来的裂图，属于无效上传，一并挡下
@@ -103,6 +103,74 @@ function removeTmpFile(p) {
   } catch (e) {
     /* 已经不在了，正合意 */
   }
+}
+
+/** 读图片宽高：失败返回 null，调用方按原图继续（压缩是优化，不是必经步骤） */
+function imageSizeOf(path) {
+  if (typeof wx.getImageInfo !== "function") return Promise.resolve(null);
+  return new Promise((resolve) => {
+    wx.getImageInfo({
+      src: path,
+      success: (res) =>
+        resolve({
+          width: Number(res.width) || 0,
+          height: Number(res.height) || 0,
+        }),
+      fail: () => resolve(null),
+    });
+  });
+}
+
+/**
+ * 上传前压缩：长边超后端封顶线、或体积偏大的 JPEG 先压一遍。
+ *
+ * 只处理 jpg/jpeg —— png 可能带透明通道，webp 本身已是压缩格式，压了只掉画质不省空间。
+ * 任何一步拿不到结果都返回空串，调用方退回原图：压缩是加速手段，绝不能成为丢图的理由。
+ * @param {string} src 本地临时路径
+ * @param {string} ext 魔数/后缀判定出的格式
+ * @param {number} size 原始体积（字节，可能拿不到）
+ * @returns {Promise<string>} 压缩后的临时路径；不需要压或失败返回 ""
+ */
+async function compressForUpload(src, ext, size) {
+  if (!src || typeof wx.compressImage !== "function") return "";
+  const kind = String(ext || "").toLowerCase();
+  if (kind !== "jpg" && kind !== "jpeg") return "";
+  const info = await imageSizeOf(src);
+  if (!info || !info.width || !info.height) return "";
+  const longSide = Math.max(info.width, info.height);
+  const overSize = Number(size) > UPLOAD_COMPRESS_IF_BYTES;
+  if (longSide <= UPLOAD_MAX_LONG_SIDE && !overSize) return "";
+
+  const opts = { src, quality: UPLOAD_JPEG_QUALITY };
+  // 尺寸参数要基础库 2.26.0+；低版本只降质量也能省一截，不能因此让整条链路走不通
+  if (
+    longSide > UPLOAD_MAX_LONG_SIDE &&
+    typeof wx.canIUse === "function" &&
+    wx.canIUse("compressImage.object.compressedWidth")
+  ) {
+    if (info.width >= info.height) {
+      opts.compressedWidth = UPLOAD_MAX_LONG_SIDE;
+      opts.compressedHeight = Math.max(
+        1,
+        Math.round((info.height * UPLOAD_MAX_LONG_SIDE) / info.width),
+      );
+    } else {
+      opts.compressedHeight = UPLOAD_MAX_LONG_SIDE;
+      opts.compressedWidth = Math.max(
+        1,
+        Math.round((info.width * UPLOAD_MAX_LONG_SIDE) / info.height),
+      );
+    }
+  }
+  return new Promise((resolve) => {
+    // 不用对象展开：会被增强编译转成 @swc/runtime helper（见 utils/api.js 注释）
+    wx.compressImage(
+      Object.assign({}, opts, {
+        success: (res) => resolve((res && res.tempFilePath) || ""),
+        fail: () => resolve(""),
+      }),
+    );
+  });
 }
 
 Page({
@@ -200,13 +268,18 @@ Page({
   _imgRects: [],
   // touchstart 记下的按下点（client 坐标），longpress 触发时取用给浮层定初始位
   _startPoint: null,
+  // 文本输入草稿（key → 未落盘的值，见 onInput）：不进 data，避免逐字符跨线程
+  _inputDraft: {},
+  _inputTimer: null,
 
   async onLoad(options) {
-    // 数组放在 Page 选项上有跨实例共用风险，这里按页面实例各自建一份（先于登录判定，
+    // 数组/对象放在 Page 选项上有跨实例共用风险，这里按页面实例各自建一份（先于登录判定，
     // 未登录时 onUnload 兜底清理才有正确的空数组可用）
     this._tmpFiles = [];
     this._imgRects = [];
     this._startPoint = null;
+    this._inputDraft = {};
+    this._inputTimer = null;
     if (!auth.checkLogin()) return;
     const [date, timeStr] = nowDateTime().split(" ");
     this.setData({ date, timeStr });
@@ -248,6 +321,10 @@ Page({
     this.clearRecTimer();
     this._transcribeSeq += 1; // 让在飞的转写结果落地时认不出归属，不再写回页面
     this.discardRecorder();
+    // 还想落盘的输入草稿已无意义（页面没了），把定时器收掉就行
+    if (this._inputTimer) clearTimeout(this._inputTimer);
+    this._inputTimer = null;
+    this._inputDraft = {};
     // 兜底：选完图还没传完就退出的话，副本会一直躺在本地目录里
     (this._tmpFiles || []).forEach(removeTmpFile);
     this._tmpFiles = [];
@@ -662,7 +739,7 @@ Page({
         push("时间", { date: m[1], timeStr: m[2] }, !untouched);
       }
     }
-    if (f.event) push("事件", { event: f.event }, !!d.event);
+    if (f.event) push("事件", { event: f.event }, !!this.fieldOf("event"));
     if (f.type) {
       const i = typeOptions.indexOf(f.type);
       if (i >= 0)
@@ -678,12 +755,17 @@ Page({
         );
     }
     if (f.experience)
-      push("经验教训", { experience: f.experience }, !!d.experience);
-    if (f.witness) push("见证者", { witness: f.witness }, !!d.witness);
+      push(
+        "经验教训",
+        { experience: f.experience },
+        !!this.fieldOf("experience"),
+      );
+    if (f.witness)
+      push("见证者", { witness: f.witness }, !!this.fieldOf("witness"));
     if (f.position)
       push("地点", { "location.position": f.position }, !!d.location.position);
     // 识别原文本体也是一个可落表的项（正文），AI 没拆出字段时就只剩这一项
-    if (text) push("正文", { content: text }, !!d.content);
+    if (text) push("正文", { content: text }, !!this.fieldOf("content"));
     return {
       items,
       blanks: items.filter((it) => !it.occupied),
@@ -702,7 +784,11 @@ Page({
       });
       wrote.push(it.label);
     });
-    if (Object.keys(patch).length) this.setData(patch);
+    if (Object.keys(patch).length) {
+      // 程序化写入前先作废这些格子的输入草稿：不然后续停笔把旧草稿落盘会把 AI 结果盖回去
+      this.discardInputDraft(Object.keys(patch));
+      this.setData(patch);
+    }
     return wrote;
   },
 
@@ -969,6 +1055,8 @@ Page({
       if (Number(code) !== 200 || !data) return;
       const [date, timeStr] = (data.time || nowDateTime()).split(" ");
       const images = (data.images || []).map((img) => ({
+        // key 供 wx:key 用：上传占位项与已存项共处一个数组，必须有稳定的唯一键
+        key: `srv-${img.url}`,
         url: img.url,
         thumbUrl: img.thumbUrl || img.url,
         displayUrl: resolveFileUrl(img.thumbUrl || img.url),
@@ -986,6 +1074,9 @@ Page({
       const orgOptions = this.data.orgOptions.map((o) =>
         Object.assign({}, o, { checked: visibleOrgIds.indexOf(o.id) !== -1 }),
       );
+      // 服务端值要盖掉表单：先把还没落盘的输入草稿作废，
+      // 否则用户刚敲的几个字会在 300ms 后把详情请求回来的原文盖掉
+      this.discardInputDraft(["event", "content", "experience", "witness"]);
       this.setData({
         date,
         timeStr,
@@ -1030,10 +1121,46 @@ Page({
   },
 
   onInput(e) {
-    // 同 login.js：避开计算属性名，防止依赖 @swc/runtime/_define_property
+    // 同 login.js：避开计算属性名，防止依赖 @swc/runtime/_define_property。
+    // 但不能逐字符 setData：textarea 的 value 是绑定的，一敲一键就回灌一次内容、
+    // 并让 auto-height 重新量一遍高度（正文框 4000 字），这是输入卡顿的主要来源。
+    // 草稿先攒在实例上，停笔后一次落进 data；提交与「表单算不算已填」都先读草稿，不会漏字
+    const key = e.currentTarget.dataset.key;
+    this._inputDraft[key] = e.detail.value;
+    if (this._inputTimer) clearTimeout(this._inputTimer);
+    this._inputTimer = setTimeout(() => {
+      this._inputTimer = null;
+      this.flushInputs();
+    }, INPUT_FLUSH_MS);
+  },
+
+  /** 把输入草稿一次性落进 data（与 data 已一致的不写，避免空转 setData） */
+  flushInputs() {
+    if (this._inputTimer) {
+      clearTimeout(this._inputTimer);
+      this._inputTimer = null;
+    }
+    const draft = this._inputDraft;
     const patch = {};
-    patch[e.currentTarget.dataset.key] = e.detail.value;
-    this.setData(patch);
+    Object.keys(draft).forEach((key) => {
+      if (draft[key] !== this.data[key]) patch[key] = draft[key];
+    });
+    this._inputDraft = {};
+    if (Object.keys(patch).length) this.setData(patch);
+  },
+
+  /** 读文本字段当前值：有还没落盘的草稿时以草稿为准（判「格子是否已填」不能看落后的 data） */
+  fieldOf(key) {
+    return Object.prototype.hasOwnProperty.call(this._inputDraft, key)
+      ? this._inputDraft[key]
+      : this.data[key];
+  },
+
+  /** 作废若干字段的草稿：程序化写表前调用，否则停笔那一刻旧草稿会把新值盖回去 */
+  discardInputDraft(keys) {
+    (keys || []).forEach((key) => {
+      delete this._inputDraft[key];
+    });
   },
 
   onDateChange(e) {
@@ -1164,23 +1291,33 @@ Page({
         } else if (Number(f.size) > MAX_UPLOAD_BYTES) {
           oversize += 1;
         } else {
-          passed.push({ path: f.path, ext: info.ext });
+          passed.push({
+            path: f.path,
+            ext: info.ext,
+            size: Number(f.size) || 0,
+          });
         }
       });
+      // 压缩有意串行：一张 4000×3000 的图解码后位图就占约 48MB，多张同时解会直接把
+      // 低端机的内存打满；它比传原图快得多，串行这一两秒是值得换的保险
       for (const p of passed) {
-        if (SUPPORTED_EXT_RE.test(p.path)) {
-          tasks.push({ tempFilePath: p.path });
+        // 先压再传：这一步把「传原图」的等待从分钟级压到十几秒（9 张 4000px 原图）
+        const compressed = await compressForUpload(p.path, p.ext, p.size);
+        const src = compressed || p.path;
+        if (SUPPORTED_EXT_RE.test(src)) {
+          // localPath 留给九宫格占位：压完的图先拿原图预览，用户能立刻看到自己选了哪几张
+          tasks.push({ tempFilePath: src, localPath: p.path });
           continue;
         }
         // 会话里的图、个别安卓机型的相册临时名常常没后缀，multer 会按扩展名拒收，
         // 先复制一份按真实格式补上后缀（认不出来按 jpg 兜底）再传
-        const tmpPath = await copyWithExt(p.path, p.ext || "jpg");
+        const tmpPath = await copyWithExt(src, p.ext || "jpg");
         if (tmpPath) {
           this._tmpFiles.push(tmpPath);
-          tasks.push({ tempFilePath: tmpPath, tmpPath });
+          tasks.push({ tempFilePath: tmpPath, localPath: p.path, tmpPath });
         } else {
           // 副本建不了（没文件管理器等）就把原路径交上去，成不成由后端判定，至少不静默丢图
-          tasks.push({ tempFilePath: p.path });
+          tasks.push({ tempFilePath: src, localPath: p.path });
         }
       }
 
@@ -1227,27 +1364,80 @@ Page({
     return parts.length ? parts.join("，") + "，已跳过" : "";
   },
 
+  /**
+   * 并发上传（最多 3 路），每张先以本地占位进九宫格、成功后原地换成服务器地址：
+   * 1. 顺序稳定：占位一就位就不再移动，并发完成序不会打乱用户选图的次序（次序即 sort）；
+   * 2. 即时反馈：选完立刻能看到图（本地临时路径可直渲），不必只盯一行「图片上传中…」；
+   * 3. 失败即摘：被后端拒/网络断的格子直接移除，不留一张永远转圈的空图。
+   */
   async uploadImages(files) {
+    if (!files.length) return;
     this.setData({ uploading: true });
-    for (const f of files) {
-      try {
-        const { code, data } = await api.event.uploadImage(f.tempFilePath);
-        if (Number(code) === 200 && data && data.url) {
-          const img = { url: data.url, thumbUrl: data.thumbUrl || data.url };
-          img.displayUrl = resolveFileUrl(img.thumbUrl);
-          this.setData({ images: this.data.images.concat([img]) });
-        }
-      } catch (err) {
-        /* request 已提示，继续下一张 */
-      } finally {
-        // 补后缀用的副本传完就删（失败也删，重试时会重新选）
-        if (f.tmpPath) {
-          removeTmpFile(f.tmpPath);
-          this._tmpFiles = this._tmpFiles.filter((p) => p !== f.tmpPath);
+    const stamp = Date.now();
+    const placeholders = files.map((f, i) => ({
+      key: `up-${stamp}-${i}`,
+      pending: true,
+      url: "",
+      thumbUrl: "",
+      displayUrl: f.localPath || f.tempFilePath,
+    }));
+    this.setData({ images: this.data.images.concat(placeholders) });
+
+    // 按 key 定位而不是按下标：上传途中用户可能删掉前面某张，下标会漂
+    const replaceOne = (key, img) => {
+      const images = this.data.images.slice();
+      const idx = images.findIndex((x) => x && x.key === key);
+      if (idx < 0) return; // 这张已被用户移除：结果丢弃（服务端文件由清理任务回收）
+      images[idx] = img;
+      this.setData({ images });
+    };
+    const dropOne = (key) => {
+      this.setData({
+        images: this.data.images.filter((x) => !(x && x.key === key)),
+      });
+    };
+
+    let cursor = 0;
+    const worker = async () => {
+      for (;;) {
+        const i = cursor;
+        cursor += 1;
+        if (i >= files.length) return;
+        const f = files[i];
+        const key = placeholders[i].key;
+        try {
+          const { code, data } = await api.event.uploadImage(f.tempFilePath);
+          if (Number(code) === 200 && data && data.url) {
+            replaceOne(key, {
+              key: `srv-${data.url}`,
+              url: data.url,
+              thumbUrl: data.thumbUrl || data.url,
+              displayUrl: resolveFileUrl(data.thumbUrl || data.url),
+            });
+          } else {
+            // 业务失败（体积/格式被后端拒）request 已提示：摘掉占位
+            dropOne(key);
+          }
+        } catch (err) {
+          // 网络异常同样已提示，继续下一张
+          dropOne(key);
+        } finally {
+          // 补后缀用的副本传完就删（失败也删，重试时会重新选）
+          if (f.tmpPath) {
+            removeTmpFile(f.tmpPath);
+            this._tmpFiles = this._tmpFiles.filter((p) => p !== f.tmpPath);
+          }
         }
       }
+    };
+    const lanes = Math.min(UPLOAD_CONCURRENCY, files.length);
+    const runners = [];
+    for (let i = 0; i < lanes; i += 1) runners.push(worker());
+    try {
+      await Promise.all(runners);
+    } finally {
+      this.setData({ uploading: false });
     }
-    this.setData({ uploading: false });
   },
 
   removeImage(e) {
@@ -1260,9 +1450,12 @@ Page({
   previewImage(e) {
     if (this.data.dragging) return; // 拖拽落指时可能误带一次 tap，忽略
     const index = e.currentTarget.dataset.index;
-    // 九宫格里用的是缩略图（省流量），点开大图必须换成原图地址，否则 300px 放大到全屏会糊
+    // 九宫格里用的是缩略图（省流量），点开大图必须换成原图地址，否则 300px 放大到全屏会糊；
+    // 还在上传的占位项没有服务器地址，直接拿本地临时文件预览（长度与 images 对齐）
     const urls = this.data.images.map((i) =>
-      resolveFileUrl(i.url || i.thumbUrl),
+      i && i.pending
+        ? i.displayUrl
+        : resolveFileUrl((i && (i.url || i.thumbUrl)) || ""),
     );
     wx.previewImage({ current: urls[index], urls });
   },
@@ -1279,7 +1472,8 @@ Page({
     if (this.data.uploading || this.data.dragging) return;
     const index = e.currentTarget.dataset.index;
     const img = this.data.images[index];
-    if (!img) return;
+    // 还挂着占位（正在上传）的那格没有服务器地址，拖了也没法落库
+    if (!img || img.pending) return;
     const q = wx.createSelectorQuery();
     q.selectAll(".img-cell").boundingClientRect();
     q.selectViewport().scrollOffset();
@@ -1309,21 +1503,21 @@ Page({
     });
   },
 
-  /** 拖拽中移动：浮层跟手；越过别的格子就把被拖图实时挪到该格（下标即 sort） */
+  /**
+   * 拖拽中移动：越过别的格子就把被拖图实时挪到该格（下标即 sort）。
+   * 浮层的跟手位移由 WXS 在渲染层直接改（见 drag.wxs），这里只做命中判定 ——
+   * 只有真的换位时才 setData，原来每帧回传一次坐标是这条拖拽最贵的开销。
+   */
   onGridTouchMove(e) {
     if (!this.data.dragging) return;
     const t = e.touches && e.touches[0];
     if (!t) return;
-    const patch = { dragPos: { x: t.clientX, y: t.clientY } };
     const target = this.hitImageSlot(t.pageX, t.pageY);
-    if (target >= 0 && target !== this.data.dragIndex) {
-      const images = this.data.images.slice();
-      const moved = images.splice(this.data.dragIndex, 1)[0];
-      images.splice(target, 0, moved);
-      patch.images = images;
-      patch.dragIndex = target;
-    }
-    this.setData(patch);
+    if (target < 0 || target === this.data.dragIndex) return;
+    const images = this.data.images.slice();
+    const moved = images.splice(this.data.dragIndex, 1)[0];
+    images.splice(target, 0, moved);
+    this.setData({ images, dragIndex: target });
   },
 
   /** 命中判定：手指（页面坐标）落在哪个格子；落在网格纵向范围外则就近夹到首/尾 */
@@ -1386,6 +1580,8 @@ Page({
   },
 
   buildPayload() {
+    // 先把停笔中的输入草稿落盘：从这里开始读的都是 data
+    this.flushInputs();
     const d = this.data;
     const validLinks = d.links
       .filter((l) => l.url && l.url.trim())
@@ -1428,6 +1624,8 @@ Page({
   },
 
   async onSubmit() {
+    // 输入框是防抖回写的：先把草稿落盘，否则「刚敲完标题立刻点发布」会报「请填写事件标题」
+    this.flushInputs();
     if (this.data.uploading) {
       wx.showToast({ title: "图片上传中，请稍候", icon: "none" });
       return;

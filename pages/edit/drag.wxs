@@ -1,0 +1,55 @@
+/**
+ * 图片拖拽浮层的「跟手」位移：整段手势在渲染层完成，逻辑层一个坐标都不收。
+ *
+ * 背景：浮层原先靠 setData 改 left/top 跟手，等于 touchmove 每帧一次跨线程往返
+ * （60 次/秒）。换位仍需逻辑层知道手指落在哪个格子，所以那边保留
+ * （见 pages/edit/edit.js 的 onGridTouchMove），但它已不再传坐标。
+ *
+ * 绑定位置：图片那一节的 form-item（.img-grid 的父节点）。事件从格子上冒泡上来；
+ * 浮层自身 pointer-events:none，不会打断进行中的手势。
+ *
+ * 约定：浮层的初始 left/top 由逻辑层在长按那一帧写进 data（= 手指按下点，见 dragPos），
+ * 这里只叠加「相对手势起点」的位移 —— 两者用同一套 client 坐标，所以不会错位。
+ * transform 必须把原来的 translate(-50%, -50%) scale(1.08) 一并写上：
+ * setStyle 是整体覆盖该属性，漏了会让浮层从手指左上角偏出去再跳回来。
+ */
+
+var originX = 0;
+var originY = 0;
+var tracking = false;
+
+function begin(e) {
+  var t = (e.touches && e.touches[0]) || null;
+  if (!t) return;
+  originX = t.clientX;
+  originY = t.clientY;
+  tracking = true;
+}
+
+function move(e, ownerInstance) {
+  if (!tracking) return;
+  var t = (e.touches && e.touches[0]) || null;
+  if (!t) return;
+  // 浮层只在长按进入拖拽态后才存在（wx:if）：取不到就说明还没开始拖，直接返回
+  if (!ownerInstance || !ownerInstance.selectComponent) return;
+  var ghost = ownerInstance.selectComponent(".img-drag-ghost");
+  if (!ghost) return;
+  var dx = t.clientX - originX;
+  var dy = t.clientY - originY;
+  ghost.setStyle({
+    transform:
+      "translate(-50%, -50%) translate(" + dx + "px, " + dy + "px) scale(1.08)",
+  });
+}
+
+function end() {
+  tracking = false;
+  originX = 0;
+  originY = 0;
+}
+
+module.exports = {
+  begin: begin,
+  move: move,
+  end: end,
+};

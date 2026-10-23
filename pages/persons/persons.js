@@ -1,6 +1,9 @@
 const api = require("../../utils/api");
 const auth = require("../../utils/auth");
 
+// 关键词筛选防抖（ms）：纯本地过滤不发请求，但每次都要重建整个名单并 setData
+const FILTER_DEBOUNCE_MS = 160;
+
 // 姓名 → 色相（0~359）：不同的人落到不同颜色
 function hueOf(name) {
   const s = name || "?";
@@ -40,6 +43,12 @@ Page({
   },
 
   _deepName: "",
+  // 关键词筛选的防抖定时器（不进 data，避免无谓的 setData）
+  _filterTimer: null,
+
+  onUnload() {
+    if (this._filterTimer) clearTimeout(this._filterTimer);
+  },
 
   onLoad(options) {
     this._deepName = options.name ? decodeURIComponent(options.name) : "";
@@ -109,16 +118,28 @@ Page({
     }
   },
 
+  /**
+   * 搜索框输入：只把关键词回写，名单等停顿后再筛。
+   * 逐字符重建 filtered 等于每敲一键都把整个名单（含 withInitial 生成的新对象）setData 一遍；
+   * 这里也不再用 trim 后的值回写 keyword —— 否则用户敲的空格会被抹掉、光标跟着跳位。
+   */
   onKeywordInput(e) {
-    const v = (e.detail.value || "").trim();
-    this.setData({
-      keyword: v,
-      filtered: v
-        ? this.withInitial(
-            this.data.persons.filter((p) => p.person.indexOf(v) !== -1),
-          )
-        : this.data.persons,
-    });
+    const raw = e.detail.value || "";
+    this.setData({ keyword: raw });
+    if (this._filterTimer) clearTimeout(this._filterTimer);
+    this._filterTimer = setTimeout(() => {
+      this._filterTimer = null;
+      this.setData({ filtered: this.filterByName(raw) });
+    }, FILTER_DEBOUNCE_MS);
+  },
+
+  /** 按关键词筛名单；没词时直接回全量（不重复 map，避免清空关键词时再造一批对象） */
+  filterByName(keyword) {
+    const v = String(keyword || "").trim();
+    if (!v) return this.data.persons;
+    return this.withInitial(
+      this.data.persons.filter((p) => p.person.indexOf(v) !== -1),
+    );
   },
 
   selectPerson(e) {

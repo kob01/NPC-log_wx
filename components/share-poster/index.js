@@ -297,7 +297,9 @@ Component({
             }
             this._nodeRetried = false;
             const canvas = item.node;
-            const dpr = wx.getSystemInfoSync().pixelRatio || 2;
+            // 导出 dpr 封顶 2：逻辑尺寸 600×2000 在 dpr=3 时是 1800×6000（单张位图约 43MB），
+            // 低端机会在 canvasToTempFilePath 这一步失败或直接白屏；1200×4000 足够清晰
+            const dpr = Math.min(wx.getSystemInfoSync().pixelRatio || 2, 2);
             const ctx = canvas.getContext("2d");
 
             // 版式常量：图片永远占满宽、原比例、不裁剪、贴顶；卡片高度随内容自适应

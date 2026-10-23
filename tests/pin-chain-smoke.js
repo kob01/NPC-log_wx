@@ -205,8 +205,9 @@ function newLoadedPage(extraPins) {
       pinned: false,
     },
   ];
+  // 列表条目现在存在实例上（_entries），data 里只留渲染用的 groups
+  p._entries = entries;
   p.setData({
-    entries,
     groups: p.buildGroups(entries),
     pinnedEntries: extraPins || [],
   });
@@ -218,7 +219,7 @@ function occurrences(p, id) {
   const inPinned = (p.data.pinnedEntries || []).filter(
     (e) => String(e.id) === String(id),
   ).length;
-  const inEntries = (p.data.entries || []).filter(
+  const inEntries = (p._entries || []).filter(
     (e) => String(e.id) === String(id),
   ).length;
   return inPinned + inEntries;
@@ -268,7 +269,7 @@ async function groupP() {
       p.data.pinnedEntries.length === 1 &&
       p.data.pinnedEntries[0].id === 20 &&
       p.data.pinnedEntries[0].pinned === true &&
-      !p.data.entries.some((e) => e.id === 20) &&
+      !p._entries.some((e) => e.id === 20) &&
       rowIds(p).indexOf("20") === -1 &&
       occurrences(p, 20) === 1,
     `${JSON.stringify(apiState.pinCalls)} | pinned=${p.data.pinnedEntries.length}`,
@@ -350,7 +351,7 @@ async function groupP() {
     "P05 置顶被拒时卡片与分组都不动",
     apiState.pinCalls.length === 1 &&
       p.data.pinnedEntries.length === 0 &&
-      p.data.entries.length === 3 &&
+      p._entries.length === 3 &&
       rowIds(p).join(",") === "21,20,19",
     JSON.stringify({
       pinned: p.data.pinnedEntries.length,
@@ -386,7 +387,7 @@ async function groupP() {
     "P07 菜单被收回时不发任何请求、不动列表",
     apiState.pinCalls.length === 0 &&
       p.data.pinnedEntries.length === 0 &&
-      p.data.entries.length === 3,
+      p._entries.length === 3,
     JSON.stringify(apiState.pinCalls),
   );
 
@@ -459,11 +460,11 @@ async function groupL() {
     p.data.pinnedEntries.length === 1 &&
       p.data.pinnedEntries[0].id === 20 &&
       p.data.pinnedEntries[0].isMine === true &&
-      p.data.entries.length === 2 &&
+      p._entries.length === 2 &&
       rowIds(p).join(",") === "21,19",
     JSON.stringify({
       pinned: p.data.pinnedEntries.length,
-      entries: p.data.entries.length,
+      entries: p._entries.length,
       rows: rowIds(p).join(","),
     }),
   );

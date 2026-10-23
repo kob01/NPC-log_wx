@@ -347,8 +347,12 @@ async function onAppShow(options) {
   const opts = options || {};
   const route = currentRoute(opts.path);
 
-  await flushOrphan(route);
-  const net_type = await refreshNetType();
+  // 两件事互不依赖：补记上一条中断（一次 close 请求）与读网络类型（最长等 800ms）。
+  // 串行会让每次冷启动多等一个往返，并行后本次的 open 能早一拍发出去
+  const [, net_type] = await Promise.all([
+    flushOrphan(route),
+    refreshNetType(),
+  ]);
   const visitKey = newVisitKey();
 
   // 先把 pending 立起来（没有 closeKey）：万一这次 open 请求整个发不出去，
